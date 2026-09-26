@@ -139,7 +139,9 @@ one change):
 - No open-files/socket inspector (lsof territory)
 - No "run new task" launcher — v2 candidate
 - No cgroup/systemd unit management (column is read-only display)
-- No GTK4 port (starter is GTK3)
+- No GTK4 port (starter is GTK3) — the sanctioned path and its
+  portability seams are defined in [gtk4-port.md](gtk4-port.md); the port
+  itself stays a post-v1 operator decision
 
 ## 8. Risks (cross-cutting; per-module risks live in the module docs)
 

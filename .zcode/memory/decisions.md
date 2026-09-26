@@ -100,3 +100,13 @@ Record architectural decisions with rationale. Newest at the bottom.
     (app-live-phase1.png). cgroup display: strip .scope/.service suffixes.
     Session ids are strict UUIDs (a friendly-name --session-id silently
     fails with empty stdout).
+17. **GTK4 port strategy (r043).** docs/gtk4-port.md: port stays post-v1,
+   but NINE portability seams are adoptable now under GTK3 and enforced by
+   a banned-API pytest gate (Application lifecycle, Gio.Menu+popover
+   adapter, event controllers + SimpleAction accels — NOT
+   ShortcutController (GTK4-only) and NOT bare GestureClick (renamed from
+   GestureMultiPress), layout.py box_add/set_child adapters, ChartArea,
+   windows-not-dialogs, icon helper, CSS discipline incl.
+   add_provider_for_display path). TreeView family: works on 4.14,
+   deprecated since 4.10 — ColumnView is the standing post-port item.
+   Collaborator review earned its cost again ($0.35, six real corrections).
