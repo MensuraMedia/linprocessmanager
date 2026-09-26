@@ -168,3 +168,14 @@ Record architectural decisions with rationale. Newest at the bottom.
     default (whole-widget :hover flashes — omit). librsvg pixbuf loader is
     OPTIONAL on Debian family — SVG assets need a png fallback chain.
     170px sidebar adopted (css + config constant). Pulse mark is the logo.
+24. **Threshold coloring + runtime-only bug class (r057).** Value colors =
+    capacity zones (<60 green, 60–84 amber, ≥85 red) via one shared
+    _cap_zone for ALL stats; delta arrows stay r056 (red ▲ up, green ▼
+    down) on plain values. Class-scope trap: a staticmethod cannot see
+    class attrs by bare name (ProcessPage._cap_zone → NameError at first
+    live snapshot; tests never called it) — and an orphaned @staticmethod
+    from a sloppy edit surfaced only at runtime. Runtime journal
+    (journalctl --user -u linprocman-app) is now part of verification.
+    Window-ID pixel proof without raising: xwd -id <win> + in-repo XWD
+    parser (PIL lacks XWD; no convert/netpbm on this box) — immune to
+    GNOME focus-stealing-prevention which now blocks wmctrl raises.
