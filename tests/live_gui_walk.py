@@ -23,7 +23,36 @@ from main import LinprocmanApplication  # noqa: E402
 
 PAGES = ["processes", "resources", "disks", "logs", "about", "settings"]
 results = {}
+# LIVE marker: minimum real process rows the table must show on this machine.
+MIN_LIVE_ROWS = 10
+live = {"rows": None}
 app = LinprocmanApplication()
+
+
+def keep_above():
+    """Force the window above others so screenshots capture it, not the desk."""
+    if app.window is not None:
+        app.window.set_keep_above(True)
+    return False
+
+
+def count_live_rows():
+    """LIVE check: count visible rows in the Processes model after warm-up.
+
+    Reads the filter model the page installed (kernel threads hidden by
+    default) — proof the sampler → diff-in-place path put REAL rows on screen,
+    not just that a window appeared.
+    """
+    page = app.navigation_manager.get_page_widget("processes")
+    count = 0
+    if page is not None and getattr(page, "model", None) is not None:
+        model = page.model.filter
+        it = model.get_iter_first()
+        while it is not None:
+            count += 1
+            it = model.iter_next(it)
+    live["rows"] = count
+    return False
 
 
 def shot(name):
@@ -49,6 +78,10 @@ def step(i):
     return False
 
 
+GLib.timeout_add(300, keep_above)
+# Count live rows ~2 s in (several sampler drains have landed by then).
+GLib.timeout_add(2000, count_live_rows)
+
 for i in range(len(PAGES)):
     GLib.timeout_add(1500 + 1300 * i, step, i)
 
@@ -61,5 +94,12 @@ for page in PAGES:
     if status == "FAIL":
         fails += 1
     print(f"{status} {page} nav={nav_ok} shot={path}")
-print(f"--- {len(PAGES) - fails}/{len(PAGES)} pages navigated + captured")
+
+rows = live["rows"]
+rows_ok = rows is not None and rows >= MIN_LIVE_ROWS
+print(f"{'PASS' if rows_ok else 'FAIL'} [live] process-rows={rows} "
+      f"(need >= {MIN_LIVE_ROWS})")
+if not rows_ok:
+    fails += 1
+print(f"--- {len(PAGES) - fails}/{len(PAGES) + 1} checks passed")
 sys.exit(1 if fails else 0)

@@ -38,7 +38,10 @@ import threading
 import time
 from dataclasses import dataclass, field
 
-import procfs
+try:  # app layout: python3 src/main.py (src on sys.path)
+    from modules import procfs
+except ImportError:  # standalone/test layout (src/modules on sys.path)
+    import procfs
 
 # Interval bounds (seconds) — docs/modules/sampling-pipeline.md cadence.
 MIN_INTERVAL = 0.5
