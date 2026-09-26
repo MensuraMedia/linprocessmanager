@@ -120,3 +120,14 @@ Record architectural decisions with rationale. Newest at the bottom.
     best and needs an our-names allowlist (theme noise false-reds). One
     Gtk version per process — non-active compat path tests cover
     branch/non-GTK logic only. pygobject ≥3.42 for GTK4 (noble: 3.48).
+19. **Debian-family compatibility (r045).** Support current+previous LTS
+    bases; floors Python 3.10 / GTK3 3.24 / GTK4 4.6 (jammy-only floor) /
+    PyGObject 3.42; feature probes (HAS_* flags in compat/gtk_env) for
+    ≥4.10 conveniences. Yama ptrace_scope=1 = stock Ubuntu/Mint: other
+    users' smaps_rollup/environ unreadable — lock-path degrade, same as
+    hidepid. Snap rejection is mandate-based NOT technical (its
+    system-observe/process-control interfaces would work); flatpak is
+    technically impossible (own PID namespace). .deb (Phase 8):
+    dh_python3, no maintainer-script cache calls (dpkg triggers own it),
+    #!/usr/bin/python3 shebang. Distro matrix mostly knowledge-verified —
+    only noble machine-tested; keep floors boring so the gap stays boring.
