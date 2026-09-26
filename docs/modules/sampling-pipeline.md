@@ -15,19 +15,28 @@ kernel.
 
 ## Interface
 
-Provides:
-- `Sampler.start()` / `stop()` / `set_interval(seconds)`
-- `Snapshot` schema: `{"ts": float, "procs": {pid: record}, "system": {cpu, mem, net, psi, disks, sensors}}`
-  — records carry **precomputed** `cpu_pct` (chosen normalization), byte
-  rates for io, and raw identity fields. Rates are computed here, at build
-  time, from the previous snapshot held in the sampler; consumers render,
-  they never differentiate.
-- Queue: bounded small (e.g. 4 slots), `put_nowait` + **drop-oldest** on
-  full; the UI drains via **one persistent GLib idle source** (no per-
-  snapshot `idle_add` pileup).
+Provides (**GLib-free** — the single GLib idle/timeout source that drains
+the queue is installed by the table layer, not here; r046 ruling):
+- `Sampler.start()` / `stop()` / `set_interval(seconds)` /
+  `set_activity_state(active: bool)` (window state is **injected** by the
+  shell — this module never reads GTK) / `request_rollup(pid, starttime)`
+  (thread-safe; satisfied on the next snapshot) / `drain_latest()` (returns
+  and clears buffered snapshots).
+- `build_snapshot(prev, now, clock, readers)` — a **pure step function**
+  with injected clock and injected readers: the mandated testability seam.
+- `Snapshot` schema: `{"ts": float, "from_backoff": bool, "procs": {pid:
+  record}, "system": {cpu, mem, net, psi, disks, sensors}}`. Records are
+  plain dicts with precomputed `cpu_pct` and io rates; **no-data is `None`
+  or an absent key — pure Python** (the `-1` + `has_data` sentinel
+  translation is the model layer's job at the ListStore boundary, per
+  process-table.md; r046 ruling). The enumerated record field set lives in
+  the task-003 contract appendix and is **frozen** after C-review before
+  task 004 is dispatched (schema-freeze gate).
+- Queue: plain bounded `queue.Queue` (4 slots), `put_nowait` + drop-oldest.
 
 Consumes: [procfs-data.md](procfs-data.md) and [sysfs-data.md](sysfs-data.md)
-readers only.
+readers only. Ring buffers are NOT this module's — it only tags
+`from_backoff` so the ring owner (resource-graphs.md) excludes gaps.
 
 ## Logic
 

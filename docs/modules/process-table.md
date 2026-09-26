@@ -21,10 +21,11 @@ Consumes: `Snapshot` objects from [sampling-pipeline.md](sampling-pipeline.md)
 
 Provides:
 - `Gtk.ListStore` (flat) / `Gtk.TreeStore` (tree) with **typed** columns
-  (PID int, CPU float, mem bytes int, nice int). Absent rate values are
-  stored as a `-1` sentinel **plus a `has_data` bool column**; sort places
-  unknowns last; cell data funcs render "—". (None in a float column is a
-  PyGObject marshaling hazard; NaN breaks numeric sort.)
+  (PID int, CPU float, mem bytes int, nice int). **Input-side seam (r046
+  ruling):** the sampler's no-data is `None` — this model layer translates
+  `None → (-1 sentinel, has_data=False)` at the ListStore boundary (None in
+  a float column is a PyGObject marshaling hazard; NaN breaks numeric
+  sort). Sort places unknowns last; cell data funcs render "—".
 - `Gtk.TreeModelFilter` wrapping the store once; the `visible_func` is
   re-pointed on query/scope change, not rebuilt per keystroke. Substring
   default, regex toggle (stdlib `re`).

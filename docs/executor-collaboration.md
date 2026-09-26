@@ -140,7 +140,25 @@ claude -p "$(cat .zcode/tasks/001-vendor-starter.md)" \
 (task, branch, scope, result, cost), records decisions if any, commits,
 backs up (s009) at phase boundaries per the global backup standard.
 
-## 6. Administration through this session and later ones
+## 6a. Direct collaboration (r046, operator-mandated deepening)
+
+Beyond batch dispatch/review, Claude participates in **persistent consult
+sessions** as a direct collaborator:
+
+- **Contract co-drafting:** before a task is dispatched, a consult session
+  critiques the decomposition and co-drafts the contract; ZCode holds the
+  rulings (decisions stay with the orchestrator per roles) and finalizes.
+  First use: task 003 (seam rulings — no-data wire format, idle-source
+  ownership, injected activity state — came out of exactly this dialogue).
+- **Multi-turn dialogue:** `--session-id` resumes a session for follow-up
+  turns. Caveat learned live: a session held open returns "Session ID
+  already in use" — the robust fallback is a fresh session with the prior
+  turn's conclusions embedded (the rulings carry the context).
+- **Phase-close reviews** stay C-reviewer's job; consult sessions never
+  clear executor work (separation of duties unchanged).
+- All consult turns appear in the QUEUE spend ledger with session ids.
+
+## 6b. Administration through this session and later ones
 
 - **This session:** ZCode orchestrates via its Bash tool (`claude -p …`);
   the executor's turns appear here as tool calls; every dispatch and result

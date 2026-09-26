@@ -4,9 +4,7 @@ Dashboard configuration and technical details
 Updated: Accurate tree structure after cleanup
 """
 
-import gi
-gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
+from ui.compat import layout
 
 from pages.page_base import BasePage
 from config.config_themes import get_all_themes, get_theme
@@ -42,20 +40,21 @@ class SettingsPage(BasePage):
             current_theme=self.current_theme_id,
             on_theme_changed=self.on_theme_changed
         )
-        self.pack_start(theme_selector, False, False, 10)
+        layout.box_add(self, theme_selector, False, False, 10)
         
         # Technical specs section
         self.add_subtitle("Technical Specifications")
         
         self.add_paragraph(
-            "• GTK Version: GTK+ 3.0\n"
-            "• Python: 3.8+\n"
-            "• Dependencies: PyGObject, pycairo, Pillow\n"
-            "• Architecture: Modular with page-based routing\n"
+            "• GTK Version: GTK+ 3.0 (compat layer keeps the tree GTK4-ready)\n"
+            "• Python: 3.10+ (system python3; stdlib-only core)\n"
+            "• Dependencies: PyGObject, pycairo, Pillow (system packages)\n"
+            "• Architecture: Modular, page-based routing over a compat seam\n"
+            "• Data source: /proc read directly (no psutil)\n"
             "• Sidebar Width: 150px\n"
             "• Logo Area: 150x150px (square)\n"
             "• Navigation Button Height: 28px\n"
-            "• Navigation Pages: 7 (Home, About, Button03-06, Settings)\n"
+            "• Navigation Pages: 6 (Processes, Resources, Disks, Logs, About, Settings)\n"
             "• Themes: 7 popular dark themes available\n"
             "• License: Free for personal and educational use"
         )
@@ -65,51 +64,48 @@ class SettingsPage(BasePage):
         
         self.add_markup_label(
             "<span font_family='monospace' foreground='#d0d0d0'>"
-            "gtk-python-dashboard-starter/\n"
+            "linprocman/\n"
             "├── src/                     # Application source code\n"
-            "│   ├── main.py              # Entry point\n"
+            "│   ├── main.py              # Gtk.Application entry point\n"
             "│   ├── config/              # Configuration modules\n"
-            "│   │   ├── __init__.py\n"
             "│   │   ├── config_theme.py  # Theme colors/fonts\n"
             "│   │   ├── config_layout.py # Layout dimensions\n"
             "│   │   └── config_themes.py # Theme definitions\n"
             "│   ├── ui/                  # UI components\n"
-            "│   │   ├── __init__.py\n"
             "│   │   ├── dashboard_window.py\n"
             "│   │   ├── sidebar.py\n"
             "│   │   ├── content_area.py\n"
+            "│   │   ├── compat/          # GTK version seam (one file/seam)\n"
+            "│   │   │   ├── gtk_env.py    # the only gi.repository import\n"
+            "│   │   │   ├── layout.py     # box pack / child-add\n"
+            "│   │   │   ├── menu.py       # model-driven menus\n"
+            "│   │   │   ├── events.py     # gestures / accels\n"
+            "│   │   │   ├── dialogs.py    # confirm windows\n"
+            "│   │   │   ├── charts.py     # cairo draw hookup\n"
+            "│   │   │   ├── icons.py      # pixbuf → image\n"
+            "│   │   │   └── css.py        # provider + class helpers\n"
             "│   │   └── components/      # UI widgets\n"
-            "│   │       ├── __init__.py\n"
             "│   │       └── component_theme_selector.py\n"
             "│   ├── pages/               # Page modules\n"
-            "│   │   ├── __init__.py\n"
             "│   │   ├── page_base.py     # Base page class\n"
-            "│   │   ├── page_home.py\n"
+            "│   │   ├── page_processes.py\n"
+            "│   │   ├── page_resources.py\n"
+            "│   │   ├── page_disks.py\n"
+            "│   │   ├── page_logs.py\n"
             "│   │   ├── page_about.py\n"
-            "│   │   ├── page_button03.py\n"
-            "│   │   ├── page_button04.py\n"
-            "│   │   ├── page_button05.py\n"
-            "│   │   ├── page_button06.py\n"
             "│   │   └── page_settings.py\n"
             "│   ├── modules/             # Feature modules\n"
-            "│   │   ├── __init__.py\n"
+            "│   │   ├── procfs.py        # /proc readers (stdlib-only)\n"
+            "│   │   ├── sysfs.py         # /sys readers (stdlib-only)\n"
             "│   │   ├── manager_navigation.py\n"
             "│   │   └── manager_theme_applicator.py\n"
             "│   └── utils/               # Utility functions\n"
-            "│       ├── __init__.py\n"
             "│       └── manager_theme.py # CSS loader\n"
-            "├── resources/               # Static resources\n"
-            "│   ├── css/                 # Stylesheets\n"
-            "│   │   └── style.css\n"
-            "│   ├── fonts/               # Custom fonts\n"
-            "│   └── images/              # Images and icons\n"
-            "│       └── logo.png\n"
+            "├── resources/               # Static resources (icons, images)\n"
             "├── docs/                    # Documentation\n"
-            "├── tests/                   # Test files\n"
-            "├── README.md                # Project documentation\n"
-            "├── requirements.txt         # Python dependencies\n"
-            "├── setup.py                 # Installation script\n"
-            "└── run.sh                   # Quick launch script"
+            "├── tests/                   # pytest suite (gates + parsers)\n"
+            "├── changelog.md             # Append-only change log\n"
+            "└── requirements.txt         # System-package manifest (comment)"
             "</span>",
             selectable=True
         )

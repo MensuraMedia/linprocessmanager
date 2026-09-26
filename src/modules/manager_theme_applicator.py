@@ -3,9 +3,7 @@ Theme Applicator
 Fixed: Home button has both top AND bottom borders
 """
 
-import gi
-gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gdk
+from ui.compat import Gtk, css
 
 
 class ThemeApplicator:
@@ -31,16 +29,11 @@ class ThemeApplicator:
         # Load CSS
         try:
             self.css_provider.load_from_data(css_content.encode())
-            
-            # Apply to screen
-            screen = Gdk.Screen.get_default()
-            style_context = Gtk.StyleContext()
-            style_context.add_provider_for_screen(
-                screen,
-                self.css_provider,
-                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-            )
-            
+
+            # Register the provider app-wide through the compat seam, which
+            # picks per-screen (GTK3) vs per-display (GTK4) registration.
+            css.add_provider(self.css_provider)
+
             print(f"✓ Applied theme: {theme_def.name}")
             return True
             

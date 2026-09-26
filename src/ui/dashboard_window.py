@@ -1,42 +1,41 @@
 """
 Main Dashboard Window
-Main application window - refactored
+Main application window — Gtk.ApplicationWindow under the Gtk.Application
+lifecycle (upgrade-architecture.md §2 app layer; gtk4-port.md §4.1).
 """
 
-import gi
-gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
+from .compat import Gtk, layout
 
 from ui.sidebar import Sidebar
 from ui.content_area import ContentArea
 from config.config_layout import Layout
 
 
-class DashboardWindow(Gtk.Window):
+class DashboardWindow(Gtk.ApplicationWindow):
     """Main application window"""
-    
-    def __init__(self, navigation_manager):
+
+    def __init__(self, navigation_manager, application=None):
         """Initialize window"""
-        super().__init__(title="Dashboard")
-        
+        super().__init__(application=application, title="linprocman")
+
         self.nav_manager = navigation_manager
-        
+
         self.set_default_size(
             Layout.dimensions.WINDOW_DEFAULT_WIDTH,
             Layout.dimensions.WINDOW_DEFAULT_HEIGHT
         )
         self.set_position(Gtk.WindowPosition.CENTER)
-        
+
         main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
-        self.add(main_box)
-        
+        layout.set_child(self, main_box)
+
         self.sidebar = Sidebar(self.nav_manager)
         self.sidebar.connect("page-changed", self.on_page_changed)
-        main_box.pack_start(self.sidebar, False, False, 0)
-        
+        layout.box_add(main_box, self.sidebar, False, False, 0)
+
         self.content_area = ContentArea(self.nav_manager)
-        main_box.pack_start(self.content_area, True, True, 0)
-    
+        layout.box_add(main_box, self.content_area, True, True, 0)
+
     def on_page_changed(self, sidebar, page_name):
         """Handle page change"""
         self.content_area.show_page(page_name)

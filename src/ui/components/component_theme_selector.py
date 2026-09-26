@@ -3,51 +3,49 @@ Theme Selector Widget
 Visual theme selector with smaller color circles
 """
 
-import gi
-gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gdk
+from ..compat import Gtk, Gdk, events, layout
+from ..compat.charts import ChartArea
 import cairo
 
 
-class ThemeColorButton(Gtk.DrawingArea):
+class ThemeColorButton(ChartArea):
     """
     Custom widget that displays a colored circle for theme selection
     Updated: Smaller 25x25 circles
+
+    Draw + click go through the compat seams (charts.ChartArea, events) so no
+    toolkit signal is named here — see upgrade-architecture.md §3.
     """
-    
+
     def __init__(self, theme_id, theme_def, callback):
         """
         Initialize theme color button
-        
+
         Args:
             theme_id: Theme identifier
             theme_def: ThemeDefinition instance
             callback: Function to call when clicked
         """
         super().__init__()
-        
+
         self.theme_id = theme_id
         self.theme_def = theme_def
         self.callback = callback
         self.is_selected = False
-        
+
         # Set size - reduced to 25x25
         self.set_size_request(25, 25)
-        
-        # Connect signals
-        self.connect('draw', self.on_draw)
-        self.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
-        self.connect('button-press-event', self.on_clicked)
-        
+
+        # Draw via the charts seam (connect("draw") ↔ set_draw_func)
+        self.set_draw_callback(self.on_draw)
+        # Click via the events seam (GestureMultiPress ↔ GestureClick)
+        self._click = events.click_gesture(self, self.on_pressed)
+
         # Tooltip
         self.set_tooltip_text(theme_def.name)
-    
-    def on_draw(self, widget, cr):
+
+    def on_draw(self, widget, cr, width, height):
         """Draw the colored circle"""
-        allocation = widget.get_allocation()
-        width = allocation.width
-        height = allocation.height
-        
         # Center point
         cx = width / 2
         cy = height / 2
@@ -73,11 +71,10 @@ class ThemeColorButton(Gtk.DrawingArea):
         
         return False
     
-    def on_clicked(self, widget, event):
-        """Handle click event"""
+    def on_pressed(self, gesture, n_press, x, y):
+        """Handle click gesture (normalized 'pressed' signature)"""
         if self.callback:
             self.callback(self.theme_id)
-        return True
     
     def set_selected(self, selected):
         """Set selection state"""
@@ -110,7 +107,7 @@ class ThemeSelectorWidget(Gtk.Box):
         for theme_id, theme_def in themes_dict.items():
             button = ThemeColorButton(theme_id, theme_def, self.theme_clicked)
             button.set_selected(theme_id == current_theme)
-            self.pack_start(button, False, False, 0)
+            layout.box_add(self, button, False, False, 0)
             self.color_buttons[theme_id] = button
     
     def theme_clicked(self, theme_id):

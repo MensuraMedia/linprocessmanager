@@ -4,9 +4,7 @@ Abstract base class for all application pages
 Updated: Added add_separator() method
 """
 
-import gi
-gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
+from ui.compat import Gtk, css, layout
 
 
 class BasePage(Gtk.Box):
@@ -54,9 +52,9 @@ class BasePage(Gtk.Box):
             Gtk.Label: Title label widget
         """
         title = Gtk.Label(label=text)
-        title.get_style_context().add_class('page-title')
+        css.add_css_class(title, 'page-title')
         title.set_xalign(0)
-        self.pack_start(title, False, False, 0)
+        layout.box_add(self, title, False, False, 0)
         return title
     
     def add_subtitle(self, text):
@@ -70,9 +68,9 @@ class BasePage(Gtk.Box):
             Gtk.Label: Subtitle label widget
         """
         subtitle = Gtk.Label(label=text)
-        subtitle.get_style_context().add_class('page-subtitle')
+        css.add_css_class(subtitle, 'page-subtitle')
         subtitle.set_xalign(0)
-        self.pack_start(subtitle, False, False, 5)
+        layout.box_add(self, subtitle, False, False, 5)
         return subtitle
     
     def add_paragraph(self, text, wrap=True, spacing_after=0):
@@ -90,7 +88,7 @@ class BasePage(Gtk.Box):
         paragraph = Gtk.Label(label=text)
         paragraph.set_line_wrap(wrap)
         paragraph.set_xalign(0)
-        self.pack_start(paragraph, False, False, spacing_after)
+        layout.box_add(self, paragraph, False, False, spacing_after)
         return paragraph
     
     def add_markup_label(self, markup, wrap=False, selectable=False, spacing_after=0):
@@ -111,7 +109,7 @@ class BasePage(Gtk.Box):
         label.set_line_wrap(wrap)
         label.set_xalign(0)
         label.set_selectable(selectable)
-        self.pack_start(label, False, False, spacing_after)
+        layout.box_add(self, label, False, False, spacing_after)
         return label
     
     def add_separator(self, height=1):
@@ -127,5 +125,5 @@ class BasePage(Gtk.Box):
         separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
         separator.set_margin_top(10)
         separator.set_margin_bottom(10)
-        self.pack_start(separator, False, False, 0)
+        layout.box_add(self, separator, False, False, 0)
         return separator

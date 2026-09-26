@@ -4,9 +4,7 @@ Stack container for pages with individual scroll states
 Updated: linprocman nav shell — Processes, Resources, Disks, Logs, About, Settings
 """
 
-import gi
-gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
+from .compat import Gtk, css, layout
 
 from pages.page_processes import ProcessesPage
 from pages.page_resources import ResourcesPage
@@ -26,12 +24,12 @@ class ContentArea(Gtk.Box):
         self.nav_manager = navigation_manager
 
         # Style class for content area
-        self.get_style_context().add_class('content-area')
+        css.add_css_class(self, 'content-area')
 
         # Create stack for pages - NO transitions
         self.stack = Gtk.Stack()
         self.stack.set_transition_type(Gtk.StackTransitionType.NONE)
-        self.pack_start(self.stack, True, True, 0)
+        layout.box_add(self, self.stack, True, True, 0)
 
         # Register stack with navigation manager
         self.nav_manager.set_page_stack(self.stack)
@@ -52,7 +50,7 @@ class ContentArea(Gtk.Box):
         """
         scrolled_window = Gtk.ScrolledWindow()
         scrolled_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        scrolled_window.add(page)
+        layout.set_child(scrolled_window, page)
         return scrolled_window
 
     def register_pages(self):
