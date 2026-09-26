@@ -79,6 +79,17 @@ Selection survives via `(pid, starttime)` keys, never row index.
   before dropping — a runaway spawning process becomes visible instead of
   silently churning.
 
+## Metric band (r058, supersedes the plain text strip)
+
+The status line becomes a **horizontal metric-gauge band** between the
+page title and the filter row — three variants studied in
+[mockup-k-metricbars.html](../mockups/mockup-k-metricbars.html): (1)
+segmented block gauges, (2) continuous bars with scale captions, (3)
+hybrid threshold-bar + 60 s sparkline (reuses Resources-page rings).
+Each gauge = one cairo widget fed by the snapshot stream; zone colors per
+capacity thresholds; delta arrows per the r056 convention. Text strip
+remains as the accessible/compact fallback in Settings.
+
 ## Columns & keyboard
 
 Flat: Process (icon+name+unit badge), User, CPU %, Memory, Swap, Disk r/w,

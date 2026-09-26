@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup K — Metric Bar Row, variant 1: segmented gauges</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:Ubuntu, Cantarell, sans-serif; }
+  body { background:#1a1a1a; padding:24px; display:flex; flex-direction:column; gap:28px; align-items:center; }
+  h2 { color:#ccc; font-size:14px; font-weight:normal; }
+  .window { width:1200px; background:#2d2d2d; color:#eee; border:1px solid #000; }
+  .titlebar { background:#222; color:#ccc; font-size:12px; padding:5px 10px; border-bottom:1px solid #1a1a1a; }
+  .content { padding:20px 22px 18px 26px; display:flex; flex-direction:column; gap:12px; }
+  .page-title { font-size:21px; font-weight:bold; color:#fff; }
+  .mono { font-variant-numeric:tabular-nums; }
+
+  /* shared: the metric band sits between title and filter */
+  .band { display:flex; gap:10px; }
+
+  /* ---- variant 1: segmented block gauges ---- */
+  .gauge { flex:1; background:#262626; border:1px solid #1a1a1a; padding:9px 12px; display:flex; flex-direction:column; gap:6px; }
+  .gauge .row { display:flex; align-items:baseline; gap:8px; }
+  .gauge .k { font-size:10px; letter-spacing:1px; color:#888; text-transform:uppercase; }
+  .gauge .v { margin-left:auto; font-size:15px; font-variant-numeric:tabular-nums; }
+  .gauge .delta { font-size:11px; }
+  .seg { display:flex; gap:2px; height:10px; }
+  .seg span { flex:1; background:#3a3a3a; }
+  .seg span.on-g { background:#3fbf6f; } .seg span.on-a { background:#e8c268; } .seg span.on-r { background:#e04c4c; }
+  .up { color:#e04c4c; } .down { color:#3fbf6f; } .flat { color:#777; }
+
+  /* ---- variant 2: continuous bars ---- */
+  .v2 .bar { height:10px; background:#3a3a3a; border-radius:2px; overflow:hidden; }
+  .v2 .fill { height:100%; }
+  .v2 .sub { display:flex; justify-content:space-between; font-size:9.5px; color:#777; margin-top:2px; }
+
+  /* ---- variant 3: sparkline hybrids ---- */
+  .v3 .spark { height:26px; }
+  .v3 svg { display:block; width:100%; height:100%; }
+
+  .filter { display:flex; gap:8px; align-items:center; }
+  .entry { flex:1; display:flex; align-items:center; gap:10px; background:#262626; border:1px solid #1a1a1a; padding:0 12px; }
+  .entry input { flex:1; background:none; border:none; color:#eee; font-size:13px; outline:none; padding:7px 0; }
+  .chip { background:#353535; border:1px solid #1a1a1a; padding:4px 10px; font-size:11.5px; color:#ddd; }
+  .chip.on { background:#0078D7; color:#fff; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  thead th { text-align:left; color:#aaa; font-weight:normal; padding:6px 10px; background:#313131; border-bottom:1px solid #1a1a1a; }
+  tbody td { padding:4px 10px; border-bottom:1px solid #262626; color:#ccc; white-space:nowrap; }
+  .note { color:#888; font-size:11px; line-height:1.55; padding:8px 2px; max-width:1200px; }
+  .note b { color:#ccc; }
+</style>
+</head>
+<body>
+
+<h2>Variant 1 — segmented block gauges (10 blocks each; zone colors; delta arrows)</h2>
+<div class="window">
+  <div class="titlebar">linprocman</div>
+  <div class="content">
+    <div class="page-title">Processes</div>
+    <div class="band">
+      <div class="gauge">
+        <div class="row"><span class="k">CPU</span><span class="v">12<span style="font-size:10px;color:#888">%</span> <span class="delta up">▲</span></span></div>
+        <div class="seg"><span class="on-g"></span><span class="on-g"></span><span class="on-g"></span><span class="on-g"></span><span class="on-g"></span><span class="on-g"></span><span></span><span></span><span></span><span></span></div>
+      </div>
+      <div class="gauge">
+        <div class="row"><span class="k">Memory</span><span class="v">68<span style="font-size:10px;color:#888">%</span> <span class="delta flat">·</span></span></div>
+        <div class="seg"><span class="on-g"></span><span class="on-g"></span><span class="on-g"></span><span class="on-g"></span><span class="on-g"></span><span class="on-g"></span><span class="on-a"></span><span class="on-a"></span><span></span><span></span></div>
+      </div>
+      <div class="gauge">
+        <div class="row"><span class="k">Swap</span><span class="v">0.2<span style="font-size:10px;color:#888">%</span> <span class="delta flat">·</span></span></div>
+        <div class="seg"><span class="on-g"></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+      <div class="gauge">
+        <div class="row"><span class="k">Disk I/O</span><span class="v">6.4<span style="font-size:10px;color:#888">%</span> <span class="delta up">▲</span></span></div>
+        <div class="seg"><span class="on-g"></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+      <div class="gauge">
+        <div class="row"><span class="k">Network</span><span class="v">1.4<span style="font-size:10px;color:#888">MB/s</span> <span class="delta down">▼</span></span></div>
+        <div class="seg"><span class="on-g"></span><span class="on-g"></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+      <div class="gauge">
+        <div class="row"><span class="k">Processes</span><span class="v">551</span></div>
+        <div class="seg"><span class="on-g"></span><span class="on-g"></span><span class="on-g"></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+    <div class="filter">
+      <div class="entry"><input placeholder="Filter by name, PID, user… (Ctrl+F)"></div>
+      <div class="chip on">All</div><div class="chip">Mine</div><div class="chip">System</div><div class="chip">Active</div>
+    </div>
+    <table>
+      <thead><tr><th>Process</th><th>User</th><th>CPU %</th><th>Memory</th><th>PID</th><th>State</th></tr></thead>
+      <tbody><tr><td>systemd</td><td>root</td><td>0.0</td><td>9.4 MB</td><td>1</td><td>S</td></tr>
+      <tr><td>cinnamon</td><td>user</td><td>4.8</td><td>412 MB</td><td>1104</td><td>S</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<h2>Variant 2 — continuous bars with threshold ticks and scale captions</h2>
+<div class="window">
+  <div class="titlebar">linprocman</div>
+  <div class="content">
+    <div class="page-title">Processes</div>
+    <div class="band v2">
+      <div class="gauge">
+        <div class="row"><span class="k">CPU</span><span class="v">12% <span class="delta up">▲</span></span></div>
+        <div class="bar"><div class="fill" style="width:12%;background:#3fbf6f"></div></div>
+        <div class="sub"><span>0</span><span>60</span><span>85</span><span>100</span></div>
+      </div>
+      <div class="gauge">
+        <div class="row"><span class="k">Memory</span><span class="v">68% <span class="delta flat">·</span></span></div>
+        <div class="bar"><div class="fill" style="width:68%;background:#e8c268"></div></div>
+        <div class="sub"><span>5.2 GB</span><span>10.9 GB used</span><span>16 GB</span><span></span></div>
+      </div>
+      <div class="gauge">
+        <div class="row"><span class="k">Swap</span><span class="v">0.2% <span class="delta flat">·</span></span></div>
+        <div class="bar"><div class="fill" style="width:2%;background:#3fbf6f"></div></div>
+        <div class="sub"><span>16 MB</span><span>8 GB</span><span></span><span></span></div>
+      </div>
+      <div class="gauge">
+        <div class="row"><span class="k">Disk I/O</span><span class="v">6.4% <span class="delta up">▲</span></span></div>
+        <div class="bar"><div class="fill" style="width:6.4%;background:#3fbf6f"></div></div>
+        <div class="sub"><span>0</span><span>util (busiest: nvme0n1)</span><span></span><span></span></div>
+      </div>
+      <div class="gauge">
+        <div class="row"><span class="k">Network</span><span class="v">1.4 MB/s <span class="delta down">▼</span></span></div>
+        <div class="bar"><div class="fill" style="width:22%;background:#3fbf6f"></div></div>
+        <div class="sub"><span>↓1.2</span><span>auto-scale ceiling 6 MB/s</span><span></span><span>↑0.2</span></div>
+      </div>
+      <div class="gauge">
+        <div class="row"><span class="k">Load</span><span class="v">0.84</span></div>
+        <div class="bar"><div class="fill" style="width:21%;background:#3fbf6f"></div></div>
+        <div class="sub"><span>1 min</span><span>cores: 4</span><span></span><span></span></div>
+      </div>
+    </div>
+    <div class="filter">
+      <div class="entry"><input placeholder="Filter…"></div>
+      <div class="chip on">All</div><div class="chip">Mine</div>
+    </div>
+  </div>
+</div>
+
+<h2>Variant 3 — hybrid: threshold bar + 60-second sparkline per metric</h2>
+<div class="window">
+  <div class="titlebar">linprocman</div>
+  <div class="content">
+    <div class="page-title">Processes</div>
+    <div class="band v2 v3">
+      <div class="gauge">
+        <div class="row"><span class="k">CPU</span><span class="v">12% <span class="delta up">▲</span></span></div>
+        <div class="bar"><div class="fill" style="width:12%;background:#3fbf6f"></div></div>
+        <div class="spark"><svg viewBox="0 0 240 26" preserveAspectRatio="none"><polyline fill="none" stroke="#3fbf6f" stroke-width="1.5" points="0,20 20,16 40,22 60,12 80,18 100,8 120,15 140,6 160,12 180,9 200,17 220,11 240,14"/></svg></div>
+      </div>
+      <div class="gauge">
+        <div class="row"><span class="k">Memory</span><span class="v">68% <span class="delta flat">·</span></span></div>
+        <div class="bar"><div class="fill" style="width:68%;background:#e8c268"></div></div>
+        <div class="spark"><svg viewBox="0 0 240 26" preserveAspectRatio="none"><polyline fill="none" stroke="#e8c268" stroke-width="1.5" points="0,10 30,9 60,10 90,8 120,9 150,8 180,8 210,9 240,8"/></svg></div>
+      </div>
+      <div class="gauge">
+        <div class="row"><span class="k">Disk I/O</span><span class="v">6.4% <span class="delta up">▲</span></span></div>
+        <div class="bar"><div class="fill" style="width:6.4%;background:#3fbf6f"></div></div>
+        <div class="spark"><svg viewBox="0 0 240 26" preserveAspectRatio="none"><polyline fill="none" stroke="#3fbf6f" stroke-width="1.5" points="0,22 30,24 60,20 90,24 120,18 150,23 180,24 210,12 240,20"/></svg></div>
+      </div>
+      <div class="gauge">
+        <div class="row"><span class="k">Network</span><span class="v">1.4 MB/s <span class="delta down">▼</span></span></div>
+        <div class="bar"><div class="fill" style="width:22%;background:#3fbf6f"></div></div>
+        <div class="spark"><svg viewBox="0 0 240 26" preserveAspectRatio="none"><polyline fill="none" stroke="#3fbf6f" stroke-width="1.5" points="0,18 30,10 60,16 90,6 120,14 150,20 180,8 210,16 240,12"/></svg></div>
+      </div>
+      <div class="gauge">
+        <div class="row"><span class="k">Pressure (PSI)</span><span class="v">cpu 0.0 · mem 0.3 · io 1.1</span></div>
+        <div class="spark"><svg viewBox="0 0 240 26" preserveAspectRatio="none"><polyline fill="none" stroke="#888" stroke-width="1.5" points="0,20 40,20 80,19 120,20 160,18 200,20 240,19"/></svg></div>
+      </div>
+    </div>
+    <div class="filter">
+      <div class="entry"><input placeholder="Filter…"></div>
+      <div class="chip on">All</div><div class="chip">Mine</div>
+    </div>
+  </div>
+</div>
+
+<div class="note"><b>Shared rules (all variants):</b> band sits between the page title and the filter row; zone colors follow the r057 thresholds
+(&lt;60 green · 60–84 amber · ≥85 red); delta arrows follow r056 (▲red up · ▼green down · gray flat); values keep tabular figures; each gauge is one
+cairo widget fed by the existing snapshot stream (no new sampling). <b>Variant 3</b> reuses the per-metric rings the Resources page already plans —
+the sparkline is the same deque, rendered small. A fourth micro-variant (numbers only, colored) is the current shipped state — these three replace it.</div>
+</body>
+</html>
