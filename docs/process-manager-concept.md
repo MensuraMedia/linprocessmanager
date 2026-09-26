@@ -16,6 +16,12 @@ scope is process monitoring and control, not system administration.
 Everything the app needs is in `/proc`. v1 has **zero runtime dependencies
 beyond the starter's** (PyGObject, pycairo, Pillow) — no psutil at runtime.
 
+**Binding mandates (r036, see docs/build-principles.md):** fundamentals from
+MensuraMedia/universal-instruction-set v2026.04; modularity and universality
+are product mandates; assets strictly from the local Phosphor master
+`~/projects/assets/icons` (copied in, never referenced); the app is fully
+self-reliant — no web-based resources at build or runtime, ever.
+
 ## 2. Foundation: the starter framework
 
 | Starter element | Use here |
@@ -244,7 +250,9 @@ XDG dir. No secrets, no telemetry, no root.
 
 ## 13. Roadmap
 
-1. Vendor starter into `src/`, wire Processes page shell.
+1. Vendor starter into `src/`, wire Processes page shell; replace the
+   starter's venv/pip `run.sh` with a direct system-python launcher
+   (docs/build-principles.md §4).
 2. `procfs.py` readers + fixture unit tests (incl. `CLK_TCK`, hostile stat lines).
 3. Sampler thread → flat table end-to-end, diff-in-place updates.
 4. Sort, filter, scope chips, selection stability.

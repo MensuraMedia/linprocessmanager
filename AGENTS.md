@@ -17,7 +17,10 @@ universal standards here.
 - Tests: pytest (tests/) — /proc parser fixtures, CPU-rate math, tree builder; run `python3 -m pytest tests/ -q` from repo root (once created)
 
 ## Project rules
-(add project-specific rules as new entries; do not restate global rules)
+- Fundamentals: universal-instruction-set v2026.04 (MensuraMedia; vendored at ~/doctrines/universal-instruction-set) — principles codified in docs/build-principles.md; modularity and universality are product mandates.
+- Assets: icons and graphics strictly from /home/user/projects/assets/icons (Phosphor, MIT), copied into resources/icons/ + manifest entry. Never fetched or referenced from remote sources.
+- Self-reliance: no web-based resources at build or runtime — no network imports under src/ (grep-gated in tests), system packages only, direct python3 launcher (no pip/venv).
+- Core modules (procfs, sampler, actions) stay UI-import-free and headlessly testable.
 
 ## Change tracking
 - changelog.md at repo root — append-only; every completed change gets an entry

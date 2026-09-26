@@ -29,3 +29,11 @@ Record architectural decisions with rationale. Newest at the bottom.
    small-model QA pass on a full-page screenshot reported 'broken process
    icons' on mockup B; upscaled crop probes showed clean glyphs everywhere.
    Verify flag reports against crops before acting on them.
+10. **Binding operator mandates (r036, mid-turn):** (a) fundamentals from
+    MensuraMedia/universal-instruction-set v2026.04 — modularity and
+    universality are PRODUCT mandates, codified in docs/build-principles.md;
+    (b) assets strictly from ~/projects/assets/icons, copied in, never
+    referenced remotely; (c) fully self-reliant app — no web-based resources
+    at build or runtime (grep gate on network imports; system packages only;
+    direct python3 launcher, no pip/venv); (d) build documentation must state
+    all of this — done in docs/build-principles.md.
