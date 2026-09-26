@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup I — Extended Columns</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:Ubuntu, Cantarell, sans-serif; }
+  body { background:#1a1a1a; padding:24px; display:flex; justify-content:center; }
+  .ic { filter:invert(1); opacity:.85; display:inline-block; vertical-align:middle; }
+  .window { width:1400px; max-width:100%; background:#2d2d2d; color:#eee; border:1px solid #000; display:flex; flex-direction:column; }
+  .titlebar { display:flex; align-items:center; justify-content:space-between; background:#222; color:#ccc; font-size:13px; padding:6px 10px; border-bottom:1px solid #1a1a1a; }
+  .winbtns { display:flex; gap:8px; }
+  .winbtns span { width:12px; height:12px; border-radius:50%; background:#555; display:inline-block; }
+  .body { display:flex; min-height:780px; }
+  .sidebar { width:150px; background:#353535; border-right:1px solid #1a1a1a; display:flex; flex-direction:column; }
+  .logo-area { height:150px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border-bottom:1px solid #1a1a1a; }
+  .logo-area .ic { width:64px; height:64px; filter:invert(27%) sepia(96%) saturate(1400%) hue-rotate(197deg) brightness(96%); }
+  .logo-cap { font-size:10px; letter-spacing:1.5px; color:#bbb; }
+  .nav { display:flex; flex-direction:column; }
+  .nav-button { display:flex; align-items:center; gap:8px; padding:8px 12px; font-size:14px; color:#eee; border-bottom:1px solid #1a1a1a; cursor:pointer; }
+  .nav-button.active { background:#0078D7; color:#fff; }
+  .nav-button .ic { width:16px; height:16px; }
+  .spacer { flex:1; }
+  .nav-bottom { border-top:1px solid #1a1a1a; }
+  .content { flex:1; padding:28px 20px 22px 26px; display:flex; flex-direction:column; gap:12px; min-width:0; }
+  .page-title { font-size:22px; font-weight:bold; color:#fff; display:flex; align-items:center; gap:14px; }
+  .column-chooser { margin-left:auto; position:relative; }
+  .cc-btn { display:flex; align-items:center; gap:8px; padding:6px 12px; background:#353535; border:1px solid #1a1a1a; color:#ddd; font-size:12px; cursor:pointer; }
+  .cc-btn .ic { width:14px; height:14px; }
+  .cc-pop { position:absolute; right:0; top:36px; width:270px; background:#353535; border:1px solid #000; box-shadow:0 14px 44px rgba(0,0,0,.7); z-index:9; padding:8px 0; }
+  .cc-head { font-size:10px; letter-spacing:1.2px; color:#888; padding:4px 14px 8px; text-transform:uppercase; }
+  .cc-item { display:flex; align-items:center; gap:10px; padding:5px 14px; font-size:12px; color:#ddd; cursor:pointer; }
+  .cc-item:hover { background:#404040; }
+  .cbox { width:13px; height:13px; border:1px solid #666; display:inline-flex; align-items:center; justify-content:center; flex:none; }
+  .cbox.on { background:#0078D7; border-color:#0078D7; }
+  .cbox .ic { width:10px; height:10px; }
+  .cc-sep { height:1px; background:#262626; margin:6px 0; }
+  .cc-note { font-size:10px; color:#888; padding:4px 14px 0; line-height:1.5; }
+
+  .toolbar { display:flex; gap:8px; align-items:center; }
+  .entry { flex:1; display:flex; align-items:center; gap:10px; background:#262626; border:1px solid #1a1a1a; padding:0 12px; }
+  .entry input { flex:1; background:none; border:none; color:#eee; font-size:14px; outline:none; padding:8px 0; }
+  .chip { display:flex; align-items:center; gap:6px; background:#353535; border:1px solid #1a1a1a; padding:5px 10px; font-size:12px; color:#ddd; cursor:pointer; }
+  .chip.on { background:#0078D7; color:#fff; }
+  .results { flex:1; border:1px solid #1a1a1a; overflow:auto; }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  thead th { text-align:left; color:#aaa; font-weight:normal; padding:7px 10px; border-bottom:1px solid #1a1a1a; background:#313131; position:sticky; top:0; white-space:nowrap; }
+  thead th .ic { width:11px; height:11px; opacity:.6; }
+  tbody td { padding:5px 10px; border-bottom:1px solid #262626; color:#ccc; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  tbody tr:hover { background:#373737; }
+  tbody tr.sel { background:#0078D7; } tbody tr.sel td { color:#fff !important; }
+  td .ic { width:13px; height:13px; margin-right:7px; }
+  .kic { opacity:.45; }
+  .hot { color:#7fd0a0; }
+  tr.sel .hot { color:#cfe6fb; }
+  .dim { color:#777; }
+  .state-S { color:#9cd0ff; font-size:11px; }
+  .state-R { color:#7fd0a0; font-size:11px; font-weight:bold; }
+  .state-D { color:#e8c268; font-weight:bold; font-size:11px; }
+  .state-Z { color:#888; font-size:11px; font-style:italic; }
+  .bar { display:inline-block; height:7px; background:#0078D7; opacity:.75; vertical-align:middle; margin-right:6px; border-radius:1px; }
+  .netcell { color:#c9a8e8; }
+  tr.sel .netcell { color:#e4d3f5; }
+  .statusbar { display:flex; gap:16px; align-items:center; background:#313131; border:1px solid #1a1a1a; padding:7px 12px; font-size:12px; color:#bbb; }
+  .mono { font-variant-numeric:tabular-nums; }
+  .note { font-size:11px; color:#888; line-height:1.55; padding:10px 2px 0; }
+  .note b { color:#ccc; font-weight:normal; }
+</style>
+</head>
+<body>
+<div class="window">
+  <div class="titlebar"><span>linprocman — Processes</span><div class="winbtns"><span></span><span></span><span></span></div></div>
+  <div class="body">
+    <div class="sidebar">
+      <div class="logo-area"><img class="ic" src="../../resources/icons/fill/pulse.svg"><div class="logo-cap">LINPROCMAN</div></div>
+      <div class="nav">
+        <div class="nav-button active"><img class="ic" src="../../resources/icons/regular/list-magnifying-glass.svg">Processes</div>
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/pulse.svg">Resources</div>
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/hard-drive.svg">Disks</div>
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/scroll.svg">Logs</div>
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/info.svg">About</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="nav"><div class="nav-button nav-bottom"><img class="ic" src="../../resources/icons/regular/gear-six.svg">Settings</div></div>
+    </div>
+
+    <div class="content">
+      <div class="page-title">Processes
+        <div class="column-chooser">
+          <div class="cc-btn"><img class="ic" src="../../resources/icons/regular/sliders-horizontal.svg">Columns: 15 of 22 <img class="ic" style="width:11px;height:11px;opacity:.6" src="../../resources/icons/regular/caret-down.svg"></div>
+          <div class="cc-pop">
+            <div class="cc-head">Visible columns — click to toggle</div>
+            <div class="cc-item"><span class="cbox on"><img class="ic" src="../../resources/icons/fill/check.svg"></span>Process</div>
+            <div class="cc-item"><span class="cbox on"><img class="ic" src="../../resources/icons/fill/check.svg"></span>User</div>
+            <div class="cc-item"><span class="cbox on"><img class="ic" src="../../resources/icons/fill/check.svg"></span>CPU %</div>
+            <div class="cc-item"><span class="cbox on"><img class="ic" src="../../resources/icons/fill/check.svg"></span>CPU time</div>
+            <div class="cc-item"><span class="cbox on"><img class="ic" src="../../resources/icons/fill/check.svg"></span>Memory (RSS)</div>
+            <div class="cc-item"><span class="cbox on"><img class="ic" src="../../resources/icons/fill/check.svg"></span>Memory %</div>
+            <div class="cc-item"><span class="cbox on"><img class="ic" src="../../resources/icons/fill/check.svg"></span>Swap</div>
+            <div class="cc-item"><span class="cbox on"><img class="ic" src="../../resources/icons/fill/check.svg"></span>Shared</div>
+            <div class="cc-item"><span class="cbox on"><img class="ic" src="../../resources/icons/fill/check.svg"></span>Disk read / write</div>
+            <div class="cc-item"><span class="cbox on"><img class="ic" src="../../resources/icons/fill/check.svg"></span>Disk %</div>
+            <div class="cc-item"><span class="cbox on"><img class="ic" src="../../resources/icons/fill/check.svg"></span>Network ↓/↑</div>
+            <div class="cc-item"><span class="cbox on"><img class="ic" src="../../resources/icons/fill/check.svg"></span>Nice</div>
+            <div class="cc-item"><span class="cbox on"><img class="ic" src="../../resources/icons/fill/check.svg"></span>PID</div>
+            <div class="cc-item"><span class="cbox on"><img class="ic" src="../../resources/icons/fill/check.svg"></span>State</div>
+            <div class="cc-sep"></div>
+            <div class="cc-item" style="margin-top:6px"><span class="cbox">·</span>Threads</div>
+            <div class="cc-item"><span class="cbox">·</span>Started</div>
+            <div class="cc-item"><span class="cbox">·</span>Command line</div>
+            <div class="cc-item"><span class="cbox">·</span>cgroup unit</div>
+            <div class="cc-item"><span class="cbox">·</span>oom_score</div>
+            <div class="cc-item"><span class="cbox">·</span>CPU affinity</div>
+            <div class="cc-item"><span class="cbox">·</span>I/O priority</div>
+            <div class="cc-note">Per-process network is socket-owner attribution (mapped fd→socket counters, own processes exact · others' best-effort / "—" under Yama). No eBPF, no root. Choices persist to settings.json.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="entry"><img class="ic" style="width:15px;height:15px;opacity:.5" src="../../resources/icons/regular/magnifying-glass.svg"><input placeholder="Filter by name, PID, user, command line  (Ctrl+F)"></div>
+        <div class="chip on">All</div><div class="chip">Mine</div><div class="chip">System</div><div class="chip">Active</div>
+      </div>
+
+      <div class="results">
+        <table>
+          <thead><tr>
+            <th style="width:19%"><img class="ic" src="../../resources/icons/regular/sort-ascending.svg"> Process</th>
+            <th>User</th><th style="text-align:right">CPU %</th><th style="text-align:right">CPU time</th>
+            <th style="text-align:right">Memory</th><th style="text-align:right">Mem %</th><th style="text-align:right">Swap</th>
+            <th style="text-align:right">Disk r / w</th><th style="text-align:right">Disk %</th>
+            <th style="text-align:right" class="netcell">Net ↓ / ↑</th>
+            <th style="text-align:right">Nice</th><th style="text-align:right">PID</th><th>State</th>
+          </tr></thead>
+          <tbody>
+            <tr class="sel">
+              <td><img class="ic" src="../../resources/icons/regular/terminal-window.svg">firefox <span class="dim" style="font-size:10px">firefox.scope</span></td>
+              <td>user</td><td class="hot">14.2</td><td>14:02</td><td>1.2 GB</td><td>7.6</td><td>12.4 MB</td>
+              <td>84 MB / 12 MB</td><td>2.1</td><td class="netcell">1.2 MB/s / 240 KB/s</td>
+              <td>0</td><td>4182</td><td class="state-R">R</td>
+            </tr>
+            <tr>
+              <td><img class="ic" src="../../resources/icons/regular/terminal-window.svg">Web Content <span class="dim" style="font-size:10px">↳ firefox</span></td>
+              <td>user</td><td class="hot">7.9</td><td>06:41</td><td>612 MB</td><td>3.8</td><td>4.1 MB</td>
+              <td>31 MB / 4 MB</td><td>0.8</td><td class="netcell">980 KB/s / 96 KB/s</td>
+              <td>0</td><td>4311</td><td class="state-S">S</td>
+            </tr>
+            <tr>
+              <td><img class="ic" src="../../resources/icons/regular/terminal-window.svg">cinnamon</td>
+              <td>user</td><td class="hot">4.8</td><td>51:22</td><td>412 MB</td><td>2.6</td><td>0</td>
+              <td>0.9 MB / 12 MB</td><td>0.1</td><td class="netcell">12 KB/s / 8 KB/s</td>
+              <td>0</td><td>1104</td><td class="state-S">S</td>
+            </tr>
+            <tr>
+              <td><img class="ic" src="../../resources/icons/regular/terminal-window.svg">tracker-miner-fs</td>
+              <td>user</td><td>0.9</td><td>03:18</td><td>28.4 MB</td><td>0.2</td><td>0</td>
+              <td>140 MB / 2.2 MB</td><td class="hot">6.4</td><td class="netcell dim">— / —</td>
+              <td>0</td><td>1206</td><td class="state-D">D</td>
+            </tr>
+            <tr>
+              <td><img class="ic" src="../../resources/icons/regular/terminal-window.svg">cinnamon <span class="dim" style="font-size:10px">session-c2</span></td>
+              <td>user</td><td>0.6</td><td>00:48</td><td>43.9 MB</td><td>0.3</td><td>0</td>
+              <td>0.1 MB / 0.4 MB</td><td>0.0</td><td class="netcell dim">— / —</td>
+              <td>0</td><td>343978</td><td class="state-S">S</td>
+            </tr>
+            <tr>
+              <td><img class="ic" src="../../resources/icons/regular/terminal-window.svg">pipewire</td>
+              <td>user</td><td>0.6</td><td>00:31</td><td>12.8 MB</td><td>0.1</td><td>0</td>
+              <td>0.2 MB / 0.1 MB</td><td>0.0</td><td class="netcell dim">— / —</td>
+              <td>-11</td><td>1138</td><td class="state-S">S</td>
+            </tr>
+            <tr>
+              <td><img class="ic kic" src="../../resources/icons/regular/lock.svg">Xorg</td>
+              <td>root</td><td>2.1</td><td>1:12:04</td><td>86.7 MB</td><td>0.5</td><td>0</td>
+              <td class="dim">— / —</td><td class="dim">—</td><td class="netcell dim">— / —</td>
+              <td>0</td><td>812</td><td class="state-S">S</td>
+            </tr>
+            <tr>
+              <td><img class="ic kic" src="../../resources/icons/regular/warning.svg">sd-pam <span class="dim">(defunct)</span></td>
+              <td>user</td><td>0.0</td><td>00:00</td><td>0</td><td>0.0</td><td>0</td>
+              <td class="dim">— / —</td><td class="dim">—</td><td class="netcell dim">— / —</td>
+              <td>0</td><td>3997</td><td class="state-Z">Z</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="statusbar">
+        <span class="mono">536</span> processes · <span class="mono">226</span> mine · CPU <span class="mono">12%</span> · net ↓<span class="mono">1.2</span> MB/s ↑<span class="mono">340</span> KB/s
+        <span style="margin-left:auto" class="mono">updated 18:21:23</span>
+      </div>
+      <div class="note"><b>New columns in this mockup:</b> CPU time · Mem % (bar) · Disk % (bar) · per-process Network ↓/↑ with owner attribution —
+      own processes exact via /proc/&lt;pid&gt;/fd socket-inode matching against /proc/net; others best-effort under Yama (dim "—", never a guess).
+      Column chooser (14 visible of 21) with persistence; the six currently-hidden columns (threads, started, cmdline, unit, oom_score, affinity) land with Phases 4–6.</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

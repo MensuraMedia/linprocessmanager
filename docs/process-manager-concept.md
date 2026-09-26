@@ -41,6 +41,7 @@ self-reliant — no web-based resources at build or runtime, ever.
 | [modules/disks-filesystems.md](modules/disks-filesystems.md) | `page_disks.py` | per-device I/O rates, per-mount usage |
 | [modules/logs-journal.md](modules/logs-journal.md) | `manager_logs.py` + `page_logs.py` | journal engine, sidebar submenu, search, row context menu, saved views |
 | [modules/log-frequency.md](modules/log-frequency.md) | `manager_frequency.py` | right-click Frequency: pattern histogram, incident bands, related events, export |
+| [modules/process-preview.md](modules/process-preview.md) | preview pane + columns + menu | extended 22-column chooser, process preview, context menu, per-process net attribution |
 | [modules/sysfs-data.md](modules/sysfs-data.md) | `sysfs.py` | hwmon temperatures, cpufreq, AMD GPU chip |
 
 Module boundaries are load-bearing: only `procfs.py` and `sysfs.py` read
@@ -192,5 +193,7 @@ chip (operator gate), per-cgroup aggregate rows (operator gate).
 Promoted into v1 modules by the r042 collaborator review: oom_score in the
 details pane, fan chips, D-state badge, spawn/exit flash, details
 sparkline, PSI memory banner, process-table saved presets, journal-for-unit
-from a process row. Per-process network columns: rejected — needs
-eBPF/root, violates the no-elevation mandate.
+from a process row. Per-process network: the r053 socket-owner-attribution design
+(modules/process-preview.md §4) replaces the blunt rejection — exact for
+own processes, proportional attribution, "—" under Yama, still no
+eBPF/root.

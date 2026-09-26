@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup J — Process Preview Pane + Context Menu</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:Ubuntu, Cantarell, sans-serif; }
+  body { background:#1a1a1a; padding:24px; display:flex; justify-content:center; }
+  .ic { filter:invert(1); opacity:.85; display:inline-block; vertical-align:middle; }
+  .window { width:1400px; max-width:100%; background:#2d2d2d; color:#eee; border:1px solid #000; display:flex; flex-direction:column; }
+  .titlebar { display:flex; align-items:center; justify-content:space-between; background:#222; color:#ccc; font-size:13px; padding:6px 10px; border-bottom:1px solid #1a1a1a; }
+  .winbtns { display:flex; gap:8px; }
+  .winbtns span { width:12px; height:12px; border-radius:50%; background:#555; display:inline-block; }
+  .body { display:flex; min-height:800px; }
+  .sidebar { width:150px; background:#353535; border-right:1px solid #1a1a1a; display:flex; flex-direction:column; }
+  .logo-area { height:150px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border-bottom:1px solid #1a1a1a; }
+  .logo-area .ic { width:64px; height:64px; filter:invert(27%) sepia(96%) saturate(1400%) hue-rotate(197deg) brightness(96%); }
+  .logo-cap { font-size:10px; letter-spacing:1.5px; color:#bbb; }
+  .nav-button { display:flex; align-items:center; gap:8px; padding:8px 12px; font-size:14px; color:#eee; border-bottom:1px solid #1a1a1a; cursor:pointer; }
+  .nav-button.active { background:#0078D7; color:#fff; }
+  .nav-button .ic { width:16px; height:16px; }
+  .spacer { flex:1; }
+  .nav-bottom { border-top:1px solid #1a1a1a; }
+
+  .main { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .content { flex:1; padding:24px 18px 18px 24px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+  .searchrow { display:flex; gap:8px; }
+  .entry { flex:1; display:flex; align-items:center; gap:10px; background:#262626; border:1px solid #1a1a1a; padding:0 12px; }
+  .entry input { flex:1; background:none; border:none; color:#eee; font-size:14px; outline:none; padding:8px 0; }
+  .btn { display:flex; align-items:center; width:36px; justify-content:center; background:#353535; border:1px solid #1a1a1a; cursor:pointer; }
+  .btn .ic { width:15px; height:15px; }
+
+  .results { flex:1; border:1px solid #1a1a1a; overflow:auto; }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  thead th { text-align:left; color:#aaa; font-weight:normal; padding:7px 10px; border-bottom:1px solid #1a1a1a; background:#313131; position:sticky; top:0; }
+  tbody td { padding:5px 10px; border-bottom:1px solid #262626; color:#ccc; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  tbody tr:hover { background:#373737; }
+  tbody tr.sel { background:#0078D7; } tbody tr.sel td { color:#fff !important; }
+  td .ic { width:13px; height:13px; margin-right:7px; }
+  .hot { color:#7fd0a0; } tr.sel .hot { color:#cfe6fb; }
+  .ctx-open { position:relative; outline:1px dashed #9cd0ff; outline-offset:-1px; }
+
+  .ctx { position:absolute; z-index:20; top:96px; left:40px; width:330px; background:#353535; border:1px solid #000; box-shadow:0 14px 44px rgba(0,0,0,.7); }
+  .ctx-title { font-size:10px; color:#888; letter-spacing:.8px; padding:8px 12px 6px; border-bottom:1px solid #262626; }
+  .ctx-item { display:flex; align-items:center; gap:10px; padding:7px 12px; font-size:12.5px; color:#ddd; cursor:pointer; border-bottom:1px solid #2b2b2b; }
+  .ctx-item:hover { background:#0078D7; color:#fff; }
+  .ctx-item .ic { width:14px; height:14px; flex:none; }
+  .ctx-item .sub { margin-left:auto; color:#777; font-size:10px; text-align:right; }
+  .ctx-item:hover .sub { color:#cfe6fb; }
+  .ctx-item.danger { color:#e88; }
+  .ctx-item.danger:hover { background:#8a2e2e; color:#fff; }
+  .ctx-sep { height:1px; background:#262626; }
+
+  /* preview pane */
+  .preview { width:330px; flex:none; border-left:1px solid #1a1a1a; background:#303030; display:flex; flex-direction:column; overflow:hidden; }
+  .pv-head { display:flex; align-items:center; gap:8px; padding:9px 12px; border-bottom:1px solid #1a1a1a; font-size:12px; color:#999; }
+  .pv-head .ic { width:14px; height:14px; }
+  .pv-head .fold { margin-left:auto; opacity:.5; cursor:pointer; }
+  .pv-proc { display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px 12px 10px; }
+  .pv-proc img.big { width:46px; height:46px; filter:invert(1); opacity:.9; }
+  .pv-proc .nm { font-size:16px; color:#fff; }
+  .pv-proc .exe { font-size:10.5px; color:#888; font-family:'Ubuntu Mono',monospace; max-width:290px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pv-proc .badges { display:flex; gap:6px; }
+  .badge { font-size:9.5px; border:1px solid #555; border-radius:8px; padding:1px 8px; color:#aaa; }
+  .badge.blue { border-color:#0078D7; color:#9cd0ff; }
+  .badge.red { border-color:#8a4040; color:#e88; }
+  .sec { padding:8px 14px 3px; color:#0078D7; font-size:9.5px; letter-spacing:1.2px; text-transform:uppercase; }
+  .props { padding:0 14px; font-size:11.5px; }
+  .prow { display:flex; justify-content:space-between; gap:8px; padding:3.5px 0; border-bottom:1px solid #262626; color:#ccc; }
+  .prow span:first-child { color:#888; flex:none; }
+  .prow span:last-child { text-align:right; word-break:break-all; font-variant-numeric:tabular-nums; }
+  .prow .lk { color:#888; }
+  .ancestry { padding:2px 14px 4px; font-size:11px; font-family:'Ubuntu Mono',monospace; line-height:1.75; color:#bbb; }
+  .anc { cursor:pointer; }
+  .anc:hover { color:#9cd0ff; }
+  .anc.cur { color:#fff; font-weight:bold; }
+  .anc-kids { color:#888; }
+  .kpi { display:flex; gap:8px; padding:4px 14px 2px; }
+  .kpi-cell { flex:1; background:#262626; border:1px solid #1a1a1a; padding:6px 4px; text-align:center; }
+  .kpi-cell .v { font-size:14px; color:#fff; font-variant-numeric:tabular-nums; }
+  .kpi-cell.hot .v { color:#7fd0a0; }
+  .kpi-cell .k { font-size:8.5px; color:#888; letter-spacing:.6px; text-transform:uppercase; margin-top:2px; }
+  .spark { margin:6px 14px; background:#262626; border:1px solid #1a1a1a; padding:6px 8px 2px; }
+  .spark .lab { font-size:9px; color:#888; }
+  .children { padding:2px 14px 6px; font-size:11px; }
+  .child-row { display:flex; align-items:center; gap:8px; padding:3.5px 6px; cursor:pointer; border-radius:2px; }
+  .child-row:hover { background:#373737; }
+  .child-row .cn { flex:1; }
+  .child-row .cc { color:#7fd0a0; font-variant-numeric:tabular-nums; }
+  .child-row .cm { color:#888; font-variant-numeric:tabular-nums; }
+  .dep { margin:6px 14px 10px; background:#262626; border:1px solid #1a1a1a; padding:8px 10px; font-size:10.5px; color:#9c9c9c; line-height:1.6; font-family:'Ubuntu Mono',monospace; }
+  .dep b { color:#9cd0ff; font-weight:normal; }
+  .pv-actions { margin-top:auto; display:flex; border-top:1px solid #1a1a1a; }
+  .pv-actions .act { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:9px 0 10px; font-size:9.5px; color:#bbb; cursor:pointer; }
+  .pv-actions .act:hover { background:#373737; color:#fff; }
+  .pv-actions .act.danger:hover { background:#5c2626; }
+  .pv-actions .act .ic { width:15px; height:15px; }
+  .note { font-size:11px; color:#888; line-height:1.55; padding:10px 2px 0; }
+  .note b { color:#ccc; font-weight:normal; }
+  .statusbar { background:#313131; border:1px solid #1a1a1a; padding:7px 12px; font-size:12px; color:#bbb; margin-top:10px; }
+</style>
+</head>
+<body>
+<div class="window">
+  <div class="titlebar"><span>linprocman — Processes · preview: firefox (4182)</span><div class="winbtns"><span></span><span></span><span></span></div></div>
+  <div class="body">
+    <div class="sidebar">
+      <div class="logo-area"><img class="ic" src="../../resources/icons/fill/pulse.svg"><div class="logo-cap">LINPROCMAN</div></div>
+      <div class="nav">
+        <div class="nav-button active"><img class="ic" src="../../resources/icons/regular/list-magnifying-glass.svg">Processes</div>
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/pulse.svg">Resources</div>
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/hard-drive.svg">Disks</div>
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/scroll.svg">Logs</div>
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/info.svg">About</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="nav"><div class="nav-button nav-bottom"><img class="ic" src="../../resources/icons/regular/gear-six.svg">Settings</div></div>
+    </div>
+
+    <div class="main">
+      <div class="content">
+        <div class="searchrow">
+          <div class="entry"><img class="ic" style="width:15px;height:15px;opacity:.5" src="../../resources/icons/regular/magnifying-glass.svg"><input placeholder="Filter (Ctrl+F)"></div>
+          <div class="btn" title="Refresh now"><img class="ic" src="../../resources/icons/regular/arrow-clockwise.svg"></div>
+          <div class="btn" title="Pause"><img class="ic" src="../../resources/icons/regular/pause-circle.svg"></div>
+        </div>
+        <div class="results">
+          <table>
+            <thead><tr><th style="width:34%">Process</th><th>User</th><th style="text-align:right">CPU %</th><th style="text-align:right">Memory</th><th style="text-align:right">PID</th><th>State</th></tr></thead>
+            <tbody>
+              <tr><td><img class="ic" src="../../resources/icons/regular/terminal-window.svg">systemd</td><td>root</td><td>0.0</td><td>9.4 MB</td><td>1</td><td>S</td></tr>
+              <tr><td><img class="ic" src="../../resources/icons/regular/terminal-window.svg">cinnamon</td><td>user</td><td class="hot">4.8</td><td>412 MB</td><td>1104</td><td>S</td></tr>
+              <tr><td><img class="ic" src="../../resources/icons/regular/terminal-window.svg">python3 <span class="ic kic" style="opacity:.3" src="../../resources/icons/regular/lock.svg">— linprocman</span></td><td>user</td><td>1.1</td><td>42.6 MB</td><td>5120</td><td>S</td></tr>
+              <tr class="sel ctx-open"><td><img class="ic" src="../../resources/icons/regular/terminal-window.svg">firefox</td><td>user</td><td class="hot">14.2</td><td>1.2 GB</td><td>4182</td><td>R</td></tr>
+              <tr><td><img class="ic" src="../../resources/icons/regular/terminal-window.svg">Web Content <span class="dim" style="font-size:10px">↳ firefox</span></td><td>user</td><td class="hot">7.9</td><td>612 MB</td><td>4311</td><td>S</td></tr>
+              <tr><td><img class="ic" src="../../resources/icons/regular/terminal-window.svg">pipewire</td><td>user</td><td>0.6</td><td>12.8 MB</td><td>1138</td><td>S</td></tr>
+            </tbody>
+          </table>
+          <div class="ctx">
+            <div class="ctx-title">firefox — PID 4182 · user</div>
+            <div class="ctx-item"><img class="ic" src="../../resources/icons/regular/list-magnifying-glass.svg">Show in tree</div>
+            <div class="ctx-item"><img class="ic" src="../../resources/icons/regular/copy.svg">Copy PID / command line</div>
+            <div class="ctx-sep"></div>
+            <div class="ctx-item"><img class="ic" src="../../resources/icons/regular/pause-circle.svg">Stop (SIGSTOP)</div>
+            <div class="ctx-item"><img class="ic" src="../../resources/icons/regular/play.svg">Continue (SIGCONT)</div>
+            <div class="ctx-item"><img class="ic" src="../../resources/icons/regular/x-circle.svg">End (SIGTERM)</div>
+            <div class="ctx-item danger"><img class="ic" src="../../resources/icons/regular/prohibit.svg">Kill (SIGKILL)</div>
+            <div class="ctx-item"><img class="ic" src="../../resources/icons/regular/lightning.svg">Send signal…<span class="sub">any</span></div>
+            <div class="ctx-sep"></div>
+            <div class="ctx-item"><img class="ic" src="../../resources/icons/regular/sliders-horizontal.svg">Change priority (renice)…</div>
+            <div class="ctx-item"><img class="ic" src="../../resources/icons/regular/cpu.svg">Set CPU affinity…</div>
+            <div class="ctx-sep"></div>
+            <div class="ctx-item hot"><img class="ic" src="../../resources/icons/regular/chart-bar.svg">Frequency…<span class="sub">resource pattern</span></div>
+            <div class="ctx-item"><img class="ic" src="../../resources/icons/regular/scroll.svg">View journal for unit…<span class="sub">firefox.scope</span></div>
+            <div class="ctx-item"><img class="ic" src="../../resources/icons/regular/terminal-window.svg">Open executable location</div>
+          </div>
+        </div>
+        <div class="note"><b>Context menu</b> — the full action surface: lifecycle (stop/continue/end/kill/custom signal), scheduling (renice, affinity),
+        navigation (show in tree), and cross-links (Frequency, journal-for-unit, exe location). All items act on (pid, starttime) with confirm-where-destructive.</div>
+        <div class="statusbar"><span class="mono">536</span> processes · CPU <span class="mono">12%</span><span style="margin-left:auto" class="mono">updated 18:21:23</span></div>
+      </div>
+
+      <!-- right preview pane -->
+      <div class="preview">
+        <div class="pv-head"><img class="ic" src="../../resources/icons/regular/eye.svg">Process preview<span class="fold"><img class="ic" src="../../resources/icons/regular/caret-right.svg"></span></div>
+        <div class="pv-proc">
+          <img class="big" src="../../resources/icons/fill/cpu.svg">
+          <div class="nm">firefox</div>
+          <div class="exe">/usr/lib/firefox/firefox</div>
+          <div class="badges"><span class="badge blue">firefox.scope</span><span class="badge">4 threads·96</span><span class="badge red">R running</span></div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-cell hot"><div class="v">14.2%</div><div class="k">cpu</div></div>
+          <div class="kpi-cell"><div class="v">1.2 GB</div><div class="k">rss</div></div>
+          <div class="kpi-cell"><div class="v">12.4 MB</div><div class="k">swap</div></div>
+          <div class="kpi-cell"><div class="v">1.4 MB/s</div><div class="k">net ∑tree</div></div>
+        </div>
+        <div class="spark"><div class="lab">cpu% · last 60 s</div>
+          <svg viewBox="0 0 280 34" width="100%" height="34" preserveAspectRatio="none">
+            <polyline fill="none" stroke="#0078D7" stroke-width="1.5" points="0,26 20,22 40,28 60,14 80,20 100,10 120,18 140,8 160,16 180,6 200,14 220,10 240,20 260,12 280,18"/>
+          </svg>
+        </div>
+        <div class="sec">Ancestry — click to jump</div>
+        <div class="ancestry">
+          <div class="anc">systemd (1)</div>
+          <div class="anc">&nbsp;└ systemd --user (3901)</div>
+          <div class="anc">&nbsp;&nbsp;&nbsp;└ firefox <span class="anc cur">(4182) ← selected</span></div>
+          <div class="anc-kids">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├ Web Content (4311) · 7.9% · 612 MB</div>
+          <div class="anc-kids">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├ WebExtensions (4302) · 0.4% · 204 MB</div>
+          <div class="anc-kids">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└ RDD Process (4288) · 0.2% · 88 MB</div>
+        </div>
+        <div class="sec">Resource consumption</div>
+        <div class="props">
+          <div class="prow"><span>CPU time / started</span><span>14:02 · 3:12 h ago</span></div>
+          <div class="prow"><span>RSS / shared / virt</span><span>1.2 GB / 210 MB / 6.8 GB</span></div>
+          <div class="prow"><span>PSS (selected read)</span><span>984 MB</span></div>
+          <div class="prow"><span>Disk read / write</span><span>84 MB / 12 MB</span></div>
+          <div class="prow"><span>Net ↓ / ↑ (self + tree)</span><span>1.2 MB/s / 240 KB/s</span></div>
+          <div class="prow"><span>Nice / oom_score</span><span>0 / 342</span></div>
+        </div>
+        <div class="sec">Networking — attribution</div>
+        <div class="props">
+          <div class="prow"><span>firefox (self)</span><span>410 KB/s ↓</span></div>
+          <div class="prow"><span>Web Content</span><span>980 KB/s ↓</span></div>
+          <div class="prow"><span>WebExtensions</span><span class="lk"><img class="ic" style="width:10px;height:10px" src="../../resources/icons/regular/lock.svg"> restricted</span></div>
+          <div class="prow"><span>combined tree</span><span>1.2 MB/s ↓ · 240 KB/s ↑</span></div>
+        </div>
+        <div class="sec">Dependencies</div>
+        <div class="dep">links <b>libxul.so</b>, <b>libgtk-3.so</b>, <b>libdbus-glib</b>…<br>uses sockets: tcp 443 ×8 · udp 53<br>netns: host · cgroup: firefox.scope</div>
+        <div class="pv-actions">
+          <div class="act danger"><img class="ic" src="../../resources/icons/regular/x-circle.svg">End</div>
+          <div class="act danger"><img class="ic" src="../../resources/icons/regular/prohibit.svg">Kill</div>
+          <div class="act"><img class="ic" src="../../resources/icons/regular/pause-circle.svg">Stop</div>
+          <div class="act"><img class="ic" src="../../resources/icons/regular/sliders-horizontal.svg">Renice</div>
+          <div class="act"><img class="ic" src="../../resources/icons/regular/scroll.svg">Journal</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
