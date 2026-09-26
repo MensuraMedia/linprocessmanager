@@ -183,6 +183,11 @@ def _under(rel, prefix):
 
 # Toolkit-seam file anchors (upgrade-architecture.md §3 table).
 COMPAT_DIR = "src/ui/compat"
+
+
+def _is_ui_tree(rel):
+    """GTK can only be referenced under src/ui/ or src/pages/ (raw-import ban)."""
+    return rel.startswith("src/ui/") or rel.startswith("src/pages/")
 GTK_ENV_REL = "src/ui/compat/gtk_env.py"
 LAYOUT_REL = "src/ui/compat/layout.py"
 DIALOGS_REL = "src/ui/compat/dialogs.py"
@@ -258,6 +263,11 @@ def test_gtk_env_is_the_gi_entry_point():
 # 'key-press-event')`` outside events.py; ``connect('draw')`` outside
 # charts.py; and Gtk.{Dialog,MessageDialog,RadioButton,ShortcutController}
 # anywhere.
+#
+# The GTK-container bans (add/set_border_width/destroy) apply only to the
+# UI trees (src/ui/, src/pages/) — the raw-import ban already proves
+# src/modules/ holds no GTK, and plain-Python set.add()/dict ops there are
+# legitimate (r048 tuning: manager_sampler._rollup_targets.add).
 # ---------------------------------------------------------------------------
 
 BANNED_CONNECT_SIGNALS = {"button-press-event", "key-press-event"}
@@ -273,11 +283,9 @@ def _banned_api_violations():
                 attr = node.func.attr
                 if attr in ("pack_start", "pack_end") and rel != LAYOUT_REL:
                     offenders.append("%s: %s()" % (rel, attr))
-                elif attr == "add" and not _under(rel, COMPAT_DIR):
-                    offenders.append("%s: container.add()" % rel)
-                elif attr == "set_border_width" and not _under(rel, COMPAT_DIR):
-                    offenders.append("%s: set_border_width()" % rel)
-                elif attr == "destroy" and rel != DIALOGS_REL:
+                elif attr in ("add", "set_border_width") and _is_ui_tree(rel) and not _under(rel, COMPAT_DIR):
+                    offenders.append("%s: %s()" % (rel, attr))
+                elif attr == "destroy" and _is_ui_tree(rel) and rel != DIALOGS_REL:
                     offenders.append("%s: destroy()" % rel)
                 elif (attr == "show_all"
                       and rel != MAIN_REL and not _under(rel, COMPAT_DIR)):

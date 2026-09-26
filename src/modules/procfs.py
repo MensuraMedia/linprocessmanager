@@ -377,6 +377,28 @@ def starttime_to_wall(starttime_jiffies, btime):
 
 
 # ---------------------------------------------------------------------------
+# PID enumeration.
+# ---------------------------------------------------------------------------
+
+def iter_pids(proc_root=PROC):
+    """Yield the integer PIDs present under ``proc_root``.
+
+    Numeric directory entries only (``/proc`` also holds ``self``, ``stat``,
+    ``meminfo`` and friends). The sampler owns timing and identity but must not
+    list ``/proc`` itself — the boundary rule keeps every kernel read in this
+    module — so PID enumeration lives here. An unreadable/absent ``proc_root``
+    yields nothing rather than raising (universality: degrade, never crash).
+    """
+    try:
+        names = os.listdir(proc_root)
+    except (FileNotFoundError, PermissionError, NotADirectoryError):
+        return
+    for name in names:
+        if name.isdigit():
+            yield int(name)
+
+
+# ---------------------------------------------------------------------------
 # System-wide readers (owned here, fixture-tested).
 # ---------------------------------------------------------------------------
 
