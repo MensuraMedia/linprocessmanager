@@ -141,3 +141,12 @@ Record architectural decisions with rationale. Newest at the bottom.
     EVERY dispatch needs its own --permission-mode acceptEdits (missing
     it = silent write-denials, executor reports honestly); dead-code
     deletion stays ZCode's (git rm -f for executor-touched files).
+21. **Phase 2b + schema gate live-fire (r048).** Component testing =
+   live cross-check vs psutil (dev-only) + suite + gates. Task 003 merged.
+   The schema-freeze gate worked exactly as designed: C-review rejected
+   the record set (mem_swap missing, read-then-dropped) before 004 could
+   build on the broken seam; fix was reviewer-specified and mechanical →
+   ZCode applied as sign-off remediation (precedent: reviewer-specified
+   mechanical fixes may be applied by ZCode, recorded as such). Gate
+   tuning precedent: banned-API sweep scoped to UI trees (raw-import ban
+   proves modules GTK-free; plain set.add is legitimate there).
