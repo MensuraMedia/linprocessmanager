@@ -4,3 +4,8 @@
 *.tar.gz
 backups/
 backup-log.md
+__pycache__/
+*.pyc
+.v2c/
+.video_agent/
+.pytest_cache/
