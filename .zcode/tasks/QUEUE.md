@@ -25,7 +25,7 @@ system python3 — no network for app code, ever)
 | 001 | data core (procfs/sysfs, launcher, nav shell) | 1 | Z contract/stage → C execute → Z verify | **merged 7e9e05a** |
 | 002 | compat module + gate tiers + Application lifecycle + riders | 2a | Z contract → C execute → Z verify | **merged 2520d31** |
 | 003 | sampler pipeline (logic-only: snapshot, rates, watchdog, queue) | 2b | Z+C co-draft → C execute → Z verify + C-review (logic-heavy) + **schema-freeze sign-off before 004** | **merged 2381dda + mem_swap fix; schema signed at 20 fields** |
-| 004 | flat table UI (diff-in-place, sort/filter, selection, VmSwap, keyboard, row budget) + settings skeleton | 2c | Z contract → C execute → Z verify (pixels) | queued |
+| 004 | flat table UI (diff-in-place, sort/filter, selection, VmSwap, keyboard, row budget) + settings skeleton | 2c | Z contract → C execute → Z verify (pixels) | **merged ad3279d — LIVE TABLE pixel-verified** |
 | 005 | phase-2 close: independent C review + red-team sweep + OP gate + backup | 2-close | C-review + Z agents → OP | queued |
 | 006–009 | actions & safety / tree & details / resources+sensors / disks | 3–6 | same pattern per module doc | queued |
 | 010+ | logs engine + views + frequency (three tasks: engine, views+menu, frequency) | 7 | same pattern; argv-contract tests first | queued |

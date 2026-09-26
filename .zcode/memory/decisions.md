@@ -150,3 +150,12 @@ Record architectural decisions with rationale. Newest at the bottom.
    mechanical fixes may be applied by ZCode, recorded as such). Gate
    tuning precedent: banned-API sweep scoped to UI trees (raw-import ban
    proves modules GTK-free; plain set.add is legitimate there).
+22. **Phase 2c + documentary close (r052).** Live table shipped and
+    pixel-verified (real rows on :0). Two verification-caught bugs fixed by
+    ZCode per r048 precedent: dual-layout import shim (app vs test path —
+    executor cannot run the app, so startup crashes are ZCode's catch),
+    clamp semantics (invalid→default, near-miss→clamp — the test encoded
+    finer rules than the doc; doc refined). Documentary set complete:
+    README/LICENSE/DEVELOPMENT; corpus review keeps docs honest vs code
+    (tuple-keyed procs, missing sensors key, unwired sysfs — all fixed).
+    Phase-2 close (005) = independent review + operator gate + backup.
