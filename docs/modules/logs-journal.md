@@ -96,7 +96,10 @@ This machine (verified 2026-09-26): user in `adm`, journalctl and
 user outside `adm`/`systemd-journal` sees only their own user journal, and
 `dmesg_restrict=1` blocks the kernel fallback. Restricted sources render a
 `lock` row with the exact remedy text ("add user to adm or systemd-journal")
-— never a sudo/pkexec hint, per build-principles §5. Volatile-only journals
+— never a sudo/pkexec hint, per build-principles §5. **Empty ≠ locked
+(r042):** a source that probes OK but returns zero entries shows "no
+entries match / none in retention" — it must never tell a user who already
+has access to go join a group. Volatile-only journals
 (no /var/log/journal) lose history on reboot — stated in the empty view.
 
 ## Tests

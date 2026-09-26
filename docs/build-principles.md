@@ -47,9 +47,10 @@ Modularity and universality are **product mandates**, not preferences:
 
 - Icons and graphic assets come **strictly from the local master library**
   `/home/user/projects/assets/icons` (Phosphor, MIT) and are **copied** into
-  `resources/icons/{regular,fill}` (44 + 10 icons; `manifest.txt` maps every
-  icon to its use). No icon is fetched, linked, or loaded from any remote
-  source, ever.
+  `resources/icons/{regular,fill}` (authoritative count on the manifest
+  footer — currently 57 + 12 files; the manifest is the single source of
+  truth and all docs reconcile to it). No icon is fetched, linked, or loaded
+  from any remote source, ever.
 - Fonts are the system's own (Ubuntu/Cantarell on Mint) — no web fonts, no
   bundled font downloads.
 - Documentation (including mockups) references only files inside this

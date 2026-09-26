@@ -41,6 +41,7 @@ notice, never a crash.
 | `window` | {w, h, maximized} | 1200×800 |
 | `logs.saved_views` | list of view dicts | [] |
 | `logs.flags` | list of {cursor, label} | [] |
+| `table.saved_presets` | list of {name, query, scope, columns, sort} | [] (r042 — Saved Views model mirrored for the process table) |
 
 ## Rules
 

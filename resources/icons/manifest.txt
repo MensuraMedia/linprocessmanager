@@ -78,4 +78,4 @@ image                 chart image export affordance (docs)
 floppy-disk           Save chart as PNG
 cursor-click          right-click context affordance (docs/mockups)
 
-68 icons total: 57 regular + 12 fill.
+69 icon files total: 57 regular + 12 fill (60 distinct names — authoritative count, r042; all docs reconcile to these numbers).

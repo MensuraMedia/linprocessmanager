@@ -29,15 +29,24 @@ Provides:
 
 ## Charts
 
-- **CPU — stacked per-core areas** (gnome-system-monitor style): cumulative
-  polygons bottom-up, core colors `#0078D7 → #2ea6ff → #00b3a4 → #7c5cff`
-  derived from the active starter theme so all 7 themes work with no
-  per-theme assets. Gridlines at 25/50/75%.
+- **CPU — stacked whole-machine-normalized areas (r042 fix):** each core's
+  contribution is normalized to total capacity (core_cpu% / ncpu), so the
+  stack sums to at most 100% of the whole machine on a fixed 0–100% axis —
+  stacking per-core-normalized values (N × 100%) was mathematically
+  impossible. Series count spans `ncpu` at runtime: the palette is
+  **generated from the active theme accent by shade-stepping** (accent →
+  progressively lighter/analogous stops), never a fixed 4-color list — all
+  7 starter themes and any core count work with zero per-theme assets.
+  Gridlines at 25/50/75%. (Mockup C's stacked look remains the target
+  visual; its "34% of 4 cores" label already matches this normalization.)
 - **Memory — area + line:** used (area) with swap (dashed line), labeled
   against MemTotal.
 - **Network — two lines with soft fills:** rx/tx rates (reset-aware).
 - **PSI — numeric chips** (`gauge`): some avg10/avg60/avg300 for cpu; some
-  and full for memory and io. Numbers, not charts.
+  and full for memory and io. Numbers, not charts. **Memory-pressure banner
+  (r042):** a subtle banner on the Processes page when memory `some avg10`
+  exceeds a threshold (default 30%) — the moment a user actually reaches
+  for a process manager.
 - **Sensors — chips only in v1** (`waveform`): hwmon temperatures, CPU
   frequency min/avg/max, AMD gpu_busy_percent when present; chips hide
   themselves when the source is absent.

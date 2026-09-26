@@ -2,7 +2,7 @@
 
 Status: draft for operator review (r036–r037, 2026-09-26)
 Base framework: mikesdatawork/gtk-python-dashboard-starter (GTK3 + Python, to be vendored into `src/`)
-Icon set: Phosphor (MIT), master library `~/projects/assets/icons`, project subset in `resources/icons/` (54 icons, manifest inside)
+Icon set: Phosphor (MIT), master library `~/projects/assets/icons`, project subset in `resources/icons/` (69 files: 57 regular + 12 fill, 60 names, manifest inside)
 Build rules: [build-principles.md](build-principles.md) — binding
 
 Modular docs: each area of logic lives in its own document under
@@ -105,7 +105,9 @@ column; submenu rows indent one level from the parent's text, never from the
 icon; width expansion (150 → 170/190px) is studied as a concept — the
 starter's `config_layout.py` makes it a constant change if adopted.
 
-Open decisions for the operator:
+Open decisions for the operator (module docs carry **provisional**
+defaults until you freeze them — a freeze lands here and the module docs in
+one change):
 1. Is A (sidebar + details fold-out) the primary direction, as it was for linfilesearch?
 2. CPU % default: per-core normalized (100% = one core) or whole-machine?
 3. Default refresh 2 s table / 1 s graphs — aggressive enough?
@@ -181,8 +183,12 @@ its module doc's tests green.
   priority coloring, saved views + flags, export.
 - **Phase 8 — Ship.** Installer, version stamp, v1 tag.
 
-Post-v1 backlog (respects §7): memory maps, oom_score/wchan, AppArmor
-context, regex filter port, CSV table export, watch/pin rows, container
-scope grouping, window-finder (X11 only), threshold notifications (operator
-gate). Per-process network columns: rejected — needs eBPF/root, violates
-the no-elevation mandate.
+Post-v1 backlog (respects §7): memory maps, AppArmor context, regex filter
+port, CSV table export, watch/pin rows, container scope grouping,
+window-finder (X11 only), threshold notifications (operator gate), battery
+chip (operator gate), per-cgroup aggregate rows (operator gate).
+Promoted into v1 modules by the r042 collaborator review: oom_score in the
+details pane, fan chips, D-state badge, spawn/exit flash, details
+sparkline, PSI memory banner, process-table saved presets, journal-for-unit
+from a process row. Per-process network columns: rejected — needs
+eBPF/root, violates the no-elevation mandate.

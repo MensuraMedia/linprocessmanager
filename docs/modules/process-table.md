@@ -32,6 +32,14 @@ Provides:
   cheap fields every snapshot, `smaps_rollup` only for the selected PID —
   read by the **sampler on request** (consumers never read the kernel; the
   pane flags a pid-of-interest and the next snapshot carries its rollup).
+  **CPU sparkline (r042):** a small cairo sparkline of the selected
+  process's sampled cpu_pct history rides the pane header — per-process
+  history without leaving the Processes page.
+- **Process-row context menu (r042):** right-click → Copy PID, Copy
+  command line, Renice, Affinity, and **"View journal for this unit"** —
+  jumps to Logs filtered on the row's `_SYSTEMD_UNIT` (targets
+  [logs-journal.md](logs-journal.md) presets; kernel threads without a
+  unit gray the item out).
 
 ## Update logic — diff-in-place with an explicit move op
 
@@ -64,6 +72,11 @@ Selection survives via `(pid, starttime)` keys, never row index.
   applied at build **and** at every diff (the move op above).
 - Kernel threads (empty cmdline **and** state ≠ Z) group under `kthreadd`,
   dimmed, **hidden by default** with a count row (mockup B).
+- **D-state badge (r042):** rows in uninterruptible sleep (D) carry a
+  prominent badge — the #1 "why is my machine frozen" diagnosis.
+- **Spawn/exit flash (r042):** inserted rows fade in, removed rows flash
+  before dropping — a runaway spawning process becomes visible instead of
+  silently churning.
 
 ## Columns & keyboard
 

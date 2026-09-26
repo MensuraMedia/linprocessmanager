@@ -128,8 +128,12 @@ claude -p "$(cat .zcode/tasks/001-vendor-starter.md)" \
 2. `python3 -m pytest tests/ -q` — green.
 3. Gates: AST import allowlist + subprocess argv allowlist
    (build-principles §4) + no-'claude'-path sweep of the repo.
-4. UI work additionally: rendered-pixel verification (headless-Firefox rig)
-   — the r036/r039 lesson stands: no claim without pixels.
+4. UI work additionally: rendered-pixel verification — **two rigs (r042
+   fix):** HTML mockups via the headless-Firefox rig; the *actual GTK app*
+   via a scripted smoke-launch on Xvfb (or the live X11 display) with a
+   window screenshot/export — Firefox cannot render GDK windows, so app UI
+   claims ride only on app pixels. The r036/r039 lesson stands: no claim
+   without pixels of the real thing.
 5. Optional independent adversarial pass (red-team skill) on the diff.
 
 **Release (P4):** ZCode fast-forwards main, appends the changelog entry

@@ -42,9 +42,12 @@ readers only.
   the thread cleanly after N failures. The UI checks snapshot age every few
   seconds and raises a "sampling stalled" banner — stale data is never
   silently presented as live.
-- **Backoff:** while the window is hidden, sample every 10 s to keep
-  identities/deltas warm — but backoff samples are **excluded from chart
-  rings** (timestamped rings; a gap renders as a gap, not as fake seconds).
+- **Backoff:** while the window is inactive, sample every 10 s to keep
+  identities/deltas warm — backoff keys on **iconified/withdrawn +
+  `is_active` state, not occlusion** (Wayland does not expose occlusion;
+  documented limitation: an occluded-but-visible Wayland window samples at
+  full cadence — X11 behaves fully). Backoff samples are **excluded from
+  chart rings** (timestamped rings; a gap renders as a gap).
 - **Pause:** full stop (the simple option); on resume, one sample of "—"
   for rate fields while deltas re-arm. Honest absence, never 0.0.
 
@@ -57,6 +60,11 @@ cpu%_total = cpu% / ncpu                                   # 100% = whole machin
 
 - **Δwall guard:** if Δwall < one sampler period (clock weirdness, double
   tick), skip the sample's rate fields — never divide by ~0.
+- **PID-recycling guard on deltas (r042 fix):** per-process rate deltas are
+  computed only when `starttime` matches the previous snapshot — a recycled
+  PID yields a mismatch and the record emits no-data for that interval
+  (re-arms like a first sample). The actions guard and the rate guard now
+  share one identity rule: **(pid, starttime) everywhere, pid never alone.**
 - **Counter-reset rule (net, disk io):** a negative delta means the counter
   reset (interface down/up, 32-bit wrap) → emit no-data for that interval,
   not 0 and not garbage.

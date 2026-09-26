@@ -17,6 +17,7 @@ Read-only sensor values for the Resources page summary chips:
 | Data | Source | Notes |
 |---|---|---|
 | temperatures | `/sys/class/hwmon/hwmon*/temp*_input` + `temp*_label` | °C millidegrees; label fallback = hwmon `name`; chips only, no graphs in v1 |
+| fan speeds | `/sys/class/hwmon/hwmon*/fan*_input` + `fan*_label` | RPM; same reader shape as temps — near-zero cost (r042) |
 | CPU frequency | `/proc/cpuinfo` (`cpu MHz`) or `/sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq` | per-core current, min/avg/max shown |
 | GPU usage (AMD only, degrade elsewhere) | `/sys/class/drm/card*/device/gpu_busy_percent` | amdgpu first; absent file → chip hidden, no error |
 

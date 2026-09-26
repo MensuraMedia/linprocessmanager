@@ -40,9 +40,11 @@ Consumes: nothing from the app; the kernel only.
 ## Parsing rules (the traps)
 
 - **comm** is everything between the first `(` and the **last** `)` of the
-  stat line — comm may contain spaces and parentheses. Fields after that are
-  1-indexed post-comm: state 3, ppid 4, utime 14, stime 15, nice 19,
-  threads 20, starttime 22, rss 24. **rss is in pages** — convert with
+  stat line — comm may contain spaces and parentheses. **Indexing rule
+  (r042 fix):** after the last `)`, split on whitespace into `tokens`;
+  `tokens[0]` = state (proc(5) field 3), and proc(5) field *n* =
+  `tokens[n-3]` — utime 14, stime 15, nice 19, threads 20, starttime 22,
+  rss 24. **rss is in pages** — convert with
   `os.sysconf("SC_PAGE_SIZE")`; the table's memory column uses status VmRSS
   (bytes) as source of truth, stat rss as cross-check.
 - **Kernel-thread detector:** empty cmdline **AND state ≠ Z**. A zombie's
