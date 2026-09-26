@@ -103,9 +103,9 @@ class ProcessesPage(BasePage):
 
         self.add_title("Processes")
         self._build_toolbar()
+        self._build_statusbar()   # r055: info strip sits below the filter, above the header row
         self._build_notice()
         self._build_table()
-        self._build_statusbar()
         self._built = True
 
     # -- toolbar ----------------------------------------------------------
@@ -309,12 +309,45 @@ class ProcessesPage(BasePage):
             cell.set_property(
                 "text", str(model.get_value(it, pm.COL_NICE)) if has else "—")
 
+
+    # -- strip formatting (r055: color-coded metrics) ---------------------
+
+    _UP, _DOWN, _FLAT = "▲", "▼", "·"
+
+    @staticmethod
+    def _span(text, color):
+        return "<span foreground='%s'>%s</span>" % (color, text)
+
+    def _fmt_cpu(self, cpu, prev):
+        """CPU: value + delta arrow. Rise green (more work), fall red (less) —
+        standard increasing/decreasing convention per operator r055."""
+        if cpu is None:
+            return self._span("CPU —", "#888888")
+        body = "CPU %d%%" % round(cpu)
+        if prev is None or abs(cpu - prev) < 1.0:
+            return self._span(body + " " + self._FLAT, "#d0d0d0")
+        if cpu > prev:
+            return self._span(body + " " + self._UP, "#7fd0a0")
+        return self._span(body + " " + self._DOWN, "#e88a8a")
+
+    @staticmethod
+    def _mem_zone(pct_used):
+        if pct_used is None:
+            return None
+        if pct_used >= 85:
+            return "#e88a8a"   # high
+        if pct_used >= 60:
+            return "#e8c268"   # medium
+        return "#7fd0a0"       # low
+
     # -- statusbar --------------------------------------------------------
 
     def _build_statusbar(self):
         self.status_label = Gtk.Label()
-        self.status_label.set_xalign(0)
+        self.status_label.set_xalign(0.5)
+        self.status_label.set_hexpand(True)
         css.add_css_class(self.status_label, "page-subtitle")
+        css.add_css_class(self.status_label, "status-strip")
         self.status_label.set_text("Starting sampler…")
         layout.box_add(self, self.status_label, False, False, 0)
 
@@ -386,17 +419,25 @@ class ProcessesPage(BasePage):
 
     def _update_status(self, snapshot):
         model = self.model
-        parts = ["%d processes" % model.last_shown]
+        parts = [self._span("%d processes" % model.last_shown, "#d0d0d0")]
         if model.last_total > model.last_shown:
             parts[0] = "%d of %d processes" % (model.last_shown, model.last_total)
         cpu = (snapshot.system or {}).get("cpu", {}).get("pct")
-        parts.append("CPU %d%%" % round(cpu) if cpu is not None else "CPU —")
+        prev_cpu = getattr(self, "_last_strip_cpu", None)
+        self._last_strip_cpu = cpu
+        parts.append(self._fmt_cpu(cpu, prev_cpu))
         if model.last_kthreads_hidden:
-            parts.append("%d kernel threads hidden" % model.last_kthreads_hidden)
+            parts.append(self._span("%d kernel threads hidden" % model.last_kthreads_hidden, "#888888"))
         if snapshot.from_backoff:
             parts.append("backoff")
-        parts.append("updated " + time.strftime("%H:%M:%S"))
-        self.status_label.set_text("  ·  ".join(parts))
+        parts.append(self._span("updated " + time.strftime("%H:%M:%S"), "#888888"))
+        mem = (snapshot.system or {}).get("mem") or {}
+        total, avail = mem.get("total"), mem.get("available")
+        if total and avail:
+            used_pct = 100.0 * (total - avail) / total
+            parts.insert(1, self._span("Mem %d%%" % round(used_pct),
+                                       self._mem_zone(used_pct) or "#d0d0d0"))
+        self.status_label.set_markup("  ·  ".join(parts))
 
     def _update_notice(self):
         model = self.model

@@ -572,3 +572,8 @@ scale slider:hover {
     font-weight: bold;
     color: #ffffff;
 }
+
+/* r055 — info strip: equally spaced between filter and header row */
+.status-strip {
+    padding: 4px 0 6px 0;
+}
