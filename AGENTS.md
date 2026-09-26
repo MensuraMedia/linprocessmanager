@@ -9,7 +9,7 @@ universal standards here.
 - Ledger: ~/projects/Zai-ZCode/s-register.md
 
 ## Stack
-- Python 3.12 (system python3, PyGObject via system packages; starter deps only: PyGObject, pycairo, Pillow — no psutil at runtime)
+- Python — floor 3.10 (Debian-family matrix; dev machine 3.12), system python3, PyGObject via system packages; starter deps only: PyGObject, pycairo, Pillow — no psutil at runtime)
 - GTK 3 (PyGObject, gi); run with `python3 src/main.py` (starter not yet vendored — see roadmap in docs/process-manager-concept.md)
 - Data source: /proc read directly (stat, status, io, smaps_rollup, cgroup, pressure)
 - Icons: Phosphor (MIT) — master library ~/projects/assets/icons; project subset resources/icons/{regular,fill} (57+12, manifest.txt maps use)

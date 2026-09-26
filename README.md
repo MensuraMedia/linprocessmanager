@@ -28,6 +28,7 @@ contract: what's described there is what gets built and tested.
 ```
 
 System packages needed: `python3-gi gir1.2-gtk-3.0 python3-cairo python3-pil`.
+Python floor: **3.10** (authoritative — dev machine runs 3.12; see docs/debian-compatibility.md §2).
 
 ## Development
 

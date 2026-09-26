@@ -36,6 +36,14 @@ file-manager windows whose path contains "linprocman" — always use the ID).
 | Live kernel | `python3 -m pytest -m live -q` | readers + schema against the real /proc (own-pid invariants; no psutil dependency) |
 | GUI walk | `DISPLAY=:0 python3 tests/live_gui_walk.py` | real navigation through NavigationManager + per-page screenshots |
 
+The pixel rig is the operator's live X session (`:0`, `who` to confirm) —
+no Xvfb needed on this machine. Settings keys for task 004 come from
+[modules/persistence-config.md](modules/persistence-config.md).
+
+Hardened-kernel degradation (hidepid, Yama ptrace_scope, dmesg_restrict)
+shows as `lock` rows / "—" cells with no error — fixture-tested in
+test_procfs.py; live behavior only differs on hosts with those settings.
+
 Claims about UI require pixels of the real window — rendered-pixel rule
 (project memory; GTK windows can't be verified through Firefox mocks).
 
