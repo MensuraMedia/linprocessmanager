@@ -33,9 +33,9 @@ class Sidebar(Gtk.Box):
         self.build_logo_area()
         self.build_navigation()
         
-        if "home" in self.nav_buttons:
-            self.set_active_button(self.nav_buttons["home"])
-            self.nav_manager.navigate_to("home")
+        if "processes" in self.nav_buttons:
+            self.set_active_button(self.nav_buttons["processes"])
+            self.nav_manager.navigate_to("processes")
     
     def build_logo_area(self):
         """Build logo area"""
@@ -86,14 +86,13 @@ class Sidebar(Gtk.Box):
         # Top navigation container
         nav_box_top = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         
-        # Main navigation items
+        # Main navigation items (linprocman nav shell)
         nav_items = [
-            ("Home", "home", True),      # Home gets top border
-            ("About", "about", False),
-            ("Button03", "button03", False),
-            ("Button04", "button04", False),
-            ("Button05", "button05", False),
-            ("Button06", "button06", False)
+            ("Processes", "processes", True),   # first item gets top border
+            ("Resources", "resources", False),
+            ("Disks", "disks", False),
+            ("Logs", "logs", False),
+            ("About", "about", False)
         ]
         
         self.nav_buttons = {}

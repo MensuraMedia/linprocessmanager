@@ -1,0 +1,11 @@
+processor	: 0
+vendor_id	: TestVendor
+model name	: Test CPU @ 2.40GHz
+cpu MHz		: 2400.000
+cache size	: 8192 KB
+
+processor	: 1
+vendor_id	: TestVendor
+model name	: Test CPU @ 2.40GHz
+cpu MHz		: 1800.500
+cache size	: 8192 KB

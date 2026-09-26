@@ -1,5 +1,14 @@
-# GTK Python Dashboard Starter - Python Dependencies
-# Install with: pip install -r requirements.txt
-
-PyGObject>=3.42.0
-pycairo>=1.20.0
+# linprocman — dependencies are SYSTEM PACKAGES ONLY. Nothing is pip-installed.
+#
+# Build-principles §4 (self-reliance): system python3 + system packages via
+# apt; no pip, no virtualenv, no network at build or runtime. Install with:
+#
+#   sudo apt install python3-gi python3-cairo python3-pil
+#
+# Required:
+#   python3-gi     (PyGObject / GTK 3 bindings)
+#   python3-cairo  (pycairo — cairo drawing for the resource graphs)
+#   python3-pil    (Pillow — image handling)
+#
+# There is intentionally no installable requirement line in this file: `pip
+# install -r requirements.txt` is not part of this project's workflow.

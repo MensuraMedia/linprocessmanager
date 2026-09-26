@@ -1,0 +1,322 @@
+"""Hostile-fixture tests for src/modules/procfs.py.
+
+Every parser is exercised against bytes from tests/fixtures/proc/ (a tree that
+mirrors the real /proc layout) or against byte literals — never the live
+kernel. The error taxonomy (FileNotFoundError -> exit, PermissionError ->
+locked, io -> None) is covered too.
+"""
+
+import os
+
+import pytest
+
+import procfs
+
+FIX = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures")
+PROC = os.path.join(FIX, "proc")
+PROC_OFFLINE = os.path.join(FIX, "proc_offline")
+
+
+# ---------------------------------------------------------------------------
+# stat
+# ---------------------------------------------------------------------------
+
+def test_stat_normal():
+    d = procfs.parse_stat(100, proc_root=PROC)
+    assert d["pid"] == 100
+    assert d["comm"] == "bash"
+    assert d["state"] == "S"
+    assert d["ppid"] == 99
+    assert d["utime"] == 50
+    assert d["stime"] == 20
+    assert d["nice"] == 0
+    assert d["num_threads"] == 1
+    assert d["starttime"] == 123456
+    assert d["rss_pages"] == 512
+    assert d["rss_bytes"] == 512 * procfs.PAGE_SIZE
+    assert d["locked"] is False
+
+
+def test_stat_comm_with_spaces():
+    d = procfs.parse_stat(101, proc_root=PROC)
+    assert d["comm"] == "Web Content"
+    assert d["state"] == "S"
+    assert d["ppid"] == 99
+    assert d["num_threads"] == 4
+    assert d["starttime"] == 555
+
+
+def test_stat_comm_with_parens():
+    # comm is between the FIRST '(' and the LAST ')'.
+    d = procfs.parse_stat(102, proc_root=PROC)
+    assert d["comm"] == "a) b (c"
+    assert d["state"] == "R"
+    assert d["ppid"] == 1
+    assert d["num_threads"] == 2
+
+
+def test_stat_zombie_empty_cmdline():
+    d = procfs.parse_stat(103, proc_root=PROC)
+    assert d["state"] == "Z"
+    # A zombie reads an empty cmdline but is NOT a kernel thread.
+    assert procfs.read_cmdline(103, proc_root=PROC) == []
+    assert procfs.is_kernel_thread([], d["state"]) is False
+
+
+def test_stat_truncated_returns_none():
+    assert procfs.parse_stat(105, proc_root=PROC) is None
+
+
+def test_decode_stat_truncated_bytes():
+    assert procfs.decode_stat(b"105 (short) S 99 105\n") is None
+
+
+def test_stat_missing_pid_raises_exit():
+    with pytest.raises(FileNotFoundError):
+        procfs.parse_stat(999999, proc_root=PROC)
+
+
+def test_stat_permission_locked(monkeypatch):
+    def boom(_path):
+        raise PermissionError("hidepid")
+    monkeypatch.setattr(procfs, "_read_bytes", boom)
+    d = procfs.parse_stat(100, proc_root=PROC)
+    assert d["locked"] is True
+    assert d["pid"] == 100
+    assert d["comm"] is None
+    assert d["rss_bytes"] is None
+
+
+# ---------------------------------------------------------------------------
+# status
+# ---------------------------------------------------------------------------
+
+def test_status_normal():
+    d = procfs.parse_status(100, proc_root=PROC)
+    assert d["name"] == "bash"
+    assert d["state"] == "S"
+    assert d["ppid"] == 99
+    assert d["uid"] == 1000
+    assert d["vm_rss_bytes"] == 2048 * 1024
+    assert d["vm_size_bytes"] == 12056 * 1024
+    assert d["vm_swap_bytes"] == 128 * 1024
+    assert d["shared_bytes"] == (400 + 48) * 1024
+
+
+def test_status_hidepid_eacces_locked(monkeypatch):
+    def boom(_path):
+        raise PermissionError("hidepid >= 1")
+    monkeypatch.setattr(procfs, "_read_bytes", boom)
+    d = procfs.parse_status(100, proc_root=PROC)
+    assert d["locked"] is True
+    assert d["pid"] == 100
+    assert d["vm_rss_bytes"] is None
+    assert d["name"] is None
+
+
+def test_status_kthread_no_vmrss():
+    raw = b"Name:\tkworker/0:1\nState:\tS (sleeping)\nPid:\t104\nPPid:\t2\n"
+    d = procfs.decode_status(raw)
+    assert d["name"] == "kworker/0:1"
+    assert d["ppid"] == 2
+    assert d["vm_rss_bytes"] is None
+    assert d["shared_bytes"] is None
+
+
+# ---------------------------------------------------------------------------
+# statm
+# ---------------------------------------------------------------------------
+
+def test_statm_shared_pages():
+    d = procfs.parse_statm(100, proc_root=PROC)
+    assert d["shared_pages"] == 400
+    assert d["resident_pages"] == 512
+    assert d["shared_bytes"] == 400 * procfs.PAGE_SIZE
+
+
+# ---------------------------------------------------------------------------
+# io
+# ---------------------------------------------------------------------------
+
+def test_io_normal():
+    d = procfs.parse_io(100, proc_root=PROC)
+    assert d["read_bytes"] == 40960
+    assert d["write_bytes"] == 8192
+
+
+def test_io_missing_returns_none():
+    # pid 104 (kthread fixture) has no io file -> None, never an error.
+    assert procfs.parse_io(104, proc_root=PROC) is None
+
+
+def test_io_restricted_returns_none(monkeypatch):
+    def boom(_path):
+        raise PermissionError("restricted io")
+    monkeypatch.setattr(procfs, "_read_bytes", boom)
+    assert procfs.parse_io(100, proc_root=PROC) is None
+
+
+# ---------------------------------------------------------------------------
+# smaps_rollup
+# ---------------------------------------------------------------------------
+
+def test_smaps_rollup():
+    d = procfs.parse_smaps_rollup(100, proc_root=PROC)
+    assert d["pss_bytes"] == 1024 * 1024
+    assert d["rss_bytes"] == 2048 * 1024
+    assert d["pss_anon_bytes"] == 800 * 1024
+
+
+def test_smaps_rollup_missing_returns_none():
+    assert procfs.parse_smaps_rollup(104, proc_root=PROC) is None
+
+
+# ---------------------------------------------------------------------------
+# cmdline + kernel-thread detector
+# ---------------------------------------------------------------------------
+
+def test_cmdline_decode_argv():
+    assert procfs.decode_cmdline(b"bash\x00-i\x00") == ["bash", "-i"]
+
+
+def test_cmdline_empty_is_empty_list():
+    assert procfs.decode_cmdline(b"") == []
+    # kthread fixture (pid 104) has an empty cmdline file.
+    assert procfs.read_cmdline(104, proc_root=PROC) == []
+
+
+def test_is_kernel_thread():
+    assert procfs.is_kernel_thread([], "S") is True       # kthread
+    assert procfs.is_kernel_thread([], "Z") is False      # zombie, not kthread
+    assert procfs.is_kernel_thread(["bash"], "S") is False  # user process
+
+
+# ---------------------------------------------------------------------------
+# cgroup fallbacks
+# ---------------------------------------------------------------------------
+
+def test_cgroup_root_is_dash():
+    assert procfs.decode_cgroup(b"0::/\n") == "—"
+
+
+def test_cgroup_init_scope_stays():
+    assert procfs.decode_cgroup(b"0::/init.scope\n") == "init.scope"
+
+
+def test_cgroup_strips_service_suffix():
+    raw = b"0::/system.slice/NetworkManager.service\n"
+    assert procfs.decode_cgroup(raw) == "NetworkManager"
+
+
+def test_cgroup_strips_scope_suffix():
+    raw = b"0::/user.slice/user-1000.slice/session-2.scope\n"
+    assert procfs.decode_cgroup(raw) == "session-2"
+
+
+def test_cgroup_raw_tail_fallback():
+    raw = b"12:pids:/legacy\n0::/somepath\n"
+    assert procfs.decode_cgroup(raw) == "somepath"
+
+
+def test_cgroup_no_v2_line_is_dash():
+    assert procfs.decode_cgroup(b"12:pids:/legacy\n") == "—"
+
+
+def test_parse_cgroup_from_fixture():
+    assert procfs.parse_cgroup(100, proc_root=PROC) == "session-2"
+
+
+# ---------------------------------------------------------------------------
+# started-time math
+# ---------------------------------------------------------------------------
+
+def test_starttime_to_wall():
+    wall = procfs.starttime_to_wall(123456, 1700000000)
+    assert wall == 1700000000 + 123456 / procfs.CLK_TCK
+
+
+def test_starttime_to_wall_none_safe():
+    assert procfs.starttime_to_wall(None, 1700000000) is None
+
+
+# ---------------------------------------------------------------------------
+# system_stat
+# ---------------------------------------------------------------------------
+
+def test_system_stat_btime_and_busy():
+    d = procfs.system_stat(proc_root=PROC)
+    assert d["btime"] == 1700000000
+    assert d["ncpu"] == 2
+    # busy = user+nice+system+irq+softirq+iowait (guest not double counted).
+    assert d["total"]["busy"] == 100 + 20 + 50 + 5 + 10 + 30
+    assert d["total"]["total"] == 100 + 20 + 50 + 1000 + 30 + 5 + 10 + 0
+    assert set(d["cpus"].keys()) == {0, 1}
+    assert d["cpus"][0]["busy"] == 50 + 10 + 25 + 2 + 5 + 15
+
+
+def test_system_stat_cpu_offline_variant():
+    d = procfs.system_stat(proc_root=PROC_OFFLINE)
+    # cpu1 is offline: only cpu0 and cpu2 lines are present.
+    assert d["ncpu"] == 2
+    assert set(d["cpus"].keys()) == {0, 2}
+
+
+# ---------------------------------------------------------------------------
+# meminfo
+# ---------------------------------------------------------------------------
+
+def test_system_meminfo_used():
+    d = procfs.system_meminfo(proc_root=PROC)
+    assert d["total"] == 16384000 * 1024
+    assert d["available"] == 8000000 * 1024
+    # used = MemTotal - MemAvailable (not free-buffers).
+    assert d["used"] == (16384000 - 8000000) * 1024
+    assert d["swap_total"] == 2000000 * 1024
+    assert d["swap_free"] == 1500000 * 1024
+
+
+# ---------------------------------------------------------------------------
+# net/dev
+# ---------------------------------------------------------------------------
+
+def test_system_net_dev_excludes_lo():
+    d = procfs.system_net_dev(proc_root=PROC)
+    assert "lo" not in d
+    assert d["eth0"]["rx_bytes"] == 500000
+    assert d["eth0"]["tx_bytes"] == 250000
+    assert d["wlan0"]["rx_bytes"] == 12345
+    assert d["wlan0"]["tx_bytes"] == 54321
+
+
+# ---------------------------------------------------------------------------
+# diskstats
+# ---------------------------------------------------------------------------
+
+def test_system_diskstats():
+    d = procfs.system_diskstats(proc_root=PROC)
+    assert d["sda"]["reads"] == 1000
+    assert d["sda"]["writes"] == 800
+    assert d["sda"]["io_ticks"] == 900
+    assert d["sda"]["sectors_read"] == 80000
+    assert d["sda"]["sectors_written"] == 64000
+    assert d["nvme0n1"]["reads"] == 2000
+
+
+# ---------------------------------------------------------------------------
+# pressure
+# ---------------------------------------------------------------------------
+
+def test_system_pressure():
+    d = procfs.system_pressure(proc_root=PROC)
+    assert d["cpu"]["some"]["avg10"] == 0.10
+    assert d["cpu"]["some"]["total"] == 12345.0
+    assert d["memory"]["full"]["avg300"] == 2.50
+    assert d["io"]["some"]["avg60"] == 6.00
+
+
+def test_system_pressure_missing_is_none():
+    # proc_offline has no pressure/ dir -> each resource None, never an error.
+    d = procfs.system_pressure(proc_root=PROC_OFFLINE)
+    assert d["cpu"] is None
+    assert d["memory"] is None
+    assert d["io"] is None
