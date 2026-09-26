@@ -318,27 +318,30 @@ class ProcessesPage(BasePage):
     def _span(text, color):
         return "<span foreground='%s'>%s</span>" % (color, text)
 
+    @staticmethod
+    def _cap_zone(pct):
+        """Capacity threshold zones (r057, all stats): <60 nominal green,
+        60-84 medium amber, >=85 near-capacity red."""
+        if pct is None:
+            return None
+        if pct >= 85:
+            return "#e04c4c"
+        if pct >= 60:
+            return "#e8c268"
+        return "#7fd0a0"
+
     def _fmt_cpu(self, cpu, prev):
-        """CPU: plain value + colored delta arrow only (r056: the number stays
-        uncolored; increase RED ▲, decrease GREEN ▼ per operator)."""
+        """CPU: threshold-colored value (r057) + delta arrow (r056 convention:
+        increase RED ▲, decrease GREEN ▼, flat gray ·)."""
         if cpu is None:
             return self._span("CPU —", "#888888")
-        body = "CPU %d%%" % round(cpu)
+        value = self._span("CPU %d%%" % round(cpu),
+                           self._cap_zone(cpu) or "#d0d0d0")
         if prev is None or abs(cpu - prev) < 1.0:
-            return body + " " + self._span(self._FLAT, "#d0d0d0")
+            return value + " " + self._span(self._FLAT, "#d0d0d0")
         if cpu > prev:
-            return body + " " + self._span(self._UP, "#e04c4c")
-        return body + " " + self._span(self._DOWN, "#3fbf6f")
-
-    @staticmethod
-    def _mem_zone(pct_used):
-        if pct_used is None:
-            return None
-        if pct_used >= 85:
-            return "#e88a8a"   # high
-        if pct_used >= 60:
-            return "#e8c268"   # medium
-        return "#7fd0a0"       # low
+            return value + " " + self._span(self._UP, "#e04c4c")
+        return value + " " + self._span(self._DOWN, "#3fbf6f")
 
     # -- statusbar --------------------------------------------------------
 
@@ -436,7 +439,7 @@ class ProcessesPage(BasePage):
         if total and avail:
             used_pct = 100.0 * (total - avail) / total
             parts.insert(1, self._span("Mem %d%%" % round(used_pct),
-                                       self._mem_zone(used_pct) or "#d0d0d0"))
+                                       self._cap_zone(used_pct) or "#d0d0d0"))
         self.status_label.set_markup("  ·  ".join(parts))
 
     def _update_notice(self):
