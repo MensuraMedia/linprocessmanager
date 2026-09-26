@@ -159,3 +159,12 @@ Record architectural decisions with rationale. Newest at the bottom.
     README/LICENSE/DEVELOPMENT; corpus review keeps docs honest vs code
     (tuple-keyed procs, missing sensors key, unwired sysfs — all fixed).
     Phase-2 close (005) = independent review + operator gate + backup.
+23. **Contrast fix + standing adversarial role (r054).** Static CSS must
+    load through the theme applicator (combined single load — load_from_data
+    REPLACES). ThemeManager deletion lesson refined: 'dead code' must be
+    checked for SIDE EFFECTS not just importers. GTK3 treeview facts: rows
+    need treeview bg (row nodes inherit), headers are real button nodes
+    (style 'treeview header button'), per-row hover is not available by
+    default (whole-widget :hover flashes — omit). librsvg pixbuf loader is
+    OPTIONAL on Debian family — SVG assets need a png fallback chain.
+    170px sidebar adopted (css + config constant). Pulse mark is the logo.
