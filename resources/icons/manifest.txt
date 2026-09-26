@@ -71,4 +71,11 @@ arrows-down-up         sort order (newest/oldest first)
 text-aa                case toggle in log search
 bookmark-simple        save current view
 
-64 icons total: 53 regular + 11 fill.
+# --- frequency analysis (r040) ---
+chart-bar             Frequency menu item + analysis view header (fill = header)
+crosshair             Focus this message pattern (context menu)
+image                 chart image export affordance (docs)
+floppy-disk           Save chart as PNG
+cursor-click          right-click context affordance (docs/mockups)
+
+68 icons total: 57 regular + 12 fill.

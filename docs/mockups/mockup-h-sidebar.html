@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup H — Sidebar width study</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:Ubuntu, Cantarell, sans-serif; }
+  body { background:#1a1a1a; padding:24px; display:flex; justify-content:center; }
+  .ic { filter:invert(1); opacity:.85; display:inline-block; vertical-align:middle; }
+  .board { width:1400px; max-width:100%; display:flex; gap:22px; align-items:flex-start; }
+  .study { border:1px solid #333; background:#222; padding:16px; width:340px; display:flex; flex-direction:column; gap:10px; }
+  .study.rec { border-color:#0078D7; }
+  .study-title { font-size:12px; letter-spacing:1.5px; color:#888; text-transform:uppercase; display:flex; align-items:center; gap:8px; }
+  .study-title .rec-badge { background:#0078D7; color:#fff; font-size:9px; padding:2px 8px; letter-spacing:1px; }
+  .window { background:#2d2d2d; color:#eee; border:1px solid #000; display:flex; height:480px; overflow:hidden; }
+  .titlebar { display:none; }
+
+  /* sidebar — shared geometry, width set per variant */
+  .sidebar { background:#353535; border-right:1px solid #1a1a1a; display:flex; flex-direction:column; flex:none; }
+  .logo-area { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; border-bottom:1px solid #1a1a1a; }
+  .logo-area .ic { width:44px; height:44px; filter:invert(27%) sepia(96%) saturate(1400%) hue-rotate(197deg) brightness(96%); }
+  .logo-cap { font-size:9px; letter-spacing:1.4px; color:#bbb; white-space:nowrap; }
+  .nav { display:flex; flex-direction:column; }
+  .nav-button { display:flex; align-items:center; gap:8px; padding:7px 0 7px 12px; font-size:13px; color:#eee; border:none; border-bottom:1px solid #1a1a1a; cursor:pointer; }
+  .nav-button .ic { width:15px; height:15px; flex:none; margin-left:0; }
+  .nav-button .label { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .nav-button:hover { background:#404040; }
+  .nav-button.active { background:#0078D7; color:#fff; }
+  .nav-button.group { color:#bbb; font-weight:bold; }
+  .nav-button .tw { width:11px; height:11px; opacity:.7; }
+  .submenu { display:flex; flex-direction:column; background:#2f2f2f; }
+  .sub-button { display:flex; align-items:center; gap:7px; padding:6px 0 6px 43px; font-size:12px; color:#ccc; border-bottom:1px solid #262626; cursor:pointer; }
+  .sub-button .ic { width:13px; height:13px; flex:none; }
+  .sub-button .label { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sub-button:hover { background:#3a3a3a; }
+  .sub-button.active { background:#0078D7; color:#fff; }
+  .sub-button .cnt { margin-left:auto; opacity:.55; font-size:9.5px; padding-right:10px; }
+  .spacer { flex:1; }
+  .nav-bottom { border-top:1px solid #1a1a1a; border-bottom:none; }
+
+  .main { flex:1; background:#2d2d2d; display:flex; align-items:center; justify-content:center; color:#555; font-size:12px; }
+
+  .notes { font-size:11px; color:#999; line-height:1.65; }
+  .notes b { color:#ddd; font-weight:normal; }
+  .notes .bad { color:#e88; }
+  .notes .good { color:#9fd8ae; }
+  .ruler { display:flex; align-items:center; gap:8px; font-size:10px; color:#0078D7; font-variant-numeric:tabular-nums; }
+  .ruler .bar { height:8px; background:repeating-linear-gradient(90deg,#0078D7 0 6px,transparent 6px 12px); border-radius:2px; }
+</style>
+</head>
+<body>
+<div class="board">
+
+  <!-- variant 1: 150px (current starter) -->
+  <div class="study">
+    <div class="study-title">150 px — starter current</div>
+    <div class="window">
+      <div class="sidebar" style="width:150px;">
+        <div class="logo-area" style="height:118px;">
+          <img class="ic" src="../../resources/icons/fill/pulse.svg">
+          <div class="logo-cap">LINPROCMAN</div>
+        </div>
+        <div class="nav">
+          <div class="nav-button"><img class="ic" src="../../resources/icons/regular/list-magnifying-glass.svg"><span class="label">Processes</span></div>
+          <div class="nav-button"><img class="ic" src="../../resources/icons/regular/pulse.svg"><span class="label">Resources</span></div>
+          <div class="nav-button"><img class="ic" src="../../resources/icons/regular/hard-drive.svg"><span class="label">Disks</span></div>
+          <div class="nav-button group"><img class="ic tw" src="../../resources/icons/regular/caret-down.svg"><img class="ic" src="../../resources/icons/regular/scroll.svg"><span class="label">Logs</span></div>
+        </div>
+        <div class="submenu">
+          <div class="sub-button active"><img class="ic" src="../../resources/icons/regular/scroll.svg"><span class="label">Journal</span></div>
+          <div class="sub-button"><img class="ic" src="../../resources/icons/regular/terminal-window.svg"><span class="label">Kernel</span><span class="cnt">1.2M</span></div>
+          <div class="sub-button"><img class="ic" src="../../resources/icons/regular/lock.svg"><span class="label">Auth</span></div>
+          <div class="sub-button"><img class="ic" src="../../resources/icons/regular/user-circle.svg"><span class="label">Applic…</span></div>
+          <div class="sub-button"><img class="ic" src="../../resources/icons/regular/notebook.svg"><span class="label">Saved V…</span></div>
+          <div class="sub-button"><img class="ic" src="../../resources/icons/regular/flag.svg"><span class="label">Flags</span><span class="cnt">3</span></div>
+        </div>
+        <div class="nav">
+          <div class="nav-button"><img class="ic" src="../../resources/icons/regular/info.svg"><span class="label">About</span></div>
+        </div>
+        <div class="spacer"></div>
+        <div class="nav">
+          <div class="nav-button nav-bottom"><img class="ic" src="../../resources/icons/regular/gear-six.svg"><span class="label">Settings</span></div>
+        </div>
+      </div>
+      <div class="main">page content</div>
+    </div>
+    <div class="ruler"><span class="bar" style="width:150px"></span>150 px</div>
+    <div class="notes">
+      <b>Verdict: strained.</b> "Applications" and "Saved Views" truncate;
+      count badges collide with labels at 12px indent floor. Left-aligned
+      icon column works, but the submenu text column has ~55 px of usable
+      width before clipping. <span class="bad">Not recommended for 6+
+      submenu items.</span>
+    </div>
+  </div>
+
+  <!-- variant 2: 170px -->
+  <div class="study">
+    <div class="study-title">170 px — expanded</div>
+    <div class="window">
+      <div class="sidebar" style="width:170px;">
+        <div class="logo-area" style="height:122px;">
+          <img class="ic" src="../../resources/icons/fill/pulse.svg">
+          <div class="logo-cap">LINPROCMAN</div>
+        </div>
+        <div class="nav">
+          <div class="nav-button"><img class="ic" src="../../resources/icons/regular/list-magnifying-glass.svg"><span class="label">Processes</span></div>
+          <div class="nav-button"><img class="ic" src="../../resources/icons/regular/pulse.svg"><span class="label">Resources</span></div>
+          <div class="nav-button"><img class="ic" src="../../resources/icons/regular/hard-drive.svg"><span class="label">Disks</span></div>
+          <div class="nav-button group"><img class="ic tw" src="../../resources/icons/regular/caret-down.svg"><img class="ic" src="../../resources/icons/regular/scroll.svg"><span class="label">Logs</span></div>
+        </div>
+        <div class="submenu">
+          <div class="sub-button active"><img class="ic" src="../../resources/icons/regular/scroll.svg"><span class="label">Journal</span></div>
+          <div class="sub-button"><img class="ic" src="../../resources/icons/regular/terminal-window.svg"><span class="label">Kernel</span><span class="cnt">1.2M</span></div>
+          <div class="sub-button"><img class="ic" src="../../resources/icons/regular/lock.svg"><span class="label">Auth</span></div>
+          <div class="sub-button"><img class="ic" src="../../resources/icons/regular/user-circle.svg"><span class="label">Applications</span></div>
+          <div class="sub-button"><img class="ic" src="../../resources/icons/regular/notebook.svg"><span class="label">Saved Views</span></div>
+          <div class="sub-button"><img class="ic" src="../../resources/icons/regular/flag.svg"><span class="label">Flags</span><span class="cnt">3</span></div>
+        </div>
+        <div class="nav">
+          <div class="nav-button"><img class="ic" src="../../resources/icons/regular/info.svg"><span class="label">About</span></div>
+        </div>
+        <div class="spacer"></div>
+        <div class="nav">
+          <div class="nav-button nav-bottom"><img class="ic" src="../../resources/icons/regular/gear-six.svg"><span class="label">Settings</span></div>
+        </div>
+      </div>
+      <div class="main">page content</div>
+    </div>
+    <div class="ruler"><span class="bar" style="width:170px"></span>170 px</div>
+    <div class="notes">
+      <b>Verdict: fits.</b> Every submenu label renders in full with its
+      badge; nav and submenu share one icon column at x=12; submenu text
+      indents to the parent's text level (x=43), so hierarchy reads
+      naturally without a separate rail. <span class="good">Recommended.</span>
+      Content area gives up 20 px — negligible at 1200+ px windows.
+    </div>
+  </div>
+
+  <!-- variant 3: 190px -->
+  <div class="study rec">
+    <div class="study-title">190 px — generous <span class="rec-badge">CONCEPT</span></div>
+    <div class="window">
+      <div class="sidebar" style="width:190px;">
+        <div class="logo-area" style="height:126px;">
+          <img class="ic" src="../../resources/icons/fill/pulse.svg">
+          <div class="logo-cap">LINPROCMAN</div>
+        </div>
+        <div class="nav">
+          <div class="nav-button"><img class="ic" src="../../resources/icons/regular/list-magnifying-glass.svg"><span class="label">Processes</span></div>
+          <div class="nav-button"><img class="ic" src="../../resources/icons/regular/pulse.svg"><span class="label">Resources</span></div>
+          <div class="nav-button"><img class="ic" src="../../resources/icons/regular/hard-drive.svg"><span class="label">Disks</span></div>
+          <div class="nav-button group"><img class="ic tw" src="../../resources/icons/regular/caret-down.svg"><img class="ic" src="../../resources/icons/regular/scroll.svg"><span class="label">Logs</span></div>
+        </div>
+        <div class="submenu">
+          <div class="sub-button active"><img class="ic" src="../../resources/icons/regular/scroll.svg"><span class="label">Journal</span></div>
+          <div class="sub-button"><img class="ic" src="../../resources/icons/regular/terminal-window.svg"><span class="label">Kernel</span><span class="cnt">1.2M</span></div>
+          <div class="sub-button"><img class="ic" src="../../resources/icons/regular/lock.svg"><span class="label">Auth</span></div>
+          <div class="sub-button"><img class="ic" src="../../resources/icons/regular/user-circle.svg"><span class="label">Applications</span></div>
+          <div class="sub-button"><img class="ic" src="../../resources/icons/regular/notebook.svg"><span class="label">Saved Views</span><span class="cnt">4</span></div>
+          <div class="sub-button"><img class="ic" src="../../resources/icons/regular/flag.svg"><span class="label">Flags</span><span class="cnt">3</span></div>
+        </div>
+        <div class="nav">
+          <div class="nav-button"><img class="ic" src="../../resources/icons/regular/info.svg"><span class="label">About</span></div>
+        </div>
+        <div class="spacer"></div>
+        <div class="nav">
+          <div class="nav-button nav-bottom"><img class="ic" src="../../resources/icons/regular/gear-six.svg"><span class="label">Settings</span></div>
+        </div>
+      </div>
+      <div class="main">page content</div>
+    </div>
+    <div class="ruler"><span class="bar" style="width:190px"></span>190 px</div>
+    <div class="notes">
+      <b>Verdict: headroom.</b> Full labels + badges with room for one more
+      level (v2 nested saved-view folders) and longer future sub-items
+      (per-unit views). Costs 40 px of content. <span class="good">Best if
+      the sidebar is expected to grow;</span> otherwise 170 px is the
+      tighter fit. One constant in the starter's `config_layout.py` either
+      way — the study is deliberately a concept, not a commitment.
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

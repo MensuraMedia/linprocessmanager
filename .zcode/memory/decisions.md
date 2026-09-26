@@ -63,3 +63,18 @@ Record architectural decisions with rationale. Newest at the bottom.
     additively for /sys + local binaries; no-network gate upgraded to AST
     import allowlist + subprocess argv allowlist. Logs = roadmap Phase 7
     (large). Mockups E + F verified.
+14. **Frequency analysis + sidebar shell (r040).** Right-click row context
+    menu on logs (copy/flag/filter/focus/frequency/export; Menu key parity;
+    resolved pattern shown in the menu label). Frequency = own module
+    (manager_frequency.py): heuristic template normalization (digits/hex/
+    IP/path → placeholders), binned histogram, incident bands threshold
+    max(3, median×4), related-events strip, incident table, PNG/CSV export;
+    warning/err seeds self-tune to incident mode. Sidebar: ONE left-aligned
+    icon column at x=12; submenu indents to parent TEXT level (x=43), never
+    the icon; width study mockup H — 150px truncates (fail), 170px
+    recommended, 190px headroom; one constant in starter config_layout if
+    adopted. Mockup G lesson: absolutely-positioned overlays inside
+    overflow:hidden windows clip silently — and the SECOND changelog
+    append-mistake happened (replaced r039 entry with r040); rule: always
+    append-only with old_string = the LAST line, new_string = last line +
+    new line.

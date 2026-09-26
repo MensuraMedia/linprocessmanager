@@ -39,7 +39,8 @@ self-reliant — no web-based resources at build or runtime, ever.
 | [modules/resource-graphs.md](modules/resource-graphs.md) | `page_resources.py` + `manager_history.py` | ring buffers, cairo charts, PSI chips |
 | [modules/persistence-config.md](modules/persistence-config.md) | `config_processes.py` | settings.json schema, XDG rules |
 | [modules/disks-filesystems.md](modules/disks-filesystems.md) | `page_disks.py` | per-device I/O rates, per-mount usage |
-| [modules/logs-journal.md](modules/logs-journal.md) | `manager_logs.py` + `page_logs.py` | journal engine, sidebar submenu, search, saved views |
+| [modules/logs-journal.md](modules/logs-journal.md) | `manager_logs.py` + `page_logs.py` | journal engine, sidebar submenu, search, row context menu, saved views |
+| [modules/log-frequency.md](modules/log-frequency.md) | `manager_frequency.py` | right-click Frequency: pattern histogram, incident bands, related events, export |
 | [modules/sysfs-data.md](modules/sysfs-data.md) | `sysfs.py` | hwmon temperatures, cpufreq, AMD GPU chip |
 
 Module boundaries are load-bearing: only `procfs.py` and `sysfs.py` read
@@ -76,7 +77,10 @@ memory+swap, network, PSI chips, load/uptime summary, temperature/frequency
 chips. **Disks** — per-device rates, per-mount usage, live plug events.
 **Logs** — sidebar submenu (Journal / Kernel / Auth / Applications / Saved
 Views), journalctl-backed, substring+regex search, time-jump, follow mode,
-priority coloring, saved views + cursor flags, export. **Live control** —
+priority coloring, row context menu (copy/flag/filter/focus),
+**Frequency analysis** (error-over-time histogram per message pattern with
+incident bands, related events plotted before/after, PNG/CSV export),
+saved views + cursor flags, export. **Live control** —
 interval selector, pause/resume, refresh now; sampling backs off when
 hidden.
 
@@ -93,6 +97,13 @@ Four mockups on the real starter palette (`#2d2d2d` window, `#353535` sidebar,
 | D — Action Dialogs | kill confirm + renice + signal picker over dimmed table | the permission/safety UX |
 | E — Logs: Journal | sidebar submenu, search bar, priority coloring, follow | the mandated logs feature, primary look |
 | F — Logs: Saved Views | saved views management + flags | the organize model |
+| G — Logs: Context + Frequency | right-click menu + frequency analysis view | the r040 controls |
+| H — Sidebar width study | 150/170/190px variants, left-aligned nav, natural submenu indent | shell concept (r040) |
+
+Sidebar shell direction (mockup H): nav buttons share one left-aligned icon
+column; submenu rows indent one level from the parent's text, never from the
+icon; width expansion (150 → 170/190px) is studied as a concept — the
+starter's `config_layout.py` makes it a constant change if adopted.
 
 Open decisions for the operator:
 1. Is A (sidebar + details fold-out) the primary direction, as it was for linfilesearch?

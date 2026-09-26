@@ -1,10 +1,11 @@
 # Module doc — system logs (`src/modules/manager_logs.py` + `src/pages/page_logs.py`)
 
-Part of the linprocman modular docs. Siblings: [procfs-data.md](procfs-data.md) ·
-[sampling-pipeline.md](sampling-pipeline.md) · [process-table.md](process-table.md) ·
-[actions-permissions.md](actions-permissions.md) · [resource-graphs.md](resource-graphs.md) ·
-[persistence-config.md](persistence-config.md) · [disks-filesystems.md](disks-filesystems.md) ·
-[sysfs-data.md](sysfs-data.md). Overview: [../process-manager-concept.md](../process-manager-concept.md).
+Part of the linprocman modular docs. Siblings: [log-frequency.md](log-frequency.md) ·
+[procfs-data.md](procfs-data.md) · [sampling-pipeline.md](sampling-pipeline.md) ·
+[process-table.md](process-table.md) · [actions-permissions.md](actions-permissions.md) ·
+[resource-graphs.md](resource-graphs.md) · [persistence-config.md](persistence-config.md) ·
+[disks-filesystems.md](disks-filesystems.md) · [sysfs-data.md](sysfs-data.md).
+Overview: [../process-manager-concept.md](../process-manager-concept.md).
 
 Operator-mandated feature (r039): system logs in the sidebar as a **submenu**,
 searchable, organizable. Source of truth: the systemd journal via the local
@@ -53,6 +54,24 @@ layer's substring/regex matcher (regex = stdlib `re`, toggleable, case toggle
   query changes (kill + respawn) — never two writers into one view.
 - Burst handling: coalesce appends per idle tick, cap per-tick insert count,
   drop-oldest beyond the cap (a crash-looping service must not freeze the UI).
+
+## Row context menu (right-click, r040)
+
+Every log row opens a context menu; items act on the row:
+
+| Item | Icon | Action |
+|---|---|---|
+| Copy message | `copy` | raw MESSAGE to clipboard |
+| Copy entry as JSON | `file-text` | the full journalctl JSON object |
+| Flag this entry | `flag` | cursor-anchored flag (organize model above) |
+| Filter by this unit | `funnel` | sets `unit:` chip to the entry's unit |
+| Focus this message pattern | `crosshair` | filters the view to the normalized pattern |
+| **Frequency…** | `chart-bar` | opens the frequency analysis view — [log-frequency.md](log-frequency.md); offered on all rows, self-tuned for warning/err |
+| Export current view… | `download-simple` | CSV/text export |
+
+Keyboard: Menu key opens it on the cursor row. The Frequency entry shows the
+resolved pattern as its submenu label ("Frequency of 'I/O error, dev P,
+sector N'…") so the heuristic is visible before committing.
 
 ## Search & organize
 
