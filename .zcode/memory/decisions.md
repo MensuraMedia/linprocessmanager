@@ -78,3 +78,14 @@ Record architectural decisions with rationale. Newest at the bottom.
     append-mistake happened (replaced r039 entry with r040); rule: always
     append-only with old_string = the LAST line, new_string = last line +
     new line.
+15. **zcode-executor collaboration (r041, proposed).** T2 delegation
+    inverted: ZCode plans/verifies, Claude Code (claude -p headless,
+    v2.1.282 verified installed) executes on task branches via
+    .zcode/tasks/NNN-*.md contracts. Executor never merges, never edits
+    binding docs, never creates CLAUDE.md/.claude (no-claude-path rule is
+    a contract constraint AND a verification sweep). Verification chain:
+    scope diff → pytest → AST/argv gates → pixel verification. Pilot =
+    task 001 (Phase 1 data core) — NOT started; operator approval gate.
+    Lessons: changelog append-mistake happened a THIRD time (r040→r041);
+    the decisions.md rule from #14 now also applies mechanically — never
+    use a previous entry as old_string unless new_string starts with it.

@@ -13,7 +13,8 @@ universal standards here.
 - GTK 3 (PyGObject, gi); run with `python3 src/main.py` (starter not yet vendored — see roadmap in docs/process-manager-concept.md)
 - Data source: /proc read directly (stat, status, io, smaps_rollup, cgroup, pressure)
 - Icons: Phosphor (MIT) — master library ~/projects/assets/icons; project subset resources/icons/{regular,fill} (57+12, manifest.txt maps use)
-- Docs: docs/process-manager-concept.md (overview + module index), docs/build-principles.md (binding mandates), docs/modules/ (10 modular docs: procfs-data, sampling-pipeline, process-table, actions-permissions, resource-graphs, persistence-config, disks-filesystems, logs-journal, log-frequency, sysfs-data), docs/mockups/ (8 UI mockups + index + PNGs)
+- Docs: docs/process-manager-concept.md (overview + module index), docs/build-principles.md (binding mandates), docs/executor-collaboration.md (ZCode⇄Claude Code build collaboration — proposed), docs/modules/ (10 modular docs: procfs-data, sampling-pipeline, process-table, actions-permissions, resource-graphs, persistence-config, disks-filesystems, logs-journal, log-frequency, sysfs-data), docs/mockups/ (8 UI mockups + index + PNGs)
+- Build collaboration: ZCode plans/verifies, Claude Code (claude -p, headless) executes implementation on task branches via .zcode/tasks/ contracts — see docs/executor-collaboration.md; pending operator approval + pilot task 001.
 - Tests: pytest (tests/) — /proc parser fixtures, CPU-rate math, tree builder; run `python3 -m pytest tests/ -q` from repo root (once created)
 
 ## Project rules
