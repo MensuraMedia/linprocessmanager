@@ -1,0 +1,61 @@
+# linprocman icon subset — Phosphor (MIT), master library ~/projects/assets/icons
+# Weight naming: regular = <name>.svg from regular/; fill = <name>-fill.svg from fill/,
+# stored here WITHOUT the suffix so code can address both weights by the same name.
+# Loading pattern (as in linfilesearch): pixbuf at 16px rows/toolbar, 24px nav,
+# tinted to theme foreground/accent; regular for tools/rows, fill for active + logo.
+
+# --- navigation / brand (regular unless noted) ---
+pulse                 logo mark (fill+reg), Resources nav, activity indicator
+list-magnifying-glass Processes nav
+hard-drive            Disks nav, disk-I/O column
+info                  About nav, details actions
+gear-six              Settings nav
+
+# --- toolbar ---
+magnifying-glass      filter entry prefix
+funnel                filters popover (user/state/nice/cgroup)
+sliders-horizontal    visible-columns / renice action
+list-dashes           flat process list view
+tree-structure        process tree view
+arrow-clockwise       refresh now
+pause-circle          pause live updates
+play                  resume live updates; SIGCONT (fill for active state)
+eye                   details pane toggle
+caret-down            expand-all, dropdown carets
+caret-right           collapsed tree twisty, fold pane away
+caret-left            unfold pane back in
+
+# --- process actions ---
+stop-circle           Stop (SIGSTOP) (fill for active state)
+x-circle              Kill (SIGKILL) (fill for active state)
+lightning             custom signal dialog
+warning               error/status warnings (fill for active state)
+shield-warning        system/protected process rows
+lock                  unreadable/other-user details fields
+prohibit              EPERM result badge on failed actions
+copy                  copy PID / command line
+arrow-square-out      open process executable location
+terminal-window       command-line display in details
+check                 action success (fill for active state)
+
+# --- resources page ---
+cpu                   CPU chart + summary (fill for active state)
+memory                memory + swap chart (fill for active state)
+arrows-left-right     network chart
+waveform              per-core mini bars section
+gauge                 pressure (PSI) chips
+chart-line-up         history legend
+stack                 stacked per-core mode
+drop-half-bottom      swap usage summary
+
+# --- misc ---
+user-circle           User column filter
+user                  user rows
+spinner-gap           refresh-in-progress spinner
+clock                 refresh-interval selector
+flag-banner           Nice / priority column
+dots-three            row overflow menu
+target                selected-PID indicator
+crosshair             "find in tree" (jump from flat row to tree)
+
+54 icons total: 44 regular + 10 fill.

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup A — Dashboard + Details pane</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:Ubuntu, Cantarell, sans-serif; }
+  body { background:#1a1a1a; padding:24px; display:flex; justify-content:center; }
+  .ic { filter:invert(1); opacity:.85; display:inline-block; vertical-align:middle; }
+  .window { width:1200px; max-width:100%; background:#2d2d2d; color:#eee; border:1px solid #000; display:flex; flex-direction:column; }
+  .titlebar { display:flex; align-items:center; justify-content:space-between; background:#222; color:#ccc; font-size:13px; padding:6px 10px; border-bottom:1px solid #1a1a1a; }
+  .winbtns { display:flex; gap:8px; }
+  .winbtns span { width:12px; height:12px; border-radius:50%; background:#555; display:inline-block; }
+  .body { display:flex; min-height:720px; }
+
+  /* sidebar */
+  .sidebar { width:150px; background:#353535; border-right:1px solid #1a1a1a; display:flex; flex-direction:column; }
+  .logo-area { height:150px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border-bottom:1px solid #1a1a1a; }
+  .logo-area .ic { width:64px; height:64px; filter:invert(27%) sepia(96%) saturate(1400%) hue-rotate(197deg) brightness(96%); }
+  .logo-cap { font-size:10px; letter-spacing:1.5px; color:#bbb; }
+  .nav { display:flex; flex-direction:column; }
+  .nav-button { display:flex; align-items:center; gap:8px; padding:8px 12px; font-size:14px; color:#eee; border:none; border-bottom:1px solid #1a1a1a; cursor:pointer; }
+  .nav-button:hover { background:#404040; }
+  .nav-button.active { background:#0078D7; color:#fff; }
+  .nav-button .ic { width:16px; height:16px; }
+  .spacer { flex:1; }
+  .nav-bottom { border-top:1px solid #1a1a1a; border-bottom:none; }
+
+  /* content */
+  .content { flex:1; padding:36px 24px 30px 32px; display:flex; flex-direction:column; gap:16px; min-width:0; }
+  .page-title { font-size:24px; font-weight:bold; color:#fff; }
+
+  .search-row { display:flex; gap:8px; align-items:stretch; }
+  .entry { flex:1; display:flex; align-items:center; gap:10px; background:#262626; border:1px solid #1a1a1a; padding:0 12px; min-width:0; }
+  .entry input { flex:1; background:none; border:none; color:#eee; font-size:15px; outline:none; padding:10px 0; min-width:0; }
+  .entry input::placeholder { color:#777; }
+  .cadence { display:flex; align-items:center; gap:6px; padding:0 12px; background:#353535; border:1px solid #1a1a1a; color:#ccc; font-size:13px; cursor:pointer; flex:none; }
+  .cadence .ic { width:14px; height:14px; }
+  .btn { display:flex; align-items:center; justify-content:center; width:38px; background:#353535; border:1px solid #1a1a1a; color:#eee; cursor:pointer; flex:none; }
+  .btn:hover { background:#404040; }
+  .btn .ic { width:16px; height:16px; }
+
+  .toolbar { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; }
+  .chip { display:flex; align-items:center; gap:6px; background:#353535; border:1px solid #1a1a1a; padding:5px 10px; font-size:12px; color:#ddd; cursor:pointer; }
+  .chip:hover { background:#404040; }
+  .chip.on { background:#0078D7; color:#fff; }
+  .chip .ic { width:14px; height:14px; }
+  .chip .count { opacity:.6; }
+  .toolgroup { display:flex; flex:none; }
+  .tool { display:flex; align-items:center; justify-content:center; width:34px; height:30px; background:#353535; border:1px solid #1a1a1a; border-left:none; cursor:pointer; }
+  .tool:first-child { border-left:1px solid #1a1a1a; }
+  .tool:hover { background:#404040; }
+  .tool.on { background:#0078D7; }
+  .tool.danger:hover { background:#a33; }
+  .tool .ic { width:16px; height:16px; }
+
+  .results { flex:1; border:1px solid #1a1a1a; display:flex; flex-direction:column; min-height:0; overflow:auto; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  thead th { text-align:left; color:#aaa; font-weight:normal; padding:8px 12px; border-bottom:1px solid #1a1a1a; background:#313131; position:sticky; top:0; }
+  thead th .ic { width:12px; height:12px; opacity:.6; }
+  tbody td { padding:7px 12px; border-bottom:1px solid #262626; color:#ddd; white-space:nowrap; }
+  tbody tr:hover { background:#373737; }
+  tbody tr.sel { background:#0078D7; }
+  tbody tr.sel td { color:#fff; }
+  td .ic { width:15px; height:15px; margin-right:8px; }
+  td .kic { width:14px; height:14px; margin-right:8px; opacity:.45; }
+  td.num, td.user { font-variant-numeric:tabular-nums; }
+  td.cpu-hot { color:#7fd0a0; }
+  td.muted, tr.muted td { color:#777; }
+  tr.sel td.cpu-hot { color:#cfe6fb; }
+  td.state { font-size:11px; }
+  .badge { display:inline-block; padding:0 6px; border:1px solid #555; border-radius:8px; font-size:10px; color:#aaa; }
+  tr.sel .badge { border-color:#9cd0ff; color:#cfe6fb; }
+
+  .statusbar { display:flex; align-items:center; gap:16px; background:#313131; border:1px solid #1a1a1a; padding:7px 12px; font-size:12px; color:#bbb; }
+  .statusbar .ic { width:14px; height:14px; }
+  .statusbar .right { margin-left:auto; display:flex; gap:16px; align-items:center; }
+  .spin { animation:spin 1.2s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .mono { font-variant-numeric:tabular-nums; }
+
+  /* ---- details fold-out pane ---- */
+  .main-area { flex:1; display:flex; min-width:0; }
+  .preview { width:290px; flex:none; border-left:1px solid #1a1a1a; background:#303030; display:flex; flex-direction:column; overflow:hidden; }
+  .pv-head { display:flex; align-items:center; gap:8px; padding:10px 12px; margin-right:8px; border-bottom:1px solid #1a1a1a; font-size:12px; color:#999; white-space:nowrap; }
+  .pv-head .ic { width:14px; height:14px; }
+  .pv-head .grow { flex:1; }
+  .pv-head .fold { opacity:.5; cursor:pointer; }
+  .pv-head .fold:hover { opacity:1; }
+  .pv-icon { display:flex; flex-direction:column; align-items:center; gap:12px; padding:22px 14px 14px; }
+  .pv-icon img.big { width:56px; height:56px; filter:invert(1); opacity:.9; }
+  .pv-icon .fname { font-size:15px; color:#fff; text-align:center; word-break:break-all; }
+  .pv-icon .ftype { font-size:11px; color:#888; max-width:240px; word-break:break-all; text-align:center; }
+  .props { padding:0 14px; font-size:12px; }
+  .props .prow { display:flex; justify-content:space-between; gap:8px; padding:5px 0; border-bottom:1px solid #262626; color:#ddd; }
+  .props .prow span:first-child { color:#888; flex:none; }
+  .props .prow span:last-child { text-align:right; word-break:break-all; }
+  .props .sec { padding:10px 0 4px; color:#0078D7; font-size:10px; letter-spacing:1.2px; text-transform:uppercase; }
+  .snippet { margin:12px 14px; background:#262626; border:1px solid #1a1a1a; padding:10px; font-family:'Ubuntu Mono', monospace; font-size:11px; color:#9c9c9c; line-height:1.5; overflow:hidden; word-break:break-all; }
+  .pv-actions { margin-top:auto; display:flex; border-top:1px solid #1a1a1a; }
+  .pv-actions .act { flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; padding:10px 0 12px; font-size:10px; color:#bbb; cursor:pointer; }
+  .pv-actions .act:hover { background:#373737; color:#fff; }
+  .pv-actions .act.danger:hover { background:#5c2626; }
+  .pv-actions .act .ic { width:16px; height:16px; }
+</style>
+</head>
+<body>
+<div class="window" id="win">
+  <div class="titlebar"><span>linprocman — All processes</span>
+    <div class="winbtns"><span></span><span></span><span></span></div></div>
+  <div class="body">
+
+    <div class="sidebar">
+      <div class="logo-area">
+        <img class="ic" src="../../resources/icons/fill/pulse.svg">
+        <div class="logo-cap">LINPROCMAN</div>
+      </div>
+      <div class="nav">
+        <div class="nav-button active"><img class="ic" src="../../resources/icons/regular/list-magnifying-glass.svg">Processes</div>
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/pulse.svg">Resources</div>
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/hard-drive.svg">Disks</div>
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/info.svg">About</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="nav">
+        <div class="nav-button nav-bottom"><img class="ic" src="../../resources/icons/regular/gear-six.svg">Settings</div>
+      </div>
+    </div>
+
+    <div class="main-area">
+      <div class="content">
+        <div class="page-title">Processes</div>
+
+        <div class="search-row">
+          <div class="entry">
+            <img class="ic" style="width:16px;height:16px;opacity:.5" src="../../resources/icons/regular/magnifying-glass.svg">
+            <input placeholder="Filter by process name, PID, user or command line">
+          </div>
+          <div class="cadence" title="Refresh interval"><img class="ic" src="../../resources/icons/regular/clock.svg">2 s<img class="ic" style="width:12px;height:12px;opacity:.6" src="../../resources/icons/regular/caret-down.svg"></div>
+          <button class="btn" title="Refresh now"><img class="ic" src="../../resources/icons/regular/arrow-clockwise.svg"></button>
+          <button class="btn" title="Pause live updates"><img class="ic" src="../../resources/icons/regular/pause-circle.svg"></button>
+        </div>
+
+        <div class="toolbar">
+          <div class="chips">
+            <div class="chip on"><img class="ic" src="../../resources/icons/regular/list-dashes.svg">All <span class="count">312</span></div>
+            <div class="chip"><img class="ic" src="../../resources/icons/regular/user-circle.svg">My processes <span class="count">41</span></div>
+            <div class="chip"><img class="ic" src="../../resources/icons/regular/shield-warning.svg">System <span class="count">271</span></div>
+            <div class="chip"><img class="ic" src="../../resources/icons/regular/pulse.svg">Active <span class="count">17</span></div>
+          </div>
+          <div class="toolgroup">
+            <div class="tool" title="Filters (user, state, nice)"><img class="ic" src="../../resources/icons/regular/funnel.svg"></div>
+            <div class="tool" title="Visible columns"><img class="ic" src="../../resources/icons/regular/sliders-horizontal.svg"></div>
+            <div class="tool on" title="Flat list"><img class="ic" src="../../resources/icons/regular/list-dashes.svg"></div>
+            <div class="tool" title="Process tree"><img class="ic" src="../../resources/icons/regular/tree-structure.svg"></div>
+            <div class="tool on" title="Details pane"><img class="ic" src="../../resources/icons/regular/eye.svg"></div>
+            <div class="tool" title="End (SIGTERM)"><img class="ic" src="../../resources/icons/regular/x-circle.svg"></div>
+            <div class="tool danger" title="Kill (SIGKILL)"><img class="ic" src="../../resources/icons/regular/prohibit.svg"></div>
+            <div class="tool" title="More actions (stop, continue, renice, signal)"><img class="ic" src="../../resources/icons/regular/dots-three.svg"></div>
+          </div>
+        </div>
+
+        <div class="results">
+          <table>
+            <thead><tr>
+              <th style="width:24%"><img class="ic" src="../../resources/icons/regular/sort-ascending.svg" style="filter:invert(1)"> Process</th>
+              <th>User</th><th style="width:56px; text-align:right">CPU %</th><th style="width:70px; text-align:right">Memory</th>
+              <th style="width:96px; text-align:right">Disk r/w</th><th style="width:40px; text-align:right">Nice</th>
+              <th style="width:52px; text-align:right">PID</th><th style="width:36px">State</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td><img class="ic" src="../../resources/icons/regular/terminal-window.svg">systemd</td>
+                <td class="user">root</td><td class="num">0.0</td><td class="num">9.4 MB</td><td class="num">— / —</td><td class="num">0</td><td class="num">1</td><td class="state">S</td>
+              </tr>
+              <tr>
+                <td><img class="ic" src="../../resources/icons/regular/terminal-window.svg">systemd-journald</td>
+                <td class="user">root</td><td class="num">0.3</td><td class="num">48.2 MB</td><td class="num">— / 2.1 MB</td><td class="num">0</td><td class="num">318</td><td class="state">S</td>
+              </tr>
+              <tr>
+                <td><img class="kic" src="../../resources/icons/regular/lock.svg">Xorg</td>
+                <td class="user">root</td><td class="num">2.1</td><td class="num">86.7 MB</td><td class="num">— / —</td><td class="num">0</td><td class="num">812</td><td class="state">S</td>
+              </tr>
+              <tr>
+                <td><img class="ic" src="../../resources/icons/regular/terminal-window.svg">cinnamon</td>
+                <td class="user">user</td><td class="num cpu-hot">4.8</td><td class="num">412 MB</td><td class="num">0.9 MB / 12 MB</td><td class="num">0</td><td class="num">1104</td><td class="state">S</td>
+              </tr>
+              <tr class="sel">
+                <td><img class="ic" src="../../resources/icons/regular/terminal-window.svg">firefox <span class="badge">firefox.scope</span></td>
+                <td class="user">user</td><td class="num cpu-hot">14.2</td><td class="num">1.2 GB</td><td class="num">84 MB / 12 MB</td><td class="num">0</td><td class="num">4182</td><td class="state">R</td>
+              </tr>
+              <tr>
+                <td><img class="ic" src="../../resources/icons/regular/terminal-window.svg">Web Content</td>
+                <td class="user">user</td><td class="num cpu-hot">7.9</td><td class="num">612 MB</td><td class="num">31 MB / 4 MB</td><td class="num">0</td><td class="num">4311</td><td class="state">S</td>
+              </tr>
+              <tr>
+                <td><img class="ic" src="../../resources/icons/regular/terminal-window.svg">pipewire</td>
+                <td class="user">user</td><td class="num">0.6</td><td class="num">12.8 MB</td><td class="num">0.2 MB / 0.1 MB</td><td class="num">-11</td><td class="num">1138</td><td class="state">S</td>
+              </tr>
+              <tr>
+                <td><img class="ic" src="../../resources/icons/regular/terminal-window.svg">python3</td>
+                <td class="user">user</td><td class="num">1.1</td><td class="num">42.6 MB</td><td class="num">0.1 MB / —</td><td class="num">0</td><td class="num">5120</td><td class="state">S</td>
+              </tr>
+              <tr class="muted">
+                <td><img class="kic" src="../../resources/icons/regular/warning.svg">sd-pam <span class="badge">defunct</span></td>
+                <td class="user">user</td><td class="num">0.0</td><td class="num">0</td><td class="num">— / —</td><td class="num">0</td><td class="num">3997</td><td class="state">Z</td>
+              </tr>
+              <tr>
+                <td><img class="ic" src="../../resources/icons/regular/terminal-window.svg">tracker-miner-fs</td>
+                <td class="user">user</td><td class="num">0.2</td><td class="num">28.4 MB</td><td class="num">140 MB / 2.2 MB</td><td class="num">0</td><td class="num">1206</td><td class="state">S</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="statusbar">
+          <img class="ic spin" src="../../resources/icons/regular/spinner-gap.svg">
+          <span><span class="mono">312</span> processes · <span class="mono">41</span> mine · load <span class="mono">0.84 0.71 0.66</span></span>
+          <div class="right">
+            <span>kernel threads hidden <span class="mono">(89)</span></span>
+            <span class="mono">updated 12:44:07</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- details fold-out -->
+      <div class="preview" id="pv">
+        <div class="pv-head">
+          <img class="ic" src="../../resources/icons/regular/eye.svg"><span class="label">Details</span>
+          <div class="grow"></div>
+          <img class="ic" src="../../resources/icons/regular/target.svg" title="Selection: (pid 4182, starttime 23911)">
+          <img class="ic fold" src="../../resources/icons/regular/caret-left.svg" title="Fold pane">
+        </div>
+        <div class="pv-icon">
+          <img class="big" src="../../resources/icons/fill/cpu.svg">
+          <div class="fname">firefox</div>
+          <div class="ftype">/usr/lib/firefox/firefox</div>
+        </div>
+        <div class="props">
+          <div class="sec">Identity</div>
+          <div class="prow"><span>PID / Parent</span><span>4182 / 3901</span></div>
+          <div class="prow"><span>User</span><span>user (1000)</span></div>
+          <div class="prow"><span>State</span><span>Running (R)</span></div>
+          <div class="prow"><span>Unit</span><span>firefox.scope</span></div>
+          <div class="sec">Memory</div>
+          <div class="prow"><span>Resident (RSS)</span><span>1.2 GB</span></div>
+          <div class="prow"><span>PSS</span><span>984 MB</span></div>
+          <div class="prow"><span>Shared / Virtual</span><span>210 MB / 6.8 GB</span></div>
+          <div class="sec">Time</div>
+          <div class="prow"><span>Started</span><span>09:41 · 3:12:04 ago</span></div>
+          <div class="prow"><span>CPU time</span><span>14:02</span></div>
+          <div class="prow"><span>Threads</span><span>96</span></div>
+          <div class="sec">Disk I/O</div>
+          <div class="prow"><span>Read / Write</span><span>84 MB / 12 MB</span></div>
+        </div>
+        <div class="snippet">/usr/lib/firefox/firefox</div>
+        <div class="pv-actions">
+          <div class="act danger"><img class="ic" src="../../resources/icons/regular/x-circle.svg">End</div>
+          <div class="act danger"><img class="ic" src="../../resources/icons/regular/prohibit.svg">Kill</div>
+          <div class="act"><img class="ic" src="../../resources/icons/regular/copy.svg">Copy PID</div>
+          <div class="act"><img class="ic" src="../../resources/icons/regular/sliders-horizontal.svg">Renice</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

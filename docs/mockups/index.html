@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>linprocman — mockups</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:Ubuntu, Cantarell, sans-serif; }
+  body { background:#1a1a1a; color:#eee; padding:32px; }
+  h1 { font-size:22px; margin-bottom:4px; }
+  .sub { color:#888; font-size:13px; margin-bottom:24px; }
+  .sub a { color:#9cd0ff; text-decoration:none; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:20px; max-width:1400px; }
+  .card { border:1px solid #333; background:#222; overflow:hidden; }
+  .card img { width:100%; display:block; }
+  .meta { padding:12px 14px; display:flex; align-items:center; gap:10px; }
+  .meta .tag { font-size:10px; letter-spacing:1px; background:#0078D7; color:#fff; padding:2px 8px; flex:none; }
+  .meta .name { font-size:14px; color:#fff; }
+  .meta .for { margin-left:auto; font-size:11px; color:#777; text-align:right; }
+  .notes { margin-top:28px; max-width:1400px; border:1px solid #333; background:#222; padding:16px 18px; font-size:12px; color:#aaa; line-height:1.6; }
+  .notes b { color:#ddd; font-weight:normal; }
+</style>
+</head>
+<body>
+<h1>linprocman — UI mockups</h1>
+<div class="sub">Four directions on the real starter palette (<b style="color:#ddd">#2d2d2d</b> window · <b style="color:#ddd">#353535</b> sidebar · <b style="color:#ddd">#0078D7</b> accent · hairline <b style="color:#ddd">#1a1a1a</b>) with the staged Phosphor subset. Concept: <a href="../process-manager-concept.md">process-manager-concept.md</a></div>
+
+<div class="grid">
+  <a class="card" href="mockup-a-processes.html">
+    <img src="mockup-a-processes.png" alt="Mockup A">
+    <div class="meta"><span class="tag">A</span><span class="name">Dashboard + Details pane</span><span class="for">primary candidate —<br>linfilesearch A+ continuity</span></div>
+  </a>
+  <a class="card" href="mockup-b-tree.html">
+    <img src="mockup-b-tree.png" alt="Mockup B">
+    <div class="meta"><span class="tag">B</span><span class="name">Process Tree</span><span class="for">hierarchy view,<br>pane folded (r028 toggle)</span></div>
+  </a>
+  <a class="card" href="mockup-c-resources.html">
+    <img src="mockup-c-resources.png" alt="Mockup C">
+    <div class="meta"><span class="tag">C</span><span class="name">Resources</span><span class="for">cairo graph targets,<br>PSI chips</span></div>
+  </a>
+  <a class="card" href="mockup-d-actions.html">
+    <img src="mockup-d-actions.png" alt="Mockup D">
+    <div class="meta"><span class="tag">D</span><span class="name">Action Dialogs</span><span class="for">kill / renice / signal,<br>EPERM status results</span></div>
+  </a>
+</div>
+
+<div class="notes">
+  <b>Open decisions</b> — primary layout (A, as with linfilesearch?); CPU % normalization default (per-core vs whole-machine); refresh defaults (2 s table / 1 s graphs); kernel threads hidden by default; brand mark (<b>pulse</b> shown, <b>gauge</b> alternative).<br>
+  <b>Model rules shown in mockups</b> — selection tracked by (pid, starttime); smaps_rollup only for the selected row; unreadable fields render as "—" or a lock, never an error; EPERM surfaces the exact errno text in the status line; v1 never elevates privileges.
+</div>
+</body>
+</html>

@@ -1,0 +1,6 @@
+*.bak
+*.bak.*
+.DS_Store
+*.tar.gz
+backups/
+backup-log.md

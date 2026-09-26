@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup D — Action Dialogs</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:Ubuntu, Cantarell, sans-serif; }
+  body { background:#1a1a1a; padding:24px; display:flex; justify-content:center; }
+  .ic { filter:invert(1); opacity:.85; display:inline-block; vertical-align:middle; }
+  .board { width:1200px; max-width:100%; display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+
+  .frame { border:1px solid #333; background:#222; padding:20px; display:flex; flex-direction:column; gap:14px; }
+  .frame-title { font-size:12px; letter-spacing:1.5px; color:#888; text-transform:uppercase; }
+
+  /* dimmed table behind dialogs */
+  .stage { position:relative; background:#2d2d2d; border:1px solid #1a1a1a; padding:28px; min-height:300px; display:flex; align-items:center; justify-content:center; }
+  .ghost { position:absolute; inset:0; background:#262626; opacity:.55; }
+  .ghost table { width:100%; border-collapse:collapse; font-size:12px; color:#555; }
+  .ghost td { padding:6px 12px; border-bottom:1px solid #222; }
+
+  .dialog { position:relative; width:360px; background:#313131; border:1px solid #000; box-shadow:0 12px 40px rgba(0,0,0,.6); }
+  .dlg-title { display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid #1a1a1a; font-size:14px; color:#fff; background:#353535; }
+  .dlg-title .ic { width:16px; height:16px; }
+  .dlg-body { padding:16px; display:flex; flex-direction:column; gap:12px; font-size:13px; color:#ccc; }
+  .dlg-body .target { background:#262626; border:1px solid #1a1a1a; padding:8px 10px; display:flex; align-items:center; gap:10px; font-size:13px; color:#eee; }
+  .dlg-body .target .ic { width:15px; height:15px; }
+  .dlg-body .target .pid { margin-left:auto; color:#888; font-size:12px; font-variant-numeric:tabular-nums; }
+  .dlg-body p { line-height:1.45; }
+  .dlg-body .note { font-size:11px; color:#888; display:flex; gap:6px; align-items:flex-start; line-height:1.4; }
+  .dlg-body .note .ic { width:13px; height:13px; margin-top:1px; opacity:.6; }
+  .warnrow { color:#e8c268; }
+  .dlg-actions { display:flex; justify-content:flex-end; gap:8px; padding:12px 16px; border-top:1px solid #1a1a1a; }
+  .dbtn { padding:7px 16px; font-size:13px; background:#353535; border:1px solid #1a1a1a; color:#eee; cursor:pointer; }
+  .dbtn:hover { background:#404040; }
+  .dbtn.primary { background:#0078D7; border-color:#0078D7; color:#fff; font-weight:bold; }
+  .dbtn.danger { background:#8a2e2e; border-color:#8a2e2e; color:#fff; font-weight:bold; }
+
+  .slider { display:flex; align-items:center; gap:10px; }
+  .slider .val { min-width:36px; text-align:center; background:#262626; border:1px solid #1a1a1a; padding:4px 6px; color:#fff; font-variant-numeric:tabular-nums; }
+  .track { flex:1; height:4px; background:#262626; border:1px solid #1a1a1a; position:relative; }
+  .fill { position:absolute; left:0; top:0; bottom:0; width:53%; background:#0078D7; }
+  .knob { position:absolute; left:53%; top:50%; transform:translate(-50%,-50%); width:14px; height:14px; border-radius:50%; background:#eee; border:1px solid #000; }
+  .ends { display:flex; justify-content:space-between; font-size:10px; color:#666; margin-top:4px; }
+
+  .siggrid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+  .sig { padding:8px 4px; text-align:center; background:#262626; border:1px solid #1a1a1a; font-size:11px; color:#ccc; cursor:pointer; font-variant-numeric:tabular-nums; }
+  .sig small { display:block; color:#777; font-size:9px; margin-top:2px; }
+  .sig.on { background:#0078D7; color:#fff; border-color:#0078D7; }
+  .sig.on small { color:#cfe6fb; }
+
+  /* status-line variants */
+  .statusline { display:flex; align-items:center; gap:10px; background:#313131; border:1px solid #1a1a1a; padding:8px 12px; font-size:12px; color:#bbb; }
+  .statusline .ic { width:14px; height:14px; flex:none; }
+  .statusline.ok { color:#9fd8ae; }
+  .statusline.err { color:#e88; }
+  .statusline .mono { font-variant-numeric:tabular-nums; }
+  .statusline .right { margin-left:auto; color:#777; }
+</style>
+</head>
+<body>
+<div class="board">
+
+  <div class="frame">
+    <div class="frame-title">Kill confirmation — over dimmed table</div>
+    <div class="stage">
+      <div class="ghost">
+        <table>
+          <tr><td>systemd</td><td>root</td><td>0.0</td><td>1</td></tr>
+          <tr><td>cinnamon</td><td>user</td><td>4.8</td><td>1104</td></tr>
+          <tr><td>firefox</td><td>user</td><td>14.2</td><td>4182</td></tr>
+          <tr><td>Web Content</td><td>user</td><td>7.9</td><td>4311</td></tr>
+          <tr><td>pipewire</td><td>user</td><td>0.6</td><td>1138</td></tr>
+          <tr><td>tracker-miner-fs</td><td>user</td><td>0.2</td><td>1206</td></tr>
+        </table>
+      </div>
+      <div class="dialog">
+        <div class="dlg-title"><img class="ic" src="../../resources/icons/fill/warning.svg">Kill process?</div>
+        <div class="dlg-body">
+          <div class="target">
+            <img class="ic" src="../../resources/icons/regular/terminal-window.svg">firefox
+            <span class="pid">PID 4182</span>
+          </div>
+          <p><b style="color:#fff">SIGKILL</b> forcibly terminates the process without letting it save anything. Unsaved work will be lost.</p>
+          <div class="note warnrow"><img class="ic" src="../../resources/icons/regular/warning.svg">96 threads and 4 child processes will be affected. Child processes are not killed automatically.</div>
+          <div class="note"><img class="ic" src="../../resources/icons/regular/target.svg">Action is guarded by <span class="mono" style="color:#ddd">(pid 4182, starttime 23911)</span> — if the PID was reused since selection, nothing is sent.</div>
+        </div>
+        <div class="dlg-actions">
+          <button class="dbtn">Cancel</button>
+          <button class="dbtn danger">Kill</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="frame">
+    <div class="frame-title">Renice + custom signal</div>
+    <div style="display:flex; gap:20px; flex-wrap:wrap; justify-content:center; align-items:flex-start; padding:8px 0;">
+      <div class="dialog" style="width:340px">
+        <div class="dlg-title"><img class="ic" src="../../resources/icons/regular/sliders-horizontal.svg">Change priority</div>
+        <div class="dlg-body">
+          <div class="target">
+            <img class="ic" src="../../resources/icons/regular/terminal-window.svg">python3
+            <span class="pid">PID 5120</span>
+          </div>
+          <div class="slider">
+            <span style="color:#888">−20</span>
+            <div style="flex:1">
+              <div class="track"><div class="fill"></div><div class="knob"></div></div>
+              <div class="ends"><span>high prio</span><span>low prio</span></div>
+            </div>
+            <span style="color:#888">19</span>
+            <div class="val">0</div>
+          </div>
+          <div class="note"><img class="ic" src="../../resources/icons/regular/lock.svg">Decreasing niceness below the current value needs elevated privileges — v1 never elevates; the action will report <span class="mono" style="color:#ddd">Permission denied</span> instead.</div>
+        </div>
+        <div class="dlg-actions">
+          <button class="dbtn">Cancel</button>
+          <button class="dbtn primary">Apply</button>
+        </div>
+      </div>
+
+      <div class="dialog" style="width:340px">
+        <div class="dlg-title"><img class="ic" src="../../resources/icons/regular/lightning.svg">Send signal</div>
+        <div class="dlg-body">
+          <div class="target">
+            <img class="ic" src="../../resources/icons/regular/terminal-window.svg">firefox
+            <span class="pid">PID 4182</span>
+          </div>
+          <div class="siggrid">
+            <div class="sig on">15<small>TERM · End</small></div>
+            <div class="sig">9<small>KILL · Kill</small></div>
+            <div class="sig">1<small>HUP · Hangup</small></div>
+            <div class="sig">2<small>INT · Interrupt</small></div>
+            <div class="sig">19<small>STOP · Pause</small></div>
+            <div class="sig">18<small>CONT · Resume</small></div>
+            <div class="sig">10<small>USR1</small></div>
+            <div class="sig">12<small>USR2</small></div>
+          </div>
+        </div>
+        <div class="dlg-actions">
+          <button class="dbtn">Cancel</button>
+          <button class="dbtn primary">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="frame" style="grid-column:1 / -1">
+    <div class="frame-title">Status-line results — success and EPERM</div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <div class="statusline ok">
+        <img class="ic" src="../../resources/icons/fill/check.svg">
+        <span>Ended <span class="mono" style="color:#fff">firefox (4182)</span> with SIGTERM</span>
+        <span class="right">12:44:19</span>
+      </div>
+      <div class="statusline err">
+        <img class="ic" src="../../resources/icons/regular/prohibit.svg">
+        <span>Failed to kill <span class="mono" style="color:#fff">systemd (1)</span>: Operation not permitted</span>
+        <span class="right">12:44:31</span>
+      </div>
+      <div class="statusline err">
+        <img class="ic" src="../../resources/icons/regular/warning.svg">
+        <span>Not sent — <span class="mono" style="color:#fff">PID 3997</span> exited and the PID was reused (starttime guard)</span>
+        <span class="right">12:44:40</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

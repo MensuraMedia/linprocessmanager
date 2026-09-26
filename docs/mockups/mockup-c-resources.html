@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup C — Resources</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:Ubuntu, Cantarell, sans-serif; }
+  body { background:#1a1a1a; padding:24px; display:flex; justify-content:center; }
+  .ic { filter:invert(1); opacity:.85; display:inline-block; vertical-align:middle; }
+  .window { width:1200px; max-width:100%; background:#2d2d2d; color:#eee; border:1px solid #000; display:flex; flex-direction:column; }
+  .titlebar { display:flex; align-items:center; justify-content:space-between; background:#222; color:#ccc; font-size:13px; padding:6px 10px; border-bottom:1px solid #1a1a1a; }
+  .winbtns { display:flex; gap:8px; }
+  .winbtns span { width:12px; height:12px; border-radius:50%; background:#555; display:inline-block; }
+  .body { display:flex; min-height:720px; }
+
+  .sidebar { width:150px; background:#353535; border-right:1px solid #1a1a1a; display:flex; flex-direction:column; }
+  .logo-area { height:150px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border-bottom:1px solid #1a1a1a; }
+  .logo-area .ic { width:64px; height:64px; filter:invert(27%) sepia(96%) saturate(1400%) hue-rotate(197deg) brightness(96%); }
+  .logo-cap { font-size:10px; letter-spacing:1.5px; color:#bbb; }
+  .nav { display:flex; flex-direction:column; }
+  .nav-button { display:flex; align-items:center; gap:8px; padding:8px 12px; font-size:14px; color:#eee; border:none; border-bottom:1px solid #1a1a1a; cursor:pointer; }
+  .nav-button:hover { background:#404040; }
+  .nav-button.active { background:#0078D7; color:#fff; }
+  .nav-button .ic { width:16px; height:16px; }
+  .spacer { flex:1; }
+  .nav-bottom { border-top:1px solid #1a1a1a; border-bottom:none; }
+
+  .content { flex:1; padding:36px 24px 30px 32px; display:flex; flex-direction:column; gap:14px; min-width:0; }
+  .page-title { font-size:24px; font-weight:bold; color:#fff; }
+  .mono { font-variant-numeric:tabular-nums; }
+
+  .summary { display:flex; gap:8px; flex-wrap:wrap; }
+  .sumchip { display:flex; align-items:center; gap:8px; background:#353535; border:1px solid #1a1a1a; padding:7px 12px; font-size:12px; color:#ddd; }
+  .sumchip .ic { width:14px; height:14px; }
+  .sumchip b { color:#fff; font-weight:normal; }
+
+  .card { border:1px solid #1a1a1a; background:#303030; display:flex; flex-direction:column; }
+  .card-head { display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid #1a1a1a; font-size:14px; color:#fff; }
+  .card-head .ic { width:16px; height:16px; }
+  .card-head .right { margin-left:auto; display:flex; gap:16px; align-items:center; font-size:12px; color:#bbb; }
+  .legend { display:flex; gap:12px; font-size:11px; color:#999; }
+  .legend span { display:flex; align-items:center; gap:5px; }
+  .swatch { width:10px; height:10px; display:inline-block; }
+  .chart { position:relative; height:150px; background:#262626; }
+  .chart svg { width:100%; height:100%; display:block; }
+  .chart .ylab { position:absolute; right:8px; font-size:10px; color:#666; }
+  .y1 { top:4px; } .y2 { top:calc(50% - 7px); } .y3 { bottom:4px; }
+
+  .psi-row { display:flex; gap:8px; }
+  .psi { flex:1; display:flex; align-items:center; gap:10px; background:#353535; border:1px solid #1a1a1a; padding:9px 12px; font-size:12px; color:#ddd; }
+  .psi .ic { width:16px; height:16px; }
+  .psi .label { color:#999; }
+  .psi b { color:#fff; font-weight:normal; font-size:14px; }
+  .psi .avg { margin-left:auto; color:#888; font-size:11px; }
+</style>
+</head>
+<body>
+<div class="window">
+  <div class="titlebar"><span>linprocman — Resources</span>
+    <div class="winbtns"><span></span><span></span><span></span></div></div>
+  <div class="body">
+
+    <div class="sidebar">
+      <div class="logo-area">
+        <img class="ic" src="../../resources/icons/fill/pulse.svg">
+        <div class="logo-cap">LINPROCMAN</div>
+      </div>
+      <div class="nav">
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/list-magnifying-glass.svg">Processes</div>
+        <div class="nav-button active"><img class="ic" src="../../resources/icons/regular/pulse.svg">Resources</div>
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/hard-drive.svg">Disks</div>
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/info.svg">About</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="nav">
+        <div class="nav-button nav-bottom"><img class="ic" src="../../resources/icons/regular/gear-six.svg">Settings</div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="page-title">Resources</div>
+
+      <div class="summary">
+        <div class="sumchip"><img class="ic" src="../../resources/icons/regular/clock.svg">uptime <b class="mono">3:12</b></div>
+        <div class="sumchip"><img class="ic" src="../../resources/icons/regular/waveform.svg">load <b class="mono">0.84 · 0.71 · 0.66</b></div>
+        <div class="sumchip"><img class="ic" src="../../resources/icons/regular/list-dashes.svg">processes <b class="mono">312</b></div>
+        <div class="sumchip"><img class="ic" src="../../resources/icons/regular/info.svg">kernel <b class="mono">7.0.0-31-generic</b></div>
+        <div class="sumchip"><img class="ic" src="../../resources/icons/regular/chart-line-up.svg">history <b>5 min @ 1 s</b></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <img class="ic" src="../../resources/icons/fill/cpu.svg">CPU
+          <div class="right">
+            <div class="legend">
+              <span><span class="swatch" style="background:#0078D7"></span>core 1</span>
+              <span><span class="swatch" style="background:#2ea6ff"></span>core 2</span>
+              <span><span class="swatch" style="background:#00b3a4"></span>core 3</span>
+              <span><span class="swatch" style="background:#7c5cff"></span>core 4</span>
+            </div>
+            <span><b style="color:#fff">34%</b> of 4 cores</span>
+          </div>
+        </div>
+        <div class="chart">
+          <svg viewBox="0 0 640 150" preserveAspectRatio="none">
+            <line x1="0" y1="37.5" x2="640" y2="37.5" stroke="#333" stroke-width="1"/>
+            <line x1="0" y1="75"  x2="640" y2="75"  stroke="#333" stroke-width="1"/>
+            <line x1="0" y1="112.5" x2="640" y2="112.5" stroke="#333" stroke-width="1"/>
+            <line x1="0" y1="150" x2="640" y2="150" stroke="#454545" stroke-width="1"/>
+            <!-- stacked cumulative polygons: core1 bottom, +core2, +core3, +core4 top -->
+            <polygon fill="#0078D7" opacity=".95" points="0,132 64,128 128,133 192,126 256,130 320,124 384,129 448,125 512,130 576,127 640,131 640,150 0,150"/>
+            <polygon fill="#2ea6ff" opacity=".95" points="0,120 64,116 128,122 192,112 256,118 320,110 384,117 448,113 512,119 576,114 640,120 640,150 0,150"/>
+            <polygon fill="#00b3a4" opacity=".95" points="0,110 64,105 128,113 192,100 256,108 320,98 384,107 448,103 512,111 576,105 640,112 640,150 0,150"/>
+            <polygon fill="#7c5cff" opacity=".95" points="0,102 64,96 128,105 192,90 256,99 320,87 384,100 448,94 512,103 576,97 640,104 640,150 0,150"/>
+          </svg>
+          <span class="ylab y1">100%</span><span class="ylab y2">50%</span><span class="ylab y3">0</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <img class="ic" src="../../resources/icons/fill/memory.svg">Memory
+          <div class="right">
+            <div class="legend">
+              <span><span class="swatch" style="background:#2ea6ff"></span>used</span>
+              <span><span class="swatch" style="background:#7c5cff"></span>swap 0.8 / 8 GB</span>
+            </div>
+            <span><b style="color:#fff">5.2 / 16 GB</b> · 3.1 GB available</span>
+          </div>
+        </div>
+        <div class="chart">
+          <svg viewBox="0 0 640 150" preserveAspectRatio="none">
+            <line x1="0" y1="37.5" x2="640" y2="37.5" stroke="#333" stroke-width="1"/>
+            <line x1="0" y1="75"  x2="640" y2="75"  stroke="#333" stroke-width="1"/>
+            <line x1="0" y1="112.5" x2="640" y2="112.5" stroke="#333" stroke-width="1"/>
+            <line x1="0" y1="150" x2="640" y2="150" stroke="#454545" stroke-width="1"/>
+            <polygon fill="#2ea6ff" opacity=".45" points="0,100 64,97 128,102 192,94 256,99 320,92 384,97 448,90 512,95 576,91 640,94 640,150 0,150"/>
+            <polyline fill="none" stroke="#2ea6ff" stroke-width="2" points="0,100 64,97 128,102 192,94 256,99 320,92 384,97 448,90 512,95 576,91 640,94"/>
+            <polyline fill="none" stroke="#7c5cff" stroke-width="2" stroke-dasharray="5 4" points="0,140 640,136"/>
+          </svg>
+          <span class="ylab y1">16 GB</span><span class="ylab y2">8 GB</span><span class="ylab y3">0</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <img class="ic" src="../../resources/icons/fill/arrows-left-right.svg">Network
+          <div class="right">
+            <div class="legend">
+              <span><span class="swatch" style="background:#39c45f"></span>down 1.2 MB/s</span>
+              <span><span class="swatch" style="background:#e8a33d"></span>up 240 KB/s</span>
+            </div>
+            <span>receiving</span>
+          </div>
+        </div>
+        <div class="chart">
+          <svg viewBox="0 0 640 150" preserveAspectRatio="none">
+            <line x1="0" y1="37.5" x2="640" y2="37.5" stroke="#333" stroke-width="1"/>
+            <line x1="0" y1="75"  x2="640" y2="75"  stroke="#333" stroke-width="1"/>
+            <line x1="0" y1="112.5" x2="640" y2="112.5" stroke="#333" stroke-width="1"/>
+            <line x1="0" y1="150" x2="640" y2="150" stroke="#454545" stroke-width="1"/>
+            <polygon fill="#39c45f" opacity=".22" points="0,128 64,102 128,116 192,76 256,106 320,68 384,110 448,84 512,101 576,74 640,92 640,150 0,150"/>
+            <polyline fill="none" stroke="#39c45f" stroke-width="2" points="0,128 64,102 128,116 192,76 256,106 320,68 384,110 448,84 512,101 576,74 640,92"/>
+            <polyline fill="none" stroke="#e8a33d" stroke-width="2" points="0,140 64,132 128,136 192,124 256,133 320,117 384,136 448,126 512,132 576,119 640,128"/>
+          </svg>
+          <span class="ylab y1">2 MB/s</span><span class="ylab y2">1 MB/s</span><span class="ylab y3">0</span>
+        </div>
+      </div>
+
+      <div class="psi-row">
+        <div class="psi"><img class="ic" src="../../resources/icons/regular/gauge.svg"><span class="label">CPU pressure</span><b class="mono">0.0</b><span class="avg mono">avg10 0.0 · avg60 0.0 · avg300 0.0</span></div>
+        <div class="psi"><img class="ic" src="../../resources/icons/regular/gauge.svg"><span class="label">Memory pressure</span><b class="mono">0.3</b><span class="avg mono">avg10 0.3 · avg60 0.4 · avg300 0.2</span></div>
+        <div class="psi"><img class="ic" src="../../resources/icons/regular/gauge.svg"><span class="label">I/O pressure</span><b class="mono">1.1</b><span class="avg mono">avg10 1.1 · avg60 0.8 · avg300 0.5</span></div>
+      </div>
+
+      <div class="statusbar" style="display:flex; align-items:center; gap:16px; background:#313131; border:1px solid #1a1a1a; padding:7px 12px; font-size:12px; color:#bbb;">
+        <img class="ic spin" src="../../resources/icons/regular/spinner-gap.svg" style="width:14px;height:14px">
+        <span>sampling at <span class="mono">1 s</span> · ring buffers hold <span class="mono">300</span> samples</span>
+        <span style="margin-left:auto" class="mono">updated 12:44:07</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
