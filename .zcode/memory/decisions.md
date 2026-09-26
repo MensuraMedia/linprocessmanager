@@ -37,3 +37,11 @@ Record architectural decisions with rationale. Newest at the bottom.
     at build or runtime (grep gate on network imports; system packages only;
     direct python3 launcher, no pip/venv); (d) build documentation must state
     all of this — done in docs/build-principles.md.
+11. **Modular docs (r037):** grouped logic lives in its own document under
+    docs/modules/ (one per planned src module: procfs-data,
+    sampling-pipeline, process-table, actions-permissions, resource-graphs,
+    persistence-config), each with Purpose / Interface / Logic / Tests.
+    The concept doc is overview + index only. Boundaries are load-bearing:
+    only procfs.py reads the kernel; only manager_actions.py mutates; UI
+    pages consume snapshots and never reach sideways. New grouped logic gets
+    a new module doc, not a longer overview.

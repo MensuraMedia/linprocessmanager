@@ -1,8 +1,12 @@
 # linprocman — Technical Concept
 
-Status: draft for operator review (r036, 2026-09-26)
+Status: draft for operator review (r036–r037, 2026-09-26)
 Base framework: mikesdatawork/gtk-python-dashboard-starter (GTK3 + Python, to be vendored into `src/`)
 Icon set: Phosphor (MIT), master library `~/projects/assets/icons`, project subset in `resources/icons/` (54 icons, manifest inside)
+Build rules: [build-principles.md](build-principles.md) — binding
+
+Modular docs: each area of logic lives in its own document under
+[modules/](modules/) (modularity mandate). This file is the overview and index.
 
 ## 1. What this is
 
@@ -16,13 +20,28 @@ scope is process monitoring and control, not system administration.
 Everything the app needs is in `/proc`. v1 has **zero runtime dependencies
 beyond the starter's** (PyGObject, pycairo, Pillow) — no psutil at runtime.
 
-**Binding mandates (r036, see docs/build-principles.md):** fundamentals from
+**Binding mandates (r036, see build-principles.md):** fundamentals from
 MensuraMedia/universal-instruction-set v2026.04; modularity and universality
 are product mandates; assets strictly from the local Phosphor master
 `~/projects/assets/icons` (copied in, never referenced); the app is fully
 self-reliant — no web-based resources at build or runtime, ever.
 
-## 2. Foundation: the starter framework
+## 2. Module documents (the grouped logic)
+
+| Doc | Maps to | Owns |
+|---|---|---|
+| [modules/procfs-data.md](modules/procfs-data.md) | `procfs.py` | every /proc reader, parse traps, fixture tests |
+| [modules/sampling-pipeline.md](modules/sampling-pipeline.md) | `manager_sampler.py` | cadence, snapshot schema, rate math, backoff |
+| [modules/process-table.md](modules/process-table.md) | `page_processes.py` | flat/tree models, diff-in-place, filter, details pane |
+| [modules/actions-permissions.md](modules/actions-permissions.md) | `manager_actions.py` | signals, renice, (pid,starttime) guard, error contract |
+| [modules/resource-graphs.md](modules/resource-graphs.md) | `page_resources.py` + `manager_history.py` | ring buffers, cairo charts, PSI chips |
+| [modules/persistence-config.md](modules/persistence-config.md) | `config_processes.py` | settings.json schema, XDG rules |
+
+Module boundaries are load-bearing: nothing but `procfs.py` reads the kernel;
+nothing but `manager_actions.py` mutates the system; UI pages consume
+snapshots and never reach sideways.
+
+## 3. Foundation: the starter framework
 
 | Starter element | Use here |
 |---|---|
@@ -33,157 +52,22 @@ self-reliant — no web-based resources at build or runtime, ever.
 | `resources/css/style.css` | extended with table/tree/graph/statusbar classes |
 | `resources/images/` + `resources/icons/` | logo (`pulse`); icon subset staged by this document |
 
-New modules under the starter's conventions:
+## 4. Feature set (traditional inventory)
 
-```
-src/modules/procfs.py            /proc readers: stat, status, io, smaps_rollup, cgroup, system-wide
-src/modules/manager_sampler.py   background snapshot loop (thread, queue, cadence)
-src/modules/manager_actions.py   signals, renice, PID-recycle guard, permission UX
-src/modules/manager_history.py   ring buffers for CPU/mem/net/PSI samples
-src/pages/page_processes.py      table + tree + filter + details pane
-src/pages/page_resources.py      cairo graphs + PSI chips
-src/pages/page_disks.py          per-mount usage (statvfs, reuse of linfilesearch mount model)
-src/config/config_processes.py   columns, refresh cadence, defaults
-```
+**Table** — name, user, CPU %, memory, VMSize/shared, disk r/w, nice, PID,
+state, started, CPU time, optional cgroup unit; sortable, columns
+choosable, widths remembered. **Tree** — PPID hierarchy, kernel threads
+grouped/dimmed/hidden by default, orphans re-parented. **Filtering** —
+instant substring over name/PID/user/cmdline + scope chips (All / Mine /
+System / Active). **Actions** — end, kill, stop/continue, hangup, custom
+signals, renice; confirmed where destructive; exact errno text on refusal.
+**Details pane** — identity, memory (RSS/PSS/shared/virtual), time, I/O,
+cmdline, exe/cwd; locked fields shown as `lock`, never errors.
+**Resources** — stacked per-core CPU, memory+swap, network, PSI chips,
+load/uptime summary. **Live control** — interval selector, pause/resume,
+refresh now; sampling backs off when hidden.
 
-## 3. Feature set (traditional inventory)
-
-**Table** — one row per process: name (+ icon), user, CPU %, memory (RSS and %),
-VMSize, shared, disk read/write total, nice value, PID, state (R/S/D/Z/T with
-color), started time, CPU time, cgroup unit (Mint is systemd; optional column,
-off by default). Columns sortable both ways, choose which are visible, widths
-remembered.
-
-**Tree** — parent/child hierarchy from PPID, twisty-expandable, same columns as
-the flat table. Kernel threads grouped under `kthreadd`, dimmed, and hidden by
-default (toggle). Orphans (parent already reaped) attach to their nearest live
-ancestor.
-
-**Filtering** — instant substring filter over name / PID / user / command line
-(matches the `magnifying-glass` entry). Scope chips like linfilesearch's mount
-chips: **All processes / My processes / User X / System / Active (CPU or I/O in
-last sample)**.
-
-**Actions** — End process (SIGTERM), Kill (SIGKILL), Stop (SIGSTOP), Continue
-(SIGCONT), Hangup (SIGHUP), custom signal picker, renice (−20…19). Kill and
-renice confirm with a dialog. Failed actions surface the exact `errno` message
-("Operation not permitted") in the status line — never a silent no-op, never a
-crash.
-
-**Details pane** — selected process, refreshed every sample: status, PID/PPID,
-threads, CPU time, started, RSS/VMSize/shared + PSS, disk I/O counters, niceness,
-command line (monospace), executable path, working directory, cgroup unit.
-Unreadable fields (other users' `environ`, hardened `/proc`) show a `lock` icon
-instead of an error.
-
-**Resources** — total CPU history + per-core stacked areas, memory + swap
-history, network up/down history, load average, uptime, and PSI
-(`/proc/pressure/{cpu,memory,io}`) as numeric chips with `gauge`.
-
-**Live control** — refresh interval selector (0.5/1/2/5 s, default 2 s table /
-1 s graphs), pause/resume (`pause-circle`/`play`), refresh now
-(`arrow-clockwise`). Sampling backs off automatically while the window is
-hidden.
-
-## 4. Data acquisition: /proc, read directly
-
-Verified on this machine (2026-09-26, kernel 7.0.0-31-generic): `/proc/pressure/*`
-present, `smaps_rollup` readable for own processes, psutil 5.9.8 installed
-(dev-time cross-check only — it does not expose PSI, and its
-`cpu_percent(interval=…)` blocks, both reasons to stay on direct reads).
-
-| Data | Source | Notes |
-|---|---|---|
-| per-PID basics | `/proc/<pid>/stat` | comm parsed after the **last** `)` — comm may contain spaces and parens; utime(14) stime(15) starttime(22) nice(19) threads(20) rss(24), fields 1-indexed after the pid field |
-| state, PPid, VmRSS/VmSize/shared | `/proc/<pid>/status` | cheaper to trust for memory fields; includes human-readable state letter |
-| PSS | `/proc/<pid>/smaps_rollup` | **selected process only** — walking smaps for every PID every tick is the classic freeze mistake |
-| disk I/O | `/proc/<pid>/io` | read/write bytes; readable for own processes, often restricted for others → render "—" when unreadable (permission model varies by kernel config; verify at implementation) |
-| command line | `/proc/<pid>/cmdline` | NUL-separated; kernel threads have none — that is the kthread detector |
-| exe, cwd | `readlink /proc/<pid>/exe|cwd` | EACCES for other users → `lock` |
-| user | `pwd.getpwuid` (stdlib) | cache uid→name |
-| cgroup unit | `/proc/<pid>/cgroup` | v2 line `0::/user.slice/…/x.scope` → last segment |
-| system CPU | `/proc/stat` | per-CPU jiffies + total |
-| memory | `/proc/meminfo` | MemTotal/Available/Cached/SwapTotal/SwapFree |
-| network | `/proc/net/dev` | rx/tx bytes per iface, summed, deltas between samples |
-| PSI | `/proc/pressure/{cpu,memory,io}` | `some avg10/avg60/avg300` (+`full` for memory/io) |
-
-Every reader is a pure function `bytes → dict` so it can be unit-tested against
-fixture files (same pytest pattern as linfilesearch's matcher tests), including
-hostile fixtures: comm with spaces, comm with parens, empty cmdline, truncated
-stat lines, disappeared PID (`FileNotFoundError` → row simply drops).
-
-## 5. Rates: CPU % math
-
-CPU % is computed from **jiffy deltas between consecutive snapshots**, never
-from a blocking interval call:
-
-```
-cpu% = Δ(utime + stime) / (CLK_TCK × Δwallclock) × 100        # 100% = one core (htop default)
-cpu%_total = cpu% / ncpu                                        # 100% = whole machine
-```
-
-- First sample after launch shows "—" (no delta yet).
-- A per-core-normalized default with a settings toggle for whole-machine
-  normalization (the two tools we mirror disagree; offering both removes the
-  argument).
-- Process vanished between samples → drop the row, keep the delta window clean.
-- `CLK_TCK` read via `os.sysconf("SC_CLK_TCK")` at startup — **verified 100** on this
-  machine (2026-09-26).
-
-## 6. UI architecture (GTK3)
-
-**Models.** Flat mode: `Gtk.ListStore`; tree mode: `Gtk.TreeStore`. Columns are
-**typed** (PID int, CPU float, mem bytes int, nice int) — sorting on typed
-columns is free and correct; display formatting (2.4 MB, 01:23:45) is done in
-`set_cell_data_func`, not stored as strings. This generalizes the hidden-epoch
-trick linfilesearch needed for dates.
-
-**Filtering.** `Gtk.TreeModelFilter` with a `visible_func` over the current
-query + scope chip. The filter wraps the store once and is re-pointed, not
-rebuilt per keystroke.
-
-**Update without flicker.** One snapshot arrives → the model is **diffed in
-place** keyed by PID (dict of PID→TreeIter): update changed rows, append new,
-remove gone. Sorting is blocked around the batch (`tree_sortable.set_sort_column_id` /
-restore) so it happens once per refresh, not per row. Diffing preserves
-selection, sort position, and tree expansion — the three things a full rebuild
-breaks. Selection is restored by `(pid, starttime)` key, not row index.
-
-**Sampler thread.** `threading.Thread` reads /proc at 1 s cadence, publishes
-immutable `Snapshot` objects to a `queue.Queue`; the GTK main thread drains via
-`GLib.idle_add`. Table applies every 2nd snapshot, graphs every snapshot,
-details pane every snapshot. Same streaming pattern as the linfilesearch engine
-— /proc reads for a few hundred processes are milliseconds warm (assumed;
-measure in implementation step 2 and raise cadence if wrong).
-
-**Details pane.** Right-hand fold-out (290px, `caret-left`/`caret-right` fold —
-the r028 square-toggle pattern from linfilesearch transfers directly). Cheap
-fields refresh every sample; `smaps_rollup` only for the selected PID.
-
-**Graphs.** `cairo` `DrawingArea`s, ring buffers (`collections.deque`
-maxlen=300 ≈ 5 min at 1 s), stacked per-core CPU polygons, memory area + swap
-line, network two-line. Redraw happens in the `draw` callback; no timers beyond
-the sampler. Series colors derive from the active starter theme so all 7 themes
-work without new assets.
-
-## 7. Actions & permissions
-
-- All signals via `os.kill(pid, sig)`; renice via `os.setpriority`.
-- **PID-recycle guard**: rows carry `(pid, starttime)`; before acting, the
-  sampler's latest snapshot is checked — if `starttime` changed, the action
-  aborts with "process ended, PID reused" in the status line. The window is
-  milliseconds; the guard closes it.
-- Killing your own processes always works; system processes raise `EPERM` →
-  status-line message with the exact errno text. v1 never elevates; a pkexec
-  path is a possible later opt-in, deliberately not wired in.
-- SIGKILL/SIGTERM confirm with a dialog naming the process and PID (mockup D).
-- Zombies display as `name (defunct)`; the details pane explains they exit when
-  the parent reaps them — killing a zombie directly is meaningless and the UI
-  says so instead of pretending.
-- niceness: lowering nice value (more priority) raises `EACCES` for normal
-  users unless the process is ours — surfaced the same way.
-
-## 8. UI direction (see docs/mockups/)
+## 5. UI direction (see docs/mockups/)
 
 Four mockups on the real starter palette (`#2d2d2d` window, `#353535` sidebar,
 `#0078D7` accent, hairline `#1a1a1a`, Ubuntu) with the real icon subset:
@@ -202,16 +86,16 @@ Open decisions for the operator:
 4. Kernel threads hidden by default — correct call?
 5. Brand mark: `pulse` (activity) — or `gauge`?
 
-## 9. Data flow
+## 6. Data flow
 
 ```
-/proc  ──1s──► sampler thread ──Snapshot──► queue ──GLib.idle_add──► main thread
-                                                          │
-              ┌───────────────────────────────────────────┤
-              ▼                       ▼                   ▼
-        ListStore/TreeStore      history rings        details pane
-        (diff-in-place,          (CPU/mem/net/PSI)    (smaps_rollup for
-         TreeModelFilter,             │                selected pid only)
+/proc ──1s──► sampler thread ──Snapshot──► queue ──GLib.idle_add──► main thread
+                                                                   │
+              ┌────────────────────────────────────────────────────┤
+              ▼                        ▼                           ▼
+        ListStore/TreeStore      history rings                 details pane
+        (diff-in-place,          (CPU/mem/net/PSI)             (smaps_rollup for
+         TreeModelFilter)              │                        selected pid only)
               │                        ▼
               ▼                  cairo DrawingAreas
         row selected ──(pid, starttime)──► manager_actions
@@ -220,14 +104,7 @@ Open decisions for the operator:
                                      status line (result / errno text)
 ```
 
-## 10. Configuration & persistence
-
-`~/.config/linprocman/settings.json`: refresh interval, view mode (flat/tree),
-visible columns + widths + sort, scope chip, kernel-thread visibility, CPU
-normalization, theme choice, window geometry. Nothing else writes outside the
-XDG dir. No secrets, no telemetry, no root.
-
-## 11. Non-goals (v1)
+## 7. Non-goals (v1)
 
 - No root mode, no polkit/pkexec elevation
 - No per-thread view (`/proc/<pid>/task/*`) — v2 candidate
@@ -236,24 +113,22 @@ XDG dir. No secrets, no telemetry, no root.
 - No cgroup/systemd unit management (column is read-only display)
 - No GTK4 port (starter is GTK3)
 
-## 12. Risks
+## 8. Risks (cross-cutting; per-module risks live in the module docs)
 
 | Risk | Mitigation |
 |---|---|
-| /proc parse edge cases (comm with spaces/parens, truncated lines) | parse-after-last-`)` rule, fixture unit tests incl. hostile samples |
-| PID recycling mid-action | `(pid, starttime)` guard before every signal |
-| `/proc/<pid>/io` unreadable for other users | "—" cells + `lock`; degrade, never error |
-| UI jank on sort-heavy refresh | block-sort around diff batches; typed columns |
-| Huge processes (thousands of threads) | v1 never walks tasks/; smaps_rollup only for selection |
-| Hardened /proc (hidepid) | detection + `lock` styling; app stays read-only-useful |
-| Freeze from walking smaps for all PIDs | forbidden by design (§4) |
+| /proc parse edge cases | parse-after-last-`)` rule + hostile fixtures (procfs-data.md) |
+| PID recycling mid-action | (pid, starttime) guard (actions-permissions.md) |
+| UI jank on sort-heavy refresh | block-sort around diff batches; typed columns (process-table.md) |
+| Freeze from walking smaps for all PIDs | selected-process only, by design (procfs-data.md) |
+| Hardened /proc (hidepid) / restricted io | "—" cells + `lock`; degrade, never error |
 
-## 13. Roadmap
+## 9. Roadmap
 
 1. Vendor starter into `src/`, wire Processes page shell; replace the
    starter's venv/pip `run.sh` with a direct system-python launcher
-   (docs/build-principles.md §4).
-2. `procfs.py` readers + fixture unit tests (incl. `CLK_TCK`, hostile stat lines).
+   (build-principles.md §4).
+2. `procfs.py` readers + fixture unit tests (hostile stat lines, CLK_TCK).
 3. Sampler thread → flat table end-to-end, diff-in-place updates.
 4. Sort, filter, scope chips, selection stability.
 5. Actions + PID guard + permission UX (mockup D flows).
