@@ -319,16 +319,16 @@ class ProcessesPage(BasePage):
         return "<span foreground='%s'>%s</span>" % (color, text)
 
     def _fmt_cpu(self, cpu, prev):
-        """CPU: value + delta arrow. Rise green (more work), fall red (less) —
-        standard increasing/decreasing convention per operator r055."""
+        """CPU: plain value + colored delta arrow only (r056: the number stays
+        uncolored; increase RED ▲, decrease GREEN ▼ per operator)."""
         if cpu is None:
             return self._span("CPU —", "#888888")
         body = "CPU %d%%" % round(cpu)
         if prev is None or abs(cpu - prev) < 1.0:
-            return self._span(body + " " + self._FLAT, "#d0d0d0")
+            return body + " " + self._span(self._FLAT, "#d0d0d0")
         if cpu > prev:
-            return self._span(body + " " + self._UP, "#7fd0a0")
-        return self._span(body + " " + self._DOWN, "#e88a8a")
+            return body + " " + self._span(self._UP, "#e04c4c")
+        return body + " " + self._span(self._DOWN, "#3fbf6f")
 
     @staticmethod
     def _mem_zone(pct_used):
