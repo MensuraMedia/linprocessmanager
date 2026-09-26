@@ -57,6 +57,10 @@ port a mechanical sweep instead of a rewrite. Reviewed by the collaborator
 
 ## 4. Portability seams — rules to adopt NOW (the "easily" part)
 
+These nine seams are promoted from convention to structure in
+[upgrade-architecture.md](upgrade-architecture.md) §3 — the `src/ui/compat/`
+module, one file per seam, riding task 002.
+
 Each rule is enforceable in pytest (a **portability gate** alongside the
 offline gates), so drift fails CI instead of surfacing during the port.
 

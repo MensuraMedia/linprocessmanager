@@ -110,3 +110,13 @@ Record architectural decisions with rationale. Newest at the bottom.
    add_provider_for_display path). TreeView family: works on 4.14,
    deprecated since 4.10 — ColumnView is the standing post-port item.
    Collaborator review earned its cost again ($0.35, six real corrections).
+18. **Upgrade architecture (r044).** src/ui/compat/ one-file-per-seam
+    module is the standing structure (import law + flip point gtk_env.py
+    flipping BOTH Gtk and Gdk; raw gi.repository import banned outside
+    it — bare import silently loads a default version). Deprecation
+    honesty: PyGObject does NOT warn for GTK C-level deprecations
+    (TreeView-on-GTK4 silent); PyGIDeprecationWarning-as-error catches
+    binding-level only; G_ENABLE_DIAGNOSTIC covers deprecated properties
+    best and needs an our-names allowlist (theme noise false-reds). One
+    Gtk version per process — non-active compat path tests cover
+    branch/non-GTK logic only. pygobject ≥3.42 for GTK4 (noble: 3.48).
