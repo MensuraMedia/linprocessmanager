@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup E — Logs: Journal</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:Ubuntu, Cantarell, sans-serif; }
+  body { background:#1a1a1a; padding:24px; display:flex; justify-content:center; }
+  .ic { filter:invert(1); opacity:.85; display:inline-block; vertical-align:middle; }
+  .window { width:1200px; max-width:100%; background:#2d2d2d; color:#eee; border:1px solid #000; display:flex; flex-direction:column; }
+  .titlebar { display:flex; align-items:center; justify-content:space-between; background:#222; color:#ccc; font-size:13px; padding:6px 10px; border-bottom:1px solid #1a1a1a; }
+  .winbtns { display:flex; gap:8px; }
+  .winbtns span { width:12px; height:12px; border-radius:50%; background:#555; display:inline-block; }
+  .body { display:flex; min-height:760px; }
+
+  .sidebar { width:150px; background:#353535; border-right:1px solid #1a1a1a; display:flex; flex-direction:column; }
+  .logo-area { height:150px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border-bottom:1px solid #1a1a1a; }
+  .logo-area .ic { width:64px; height:64px; filter:invert(27%) sepia(96%) saturate(1400%) hue-rotate(197deg) brightness(96%); }
+  .logo-cap { font-size:10px; letter-spacing:1.5px; color:#bbb; }
+  .nav { display:flex; flex-direction:column; }
+  .nav-button { display:flex; align-items:center; gap:8px; padding:8px 12px; font-size:14px; color:#eee; border:none; border-bottom:1px solid #1a1a1a; cursor:pointer; }
+  .nav-button:hover { background:#404040; }
+  .nav-button.active { background:#0078D7; color:#fff; }
+  .nav-button .ic { width:16px; height:16px; }
+  .nav-button.group { color:#bbb; }
+  .nav-button.group .tw { width:12px; height:12px; opacity:.7; }
+  .submenu { display:flex; flex-direction:column; background:#2f2f2f; }
+  .sub-button { display:flex; align-items:center; gap:8px; padding:6px 12px 6px 24px; font-size:12.5px; color:#ccc; border-bottom:1px solid #262626; cursor:pointer; }
+  .sub-button:hover { background:#3a3a3a; }
+  .sub-button.active { background:#0078D7; color:#fff; }
+  .sub-button .ic { width:13px; height:13px; }
+  .sub-button .cnt { margin-left:auto; opacity:.55; font-size:10px; }
+  .sub-sep { border-top:1px solid #1a1a1a; }
+  .spacer { flex:1; }
+  .nav-bottom { border-top:1px solid #1a1a1a; border-bottom:none; }
+
+  .content { flex:1; padding:36px 24px 30px 32px; display:flex; flex-direction:column; gap:14px; min-width:0; }
+  .page-title { font-size:24px; font-weight:bold; color:#fff; }
+  .mono { font-variant-numeric:tabular-nums; }
+
+  .search-row { display:flex; gap:8px; align-items:stretch; }
+  .entry { flex:1; display:flex; align-items:center; gap:10px; background:#262626; border:1px solid #1a1a1a; padding:0 12px; min-width:0; }
+  .entry input { flex:1; background:none; border:none; color:#eee; font-size:15px; outline:none; padding:10px 0; min-width:0; }
+  .entry input::placeholder { color:#777; }
+  .mode { display:flex; align-items:center; padding:0 12px; background:#353535; border:1px solid #1a1a1a; border-left:none; color:#bbb; font-size:12px; gap:6px; cursor:pointer; }
+  .mode:first-of-type { border-left:1px solid #1a1a1a; }
+  .mode.on { background:#0078D7; color:#fff; }
+  .mode .ic { width:15px; height:15px; }
+  .btn { display:flex; align-items:center; gap:8px; padding:0 12px; background:#353535; border:1px solid #1a1a1a; color:#eee; font-size:12px; cursor:pointer; flex:none; }
+  .btn:hover { background:#404040; }
+  .btn.on { background:#0078D7; color:#fff; }
+  .btn .ic { width:14px; height:14px; }
+
+  .toolbar { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; }
+  .chip { display:flex; align-items:center; gap:6px; background:#353535; border:1px solid #1a1a1a; padding:5px 10px; font-size:12px; color:#ddd; cursor:pointer; }
+  .chip:hover { background:#404040; }
+  .chip.on { background:#3a3a3a; color:#fff; border-color:#555; }
+  .chip.on.err { color:#e88; border-color:#8a4040; }
+  .chip.on.warn { color:#e8c268; border-color:#8a7a40; }
+  .chip.on.dbg { color:#888; }
+  .chip .ic { width:13px; height:13px; }
+  .chip .dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+
+  .results { flex:1; border:1px solid #1a1a1a; display:flex; flex-direction:column; min-height:0; overflow:auto; }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  thead th { text-align:left; color:#aaa; font-weight:normal; padding:7px 12px; border-bottom:1px solid #1a1a1a; background:#313131; position:sticky; top:0; }
+  tbody td { padding:5px 12px; border-bottom:1px solid #262626; color:#ccc; white-space:nowrap; }
+  tbody tr:hover { background:#373737; }
+  tbody tr.sel { background:#0078D7; }
+  tbody tr.sel td { color:#fff !important; }
+  td.time { color:#999; width:110px; font-variant-numeric:tabular-nums; }
+  td.unit { color:#9cd0ff; width:150px; }
+  td.msg { white-space:normal; min-width:300px; line-height:1.4; }
+  tr.err td { color:#e88; } tr.err td.unit { color:#e88; }
+  tr.warn td { color:#e8c268; } tr.warn td.unit { color:#e8c268; }
+  tr.dbg td { color:#777; }
+  tr.loadolder td { color:#777; text-align:center; cursor:pointer; }
+  tr.loadolder:hover td { color:#cfe6fb; }
+  mark { background:#0d4f8a; color:#fff; padding:0 2px; }
+
+  .statusbar { display:flex; align-items:center; gap:16px; background:#313131; border:1px solid #1a1a1a; padding:7px 12px; font-size:12px; color:#bbb; }
+  .statusbar .ic { width:14px; height:14px; }
+  .statusbar .right { margin-left:auto; display:flex; gap:16px; align-items:center; }
+  .follow { color:#9fd8ae; display:flex; gap:6px; align-items:center; }
+</style>
+</head>
+<body>
+<div class="window">
+  <div class="titlebar"><span>linprocman — Logs ▸ Journal</span>
+    <div class="winbtns"><span></span><span></span><span></span></div></div>
+  <div class="body">
+
+    <div class="sidebar">
+      <div class="logo-area">
+        <img class="ic" src="../../resources/icons/fill/pulse.svg">
+        <div class="logo-cap">LINPROCMAN</div>
+      </div>
+      <div class="nav">
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/list-magnifying-glass.svg">Processes</div>
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/pulse.svg">Resources</div>
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/hard-drive.svg">Disks</div>
+        <div class="nav-button group"><img class="ic tw" src="../../resources/icons/regular/caret-down.svg"><img class="ic" src="../../resources/icons/regular/scroll.svg">Logs</div>
+      </div>
+      <div class="submenu">
+        <div class="sub-button active"><img class="ic" src="../../resources/icons/regular/scroll.svg">Journal</div>
+        <div class="sub-button"><img class="ic" src="../../resources/icons/regular/terminal-window.svg">Kernel<span class="cnt mono">1.2M</span></div>
+        <div class="sub-button"><img class="ic" src="../../resources/icons/regular/lock.svg">Auth</div>
+        <div class="sub-button"><img class="ic" src="../../resources/icons/regular/user-circle.svg">Applications</div>
+        <div class="sub-button sub-sep"><img class="ic" src="../../resources/icons/regular/notebook.svg">Saved Views<span class="cnt mono">4</span></div>
+        <div class="sub-button"><img class="ic" src="../../resources/icons/regular/flag.svg">Flags<span class="cnt mono">3</span></div>
+      </div>
+      <div class="nav" style="margin-top:0;">
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/info.svg">About</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="nav">
+        <div class="nav-button nav-bottom"><img class="ic" src="../../resources/icons/regular/gear-six.svg">Settings</div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="page-title">Logs — Journal</div>
+
+      <div class="search-row">
+        <div class="entry">
+          <img class="ic" style="width:16px;height:16px;opacity:.5" src="../../resources/icons/regular/magnifying-glass.svg">
+          <input value="nvme0n1" style="color:#fff">
+        </div>
+        <div class="mode" title="Match case"><img class="ic" src="../../resources/icons/regular/text-aa.svg">Aa</div>
+        <div class="mode on" title="Substring mode"><img class="ic" src="../../resources/icons/regular/text-aa.svg">abc</div>
+        <div class="btn" title="Time range"><img class="ic" src="../../resources/icons/regular/calendar-blank.svg">Since 12:00<img class="ic" style="width:11px;height:11px;opacity:.6" src="../../resources/icons/regular/caret-down.svg"></div>
+        <div class="btn on" title="Follow new entries"><img class="ic" src="../../resources/icons/regular/play.svg">Follow</div>
+        <div class="btn" title="Export current view"><img class="ic" src="../../resources/icons/regular/download-simple.svg">Export</div>
+        <div class="btn" title="Save this view"><img class="ic" src="../../resources/icons/regular/bookmark-simple.svg">Save view</div>
+      </div>
+
+      <div class="toolbar">
+        <div class="chips">
+          <div class="chip on err"><span class="dot" style="background:#e88"></span>Error</div>
+          <div class="chip on warn"><span class="dot" style="background:#e8c268"></span>Warning</div>
+          <div class="chip on"><span class="dot" style="background:#9cd0ff"></span>Notice</div>
+          <div class="chip on"><span class="dot" style="background:#888"></span>Info</div>
+          <div class="chip dbg"><span class="dot" style="background:#555"></span>Debug</div>
+          <div class="chip"><img class="ic" src="../../resources/icons/regular/funnel.svg">unit: nvme*, ext4*</div>
+          <div class="chip"><img class="ic" src="../../resources/icons/regular/x-circle.svg"></div>
+        </div>
+        <div class="chips">
+          <div class="chip"><img class="ic" src="../../resources/icons/regular/arrows-down-up.svg">Newest first</div>
+          <div class="chip"><img class="ic" src="../../resources/icons/regular/list-numbers.svg">2,000 loaded</div>
+        </div>
+      </div>
+
+      <div class="results">
+        <table>
+          <thead><tr>
+            <th>Time</th><th>Unit / Source</th><th style="width:60%">Message</th>
+          </tr></thead>
+          <tbody>
+            <tr class="loadolder"><td colspan="3">load 2,000 older entries — cursor paging (journalctl --cursor=…)</td></tr>
+            <tr class="warn">
+              <td class="time">12:43:58</td><td class="unit">kernel</td>
+              <td class="msg">EXT4-fs warning (device <mark>nvme0n1p3</mark>): ext4_end_bio: I/O error 10 writing to inode 8123456</td>
+            </tr>
+            <tr class="err">
+              <td class="time">12:43:58</td><td class="unit">kernel</td>
+              <td class="msg">blk_update_request: I/O error, dev <mark>nvme0n1</mark>, sector 1953525136 op 0x1:(WRITE)</td>
+            </tr>
+            <tr>
+              <td class="time">12:44:02</td><td class="unit">firefox.scope</td>
+              <td class="msg">Started Firefox — web browser.</td>
+            </tr>
+            <tr class="sel">
+              <td class="time">12:44:04</td><td class="unit">kernel</td>
+              <td class="msg"><mark>nvme</mark> nvme0: I/O 223 QID 3 timeout, aborting</td>
+            </tr>
+            <tr>
+              <td class="time">12:44:07</td><td class="unit">NetworkManager</td>
+              <td class="msg">device (wlp3s0): supplicant: keepalive: no response — reauthenticating</td>
+            </tr>
+            <tr>
+              <td class="time">12:44:19</td><td class="unit">sudo</td>
+              <td class="msg">user : TTY=pts/0 ; PWD=/home/user ; USER=root ; COMMAND=/usr/bin/apt update</td>
+            </tr>
+            <tr class="dbg">
+              <td class="time">12:44:23</td><td class="unit">rtkit-daemon</td>
+              <td class="msg">Successfully made thread 5120 of process 4182 owned by '1000' high priority at nice level -11</td>
+            </tr>
+            <tr class="warn">
+              <td class="time">12:44:31</td><td class="unit">systemd-udevd</td>
+              <td class="msg">nvme0n1: Worker process is already running, skipping</td>
+            </tr>
+            <tr>
+              <td class="time">12:44:36</td><td class="unit">mintupdate</td>
+              <td class="msg">Update check complete: 7 packages available (0 security)</td>
+            </tr>
+            <tr class="err">
+              <td class="time">12:44:41</td><td class="unit">cups-browsed</td>
+              <td class="msg">Couldn't create IPP request: http-address-not-found</td>
+            </tr>
+            <tr class="dbg">
+              <td class="time">12:44:52</td><td class="unit">gnome-shell</td>
+              <td class="msg">Window manager warning: last_user_time out of range — event suppressed</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="statusbar">
+        <span class="follow"><img class="ic" src="../../resources/icons/fill/play.svg">following</span>
+        <span><span class="mono">2,000</span> entries loaded · cap <span class="mono">20,000</span></span>
+        <span><span class="mono">9</span> matches for <span class="mono" style="color:#fff">nvme0n1</span> · Enter to cycle</span>
+        <div class="right">
+          <span>journal size: <span class="mono">486 MB</span> · persistent</span>
+          <span class="mono">updated 12:44:52</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

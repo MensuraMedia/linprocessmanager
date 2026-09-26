@@ -45,3 +45,21 @@ Record architectural decisions with rationale. Newest at the bottom.
     only procfs.py reads the kernel; only manager_actions.py mutates; UI
     pages consume snapshots and never reach sideways. New grouped logic gets
     a new module doc, not a longer overview.
+12. **Adversarial review applied (r039).** Three agents (correctness,
+    security/ops, feature-gap). Notable accepted findings: diff keys must be
+    TreeRowReferences with an explicit move op (re-parenting); sampler
+    period = table interval (no second decimation); rings hold (ts,value);
+    renice rule corrected (own=only increase, others=always EPERM); PID
+    guard re-reads stat at click time; hidepid EACCES is a locked row, not
+    an exit; sampler needs a watchdog + drop-oldest queue; fork-bomb row
+    budget; per-process network columns rejected (needs eBPF/root).
+13. **System logs (r039, operator-mandated).** journalctl subprocess only
+    (no python3-systemd): argv-list, `=`-form flags only, never shell=True;
+    bounded fetch + cursor paging; follow via io_add_watch + child reaping;
+    permission probe-and-degrade (lock + remedy text, never elevate).
+    Organize = Saved Views (named filter sets in settings.json, submenu
+    children) + cursor-anchored Flags. Sidebar submenu: Journal / Kernel /
+    Auth / Applications / Saved Views / Flags. build-principles §4 amended
+    additively for /sys + local binaries; no-network gate upgraded to AST
+    import allowlist + subprocess argv allowlist. Logs = roadmap Phase 7
+    (large). Mockups E + F verified.

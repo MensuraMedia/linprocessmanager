@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup F — Logs: Saved Views & Flags</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:Ubuntu, Cantarell, sans-serif; }
+  body { background:#1a1a1a; padding:24px; display:flex; justify-content:center; }
+  .ic { filter:invert(1); opacity:.85; display:inline-block; vertical-align:middle; }
+  .window { width:1200px; max-width:100%; background:#2d2d2d; color:#eee; border:1px solid #000; display:flex; flex-direction:column; }
+  .titlebar { display:flex; align-items:center; justify-content:space-between; background:#222; color:#ccc; font-size:13px; padding:6px 10px; border-bottom:1px solid #1a1a1a; }
+  .winbtns { display:flex; gap:8px; }
+  .winbtns span { width:12px; height:12px; border-radius:50%; background:#555; display:inline-block; }
+  .body { display:flex; min-height:760px; }
+
+  .sidebar { width:150px; background:#353535; border-right:1px solid #1a1a1a; display:flex; flex-direction:column; }
+  .logo-area { height:150px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border-bottom:1px solid #1a1a1a; }
+  .logo-area .ic { width:64px; height:64px; filter:invert(27%) sepia(96%) saturate(1400%) hue-rotate(197deg) brightness(96%); }
+  .logo-cap { font-size:10px; letter-spacing:1.5px; color:#bbb; }
+  .nav { display:flex; flex-direction:column; }
+  .nav-button { display:flex; align-items:center; gap:8px; padding:8px 12px; font-size:14px; color:#eee; border:none; border-bottom:1px solid #1a1a1a; cursor:pointer; }
+  .nav-button:hover { background:#404040; }
+  .nav-button.active { background:#0078D7; color:#fff; }
+  .nav-button .ic { width:16px; height:16px; }
+  .nav-button.group { color:#bbb; }
+  .nav-button.group .tw { width:12px; height:12px; opacity:.7; }
+  .submenu { display:flex; flex-direction:column; background:#2f2f2f; }
+  .sub-button { display:flex; align-items:center; gap:8px; padding:6px 12px 6px 24px; font-size:12.5px; color:#ccc; border-bottom:1px solid #262626; cursor:pointer; }
+  .sub-button:hover { background:#3a3a3a; }
+  .sub-button.active { background:#0078D7; color:#fff; }
+  .sub-button .ic { width:13px; height:13px; }
+  .sub-button .cnt { margin-left:auto; opacity:.55; font-size:10px; }
+  .spacer { flex:1; }
+  .nav-bottom { border-top:1px solid #1a1a1a; border-bottom:none; }
+
+  .content { flex:1; padding:36px 24px 30px 32px; display:flex; gap:16px; min-width:0; }
+  .mono { font-variant-numeric:tabular-nums; }
+
+  .panel { border:1px solid #1a1a1a; background:#303030; display:flex; flex-direction:column; min-width:0; }
+  .panel-head { display:flex; align-items:center; gap:8px; padding:10px 14px; border-bottom:1px solid #1a1a1a; font-size:13px; color:#fff; }
+  .panel-head .ic { width:15px; height:15px; }
+  .panel-head .right { margin-left:auto; color:#777; font-size:11px; }
+
+  .views { flex:1.4; }
+  .vrow { display:flex; align-items:center; gap:10px; padding:9px 14px; border-bottom:1px solid #262626; cursor:pointer; }
+  .vrow:hover { background:#373737; }
+  .vrow.sel { background:#0078D7; }
+  .vrow .ic { width:14px; height:14px; flex:none; }
+  .vrow .vname { font-size:13px; color:#eee; }
+  .vrow .vmeta { font-size:10.5px; color:#888; margin-top:2px; }
+  .vrow .vops { margin-left:auto; display:flex; gap:8px; opacity:0; }
+  .vrow:hover .vops { opacity:1; }
+  .vrow .vops .ic { width:13px; height:13px; opacity:.6; }
+  .vrow .badge { font-size:9px; border:1px solid #555; border-radius:8px; padding:0 6px; color:#aaa; flex:none; }
+  .vrow.sel .badge { border-color:#9cd0ff; color:#cfe6fb; }
+
+  .flags { flex:1; }
+  .frow { display:flex; align-items:flex-start; gap:10px; padding:9px 14px; border-bottom:1px solid #262626; cursor:pointer; }
+  .frow:hover { background:#373737; }
+  .frow .ic { width:13px; height:13px; flex:none; margin-top:2px; }
+  .frow .flabel { font-size:12.5px; color:#eee; }
+  .frow .fmeta { font-size:10.5px; color:#888; margin-top:2px; }
+  .frow .jump { margin-left:auto; color:#0078D7; font-size:10.5px; white-space:nowrap; margin-top:2px; }
+
+  .dialog { width:400px; background:#313131; border:1px solid #000; box-shadow:0 12px 40px rgba(0,0,0,.6); align-self:center; margin:0 auto; }
+  .dlg-title { display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid #1a1a1a; font-size:14px; color:#fff; background:#353535; }
+  .dlg-title .ic { width:16px; height:16px; }
+  .dlg-body { padding:16px; display:flex; flex-direction:column; gap:12px; font-size:13px; color:#ccc; }
+  .field { background:#262626; border:1px solid #1a1a1a; padding:8px 10px; color:#fff; font-size:14px; }
+  .summary { background:#262626; border:1px solid #1a1a1a; padding:10px; font-size:11.5px; color:#aaa; line-height:1.6; }
+  .summary b { color:#ddd; font-weight:normal; }
+  .checks { display:flex; flex-direction:column; gap:6px; font-size:12px; }
+  .checks label { display:flex; gap:8px; align-items:center; cursor:pointer; }
+  .cbox { width:14px; height:14px; border:1px solid #555; display:inline-flex; align-items:center; justify-content:center; }
+  .cbox.on { background:#0078D7; border-color:#0078D7; }
+  .cbox .ic { width:11px; height:11px; }
+  .dlg-actions { display:flex; justify-content:flex-end; gap:8px; padding:12px 16px; border-top:1px solid #1a1a1a; }
+  .dbtn { padding:7px 16px; font-size:13px; background:#353535; border:1px solid #1a1a1a; color:#eee; cursor:pointer; }
+  .dbtn:hover { background:#404040; }
+  .dbtn.primary { background:#0078D7; border-color:#0078D7; color:#fff; font-weight:bold; }
+
+  .overlaywrap { flex:1.4; display:flex; position:relative; border:1px solid #1a1a1a; background:#262626; overflow:hidden; }
+  .ghostlog { position:absolute; inset:0; opacity:.45; padding:12px 14px; font-size:11.5px; color:#777; line-height:1.7; font-family:'Ubuntu Mono', monospace; }
+</style>
+</head>
+<body>
+<div class="window">
+  <div class="titlebar"><span>linprocman — Logs ▸ Saved Views</span>
+    <div class="winbtns"><span></span><span></span><span></span></div></div>
+  <div class="body">
+
+    <div class="sidebar">
+      <div class="logo-area">
+        <img class="ic" src="../../resources/icons/fill/pulse.svg">
+        <div class="logo-cap">LINPROCMAN</div>
+      </div>
+      <div class="nav">
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/list-magnifying-glass.svg">Processes</div>
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/pulse.svg">Resources</div>
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/hard-drive.svg">Disks</div>
+        <div class="nav-button group"><img class="ic tw" src="../../resources/icons/regular/caret-down.svg"><img class="ic" src="../../resources/icons/regular/scroll.svg">Logs</div>
+      </div>
+      <div class="submenu">
+        <div class="sub-button"><img class="ic" src="../../resources/icons/regular/scroll.svg">Journal</div>
+        <div class="sub-button"><img class="ic" src="../../resources/icons/regular/terminal-window.svg">Kernel<span class="cnt mono">1.2M</span></div>
+        <div class="sub-button"><img class="ic" src="../../resources/icons/regular/lock.svg">Auth</div>
+        <div class="sub-button"><img class="ic" src="../../resources/icons/regular/user-circle.svg">Applications</div>
+        <div class="sub-button active sub-sep"><img class="ic" src="../../resources/icons/regular/notebook.svg">Saved Views<span class="cnt mono">4</span></div>
+        <div class="sub-button"><img class="ic" src="../../resources/icons/regular/flag.svg">Flags<span class="cnt mono">3</span></div>
+      </div>
+      <div class="nav">
+        <div class="nav-button"><img class="ic" src="../../resources/icons/regular/info.svg">About</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="nav">
+        <div class="nav-button nav-bottom"><img class="ic" src="../../resources/icons/regular/gear-six.svg">Settings</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <div class="panel views">
+        <div class="panel-head"><img class="ic" src="../../resources/icons/regular/notebook.svg">Saved Views
+          <span class="right">persisted in settings.json</span></div>
+        <div class="vrow sel">
+          <img class="ic" src="../../resources/icons/regular/scroll.svg">
+          <div>
+            <div class="vname">Disk errors <span class="badge">err+warn</span></div>
+            <div class="vmeta">Journal · units: nvme*, ext4*, kernel · prio err,warning · since −24 h</div>
+          </div>
+          <div class="vops"><img class="ic" src="../../resources/icons/regular/copy.svg"><img class="ic" src="../../resources/icons/regular/sliders-horizontal.svg"><img class="ic" src="../../resources/icons/regular/x-circle.svg"></div>
+        </div>
+        <div class="vrow">
+          <img class="ic" src="../../resources/icons/regular/lock.svg">
+          <div>
+            <div class="vname">Auth failures <span class="badge">regex</span></div>
+            <div class="vmeta">Auth preset · query: (failed|invalid user) · case-insensitive</div>
+          </div>
+          <div class="vops"><img class="ic" src="../../resources/icons/regular/copy.svg"><img class="ic" src="../../resources/icons/regular/sliders-horizontal.svg"><img class="ic" src="../../resources/icons/regular/x-circle.svg"></div>
+        </div>
+        <div class="vrow">
+          <img class="ic" src="../../resources/icons/regular/user-circle.svg">
+          <div>
+            <div class="vname">Firefox churn <span class="badge">follow</span></div>
+            <div class="vmeta">Applications · units: firefox.scope · follow on · since boot</div>
+          </div>
+          <div class="vops"><img class="ic" src="../../resources/icons/regular/copy.svg"><img class="ic" src="../../resources/icons/regular/sliders-horizontal.svg"><img class="ic" src="../../resources/icons/regular/x-circle.svg"></div>
+        </div>
+        <div class="vrow">
+          <img class="ic" src="../../resources/icons/regular/terminal-window.svg">
+          <div>
+            <div class="vname">Boot noise <span class="badge">dbg</span></div>
+            <div class="vmeta">Kernel · prio debug · since boot · not following</div>
+          </div>
+          <div class="vops"><img class="ic" src="../../resources/icons/regular/copy.svg"><img class="ic" src="../../resources/icons/regular/sliders-horizontal.svg"><img class="ic" src="../../resources/icons/regular/x-circle.svg"></div>
+        </div>
+      </div>
+
+      <div style="flex:1.4; display:flex; flex-direction:column; gap:16px; min-width:0;">
+        <div class="overlaywrap">
+          <div class="ghostlog">Sep 26 12:44:04 user-cinnamon kernel: nvme nvme0: I/O 223 QID 3 timeout, aborting
+Sep 26 12:44:07 user-cinnamon NetworkManager[712]: device (wlp3s0): keepalive: no response
+Sep 26 12:44:19 user-cinnamon sudo: user : TTY=pts/0 ; COMMAND=/usr/bin/apt update
+Sep 26 12:44:23 user-cinnamon rtkit-daemon[1130]: made thread 5120 high priority
+Sep 26 12:44:31 user-cinnamon systemd-udevd[318]: nvme0n1: Worker process already running
+Sep 26 12:44:36 user-cinnamon mintupdate[2100]: Update check complete: 7 packages
+Sep 26 12:44:41 user-cinnamon cups-browsed[980]: Couldn't create IPP request
+Sep 26 12:44:52 user-cinnamon gnome-shell[1104]: last_user_time out of range</div>
+          <div class="dialog">
+            <div class="dlg-title"><img class="ic" src="../../resources/icons/regular/bookmark-simple.svg">Save current view</div>
+            <div class="dlg-body">
+              <div class="field">Disk errors — this week</div>
+              <div class="summary">
+                <b>Preset</b> Journal · <b>units</b> nvme*, ext4*, kernel ·
+                <b>prio</b> err, warning · <b>since</b> −24 h ·
+                <b>query</b> — · <b>follow</b> on
+              </div>
+              <div class="checks">
+                <label><span class="cbox on"><img class="ic" src="../../resources/icons/fill/check.svg"></span>show in sidebar submenu</label>
+                <label><span class="cbox"></span>resume follow automatically on open</label>
+              </div>
+            </div>
+            <div class="dlg-actions">
+              <button class="dbtn">Cancel</button>
+              <button class="dbtn primary">Save view</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel flags">
+          <div class="panel-head"><img class="ic" src="../../resources/icons/regular/flag.svg">Flags
+            <span class="right">cursor-anchored — survive reboots on persistent journals</span></div>
+          <div class="frow">
+            <img class="ic" src="../../resources/icons/regular/flag.svg">
+            <div>
+              <div class="flabel">First nvme timeout seen</div>
+              <div class="fmeta mono">Sep 26 12:44:04 · kernel</div>
+            </div>
+            <span class="jump">jump ▸</span>
+          </div>
+          <div class="frow">
+            <img class="ic" src="../../resources/icons/regular/flag.svg">
+            <div>
+              <div class="flabel">After apt update</div>
+              <div class="fmeta mono">Sep 26 12:44:19 · sudo</div>
+            </div>
+            <span class="jump">jump ▸</span>
+          </div>
+          <div class="frow">
+            <img class="ic" src="../../resources/icons/regular/flag.svg">
+            <div>
+              <div class="flabel">Printer broke again</div>
+              <div class="fmeta mono">Sep 26 12:44:41 · cups-browsed</div>
+            </div>
+            <span class="jump">jump ▸</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -2,57 +2,82 @@
 
 Part of the linprocman modular docs. Siblings: [procfs-data.md](procfs-data.md) ·
 [sampling-pipeline.md](sampling-pipeline.md) · [actions-permissions.md](actions-permissions.md) ·
-[resource-graphs.md](resource-graphs.md) · [persistence-config.md](persistence-config.md).
-Overview: [../process-manager-concept.md](../process-manager-concept.md).
+[resource-graphs.md](resource-graphs.md) · [persistence-config.md](persistence-config.md) ·
+[logs-journal.md](logs-journal.md) · [disks-filesystems.md](disks-filesystems.md) ·
+[sysfs-data.md](sysfs-data.md). Overview: [../process-manager-concept.md](../process-manager-concept.md).
 
 ## Purpose
 
 The Processes page model layer: flat list and tree, filter, live update
-without flicker, selection identity, and the details fold-out pane.
+without flicker, selection identity, keyboard operation, and the details
+fold-out pane.
 
 ## Interface
 
-Consumes: `Snapshot` objects from [sampling-pipeline.md](sampling-pipeline.md);
-selection handed to [actions-permissions.md](actions-permissions.md) as
-`(pid, starttime)`.
+Consumes: `Snapshot` objects from [sampling-pipeline.md](sampling-pipeline.md)
+(rates precomputed); selection handed to
+[actions-permissions.md](actions-permissions.md) as `(pid, starttime)`
+**lists** — multi-select is first-class (bulk actions).
 
 Provides:
 - `Gtk.ListStore` (flat) / `Gtk.TreeStore` (tree) with **typed** columns
-  (PID int, CPU float, mem bytes int, nice int) — sorting on typed columns is
-  correct for free; display formatting (2.4 MB, 01:23:45) lives in
-  `set_cell_data_func`, never stored as strings. Generalizes the hidden-epoch
-  trick linfilesearch needed for dates.
+  (PID int, CPU float, mem bytes int, nice int). Absent rate values are
+  stored as a `-1` sentinel **plus a `has_data` bool column**; sort places
+  unknowns last; cell data funcs render "—". (None in a float column is a
+  PyGObject marshaling hazard; NaN breaks numeric sort.)
 - `Gtk.TreeModelFilter` wrapping the store once; the `visible_func` is
-  re-pointed on query/scope change, not rebuilt per keystroke.
+  re-pointed on query/scope change, not rebuilt per keystroke. Substring
+  default, regex toggle (stdlib `re`).
 - Details pane: 290px fold-out (caret fold, the r028 square-toggle pattern);
-  cheap fields every snapshot, `smaps_rollup` only for the selected PID.
+  cheap fields every snapshot, `smaps_rollup` only for the selected PID —
+  read by the **sampler on request** (consumers never read the kernel; the
+  pane flags a pid-of-interest and the next snapshot carries its rollup).
 
-## Update logic — diff-in-place, never rebuild
+## Update logic — diff-in-place with an explicit move op
 
-One snapshot arrives → diff keyed by a `pid → TreeIter` dict: update changed
-rows, append new, remove gone. Sorting is blocked around the batch
-(`set_sort_column_index` save/restore) so it runs once per refresh, not once
-per row. This preserves the three things a full rebuild breaks: selection,
-sort position, tree expansion. Selection is restored by `(pid, starttime)`,
-not row index.
+One snapshot arrives → diff keyed by `pid → Gtk.TreeRowReference` (raw
+TreeIters are invalidated by row removals — never cached across batches).
+Operations, in order:
+
+1. **Move** — children whose parent vanished this snapshot are relocated to
+   their nearest live ancestor first (TreeStore cannot re-parent in place
+   once sorted: remove+reinsert, expansion restored via row reference).
+2. **Update** — changed rows in place.
+3. **Insert / Remove** — new pids appended; gone pids removed (parents
+   after their children were relocated).
+
+Sorting is blocked around the whole batch (`set_sort_column_index`
+save/restore) so it runs once per refresh. The `TreeModelFilter` is also
+suspended around batches (refilter once at the end) — per-row-changed
+refiltering is O(n²) and is exactly what freezes a GUI during a fork bomb.
+
+**Row budget (adversarial fix):** above ~5k visible rows, the page shows the
+top N (current sort) + a "showing 5,000 of 23,412 — refine filter" notice,
+and the sampler interval is offered to coarsen. The manager must stay
+responsive during the incident it exists to manage.
+
+Selection survives via `(pid, starttime)` keys, never row index.
 
 ## Tree building
 
-- Edges from PPid; orphans (parent already reaped) attach to the nearest live
-  ancestor, else PID 1.
-- Kernel threads (empty cmdline) group under `kthreadd`, dimmed style,
-  **hidden by default** with a count row (mockup B).
-- Reparenting under subreapers is handled by the nearest-live-ancestor rule —
-  no prctl guessing.
+- Edges from PPid; orphans attach to the nearest live ancestor, else PID 1 —
+  applied at build **and** at every diff (the move op above).
+- Kernel threads (empty cmdline **and** state ≠ Z) group under `kthreadd`,
+  dimmed, **hidden by default** with a count row (mockup B).
 
-## Columns
+## Columns & keyboard
 
-Flat view: Process (icon+name+unit badge), User, CPU %, Memory, Disk r/w,
-Nice, PID, State. Tree view drops disk columns for hierarchy width. Visible
-columns, widths, and minimums persist (linfilesearch r025 lesson: minimum
-widths — Name 200, Path 300 equivalents — stop the sheet crushing text).
+Flat: Process (icon+name+unit badge), User, CPU %, Memory, Swap, Disk r/w,
+Nice, PID, State. Tree drops disk columns for hierarchy width. Visible
+columns/widths persist with enforced minimums (linfilesearch r025 lesson).
+
+Keyboard: Ctrl+F focuses filter; ↑/↓ move; Enter opens details; Space
+toggles multi-select mark; Delete = End (with confirm); Ctrl+K = Kill;
+Ctrl+R refresh now; F5 toggles pause.
 
 ## Tests
 
-Tree builder units (orphans, cycles-guard, kthread grouping), diff behavior
-(update/insert/remove preserves selection path), typed-sort correctness.
+Tree builder units (orphans, cycles guard, kthread grouping, zombie
+exclusion), diff behavior (update/insert/remove/move preserves selection
+and expansion), filter suspension, row-budget notice, unknown-value sort
+placement, keyboard map.

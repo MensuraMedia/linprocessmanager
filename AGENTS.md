@@ -12,8 +12,8 @@ universal standards here.
 - Python 3.12 (system python3, PyGObject via system packages; starter deps only: PyGObject, pycairo, Pillow — no psutil at runtime)
 - GTK 3 (PyGObject, gi); run with `python3 src/main.py` (starter not yet vendored — see roadmap in docs/process-manager-concept.md)
 - Data source: /proc read directly (stat, status, io, smaps_rollup, cgroup, pressure)
-- Icons: Phosphor (MIT) — master library ~/projects/assets/icons; project subset resources/icons/{regular,fill} (44+10, manifest.txt maps use)
-- Docs: docs/process-manager-concept.md (overview + module index), docs/build-principles.md (binding mandates), docs/modules/ (6 modular docs: procfs-data, sampling-pipeline, process-table, actions-permissions, resource-graphs, persistence-config), docs/mockups/ (4 UI mockups + index + PNGs)
+- Icons: Phosphor (MIT) — master library ~/projects/assets/icons; project subset resources/icons/{regular,fill} (53+11, manifest.txt maps use)
+- Docs: docs/process-manager-concept.md (overview + module index), docs/build-principles.md (binding mandates), docs/modules/ (9 modular docs: procfs-data, sampling-pipeline, process-table, actions-permissions, resource-graphs, persistence-config, disks-filesystems, logs-journal, sysfs-data), docs/mockups/ (6 UI mockups + index + PNGs)
 - Tests: pytest (tests/) — /proc parser fixtures, CPU-rate math, tree builder; run `python3 -m pytest tests/ -q` from repo root (once created)
 
 ## Project rules

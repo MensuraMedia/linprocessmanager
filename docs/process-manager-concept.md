@@ -17,8 +17,10 @@ Debian (X11 or Wayland), running as an unprivileged user process. Feature
 parity reference: gnome-system-monitor (installed on this machine) and htop;
 scope is process monitoring and control, not system administration.
 
-Everything the app needs is in `/proc`. v1 has **zero runtime dependencies
-beyond the starter's** (PyGObject, pycairo, Pillow) — no psutil at runtime.
+Everything the app needs is on the local machine: kernel interfaces —
+`/proc` and `/sys` — plus the local `journalctl` binary for logs. v1 has
+**zero runtime dependencies beyond the starter's** (PyGObject, pycairo,
+Pillow) — no psutil, no python3-systemd, no network.
 
 **Binding mandates (r036, see build-principles.md):** fundamentals from
 MensuraMedia/universal-instruction-set v2026.04; modularity and universality
@@ -36,10 +38,14 @@ self-reliant — no web-based resources at build or runtime, ever.
 | [modules/actions-permissions.md](modules/actions-permissions.md) | `manager_actions.py` | signals, renice, (pid,starttime) guard, error contract |
 | [modules/resource-graphs.md](modules/resource-graphs.md) | `page_resources.py` + `manager_history.py` | ring buffers, cairo charts, PSI chips |
 | [modules/persistence-config.md](modules/persistence-config.md) | `config_processes.py` | settings.json schema, XDG rules |
+| [modules/disks-filesystems.md](modules/disks-filesystems.md) | `page_disks.py` | per-device I/O rates, per-mount usage |
+| [modules/logs-journal.md](modules/logs-journal.md) | `manager_logs.py` + `page_logs.py` | journal engine, sidebar submenu, search, saved views |
+| [modules/sysfs-data.md](modules/sysfs-data.md) | `sysfs.py` | hwmon temperatures, cpufreq, AMD GPU chip |
 
-Module boundaries are load-bearing: nothing but `procfs.py` reads the kernel;
-nothing but `manager_actions.py` mutates the system; UI pages consume
-snapshots and never reach sideways.
+Module boundaries are load-bearing: only `procfs.py` and `sysfs.py` read
+kernel interfaces; only `manager_logs.py` spawns local binaries (journalctl,
+dmesg) under the argv contract; only `manager_actions.py` mutates the
+system; UI pages consume snapshots and never reach sideways.
 
 ## 3. Foundation: the starter framework
 
@@ -54,18 +60,25 @@ snapshots and never reach sideways.
 
 ## 4. Feature set (traditional inventory)
 
-**Table** — name, user, CPU %, memory, VMSize/shared, disk r/w, nice, PID,
-state, started, CPU time, optional cgroup unit; sortable, columns
-choosable, widths remembered. **Tree** — PPID hierarchy, kernel threads
-grouped/dimmed/hidden by default, orphans re-parented. **Filtering** —
-instant substring over name/PID/user/cmdline + scope chips (All / Mine /
-System / Active). **Actions** — end, kill, stop/continue, hangup, custom
-signals, renice; confirmed where destructive; exact errno text on refusal.
-**Details pane** — identity, memory (RSS/PSS/shared/virtual), time, I/O,
-cmdline, exe/cwd; locked fields shown as `lock`, never errors.
-**Resources** — stacked per-core CPU, memory+swap, network, PSI chips,
-load/uptime summary. **Live control** — interval selector, pause/resume,
-refresh now; sampling backs off when hidden.
+**Table** — name, user, CPU %, memory (RSS + swap VmSwap), VMSize/shared,
+disk r/w, nice, PID, state, started, CPU time, optional cgroup unit;
+sortable, columns choosable, widths remembered; full keyboard operation
+(Ctrl+F filter, arrows, Enter details, Delete end). **Tree** — PPID
+hierarchy, kernel threads grouped/dimmed/hidden by default, orphans
+re-parented. **Filtering** — instant substring over name/PID/user/cmdline
+(regex toggle) + scope chips (All / Mine / System / Active / Containers).
+**Actions** — end, kill, stop/continue, hangup, custom signals, renice, CPU
+affinity; multi-select bulk actions; confirmed where destructive; exact
+errno text on refusal. **Details pane** — identity, memory
+(RSS/PSS/shared/virtual/swap), time, I/O, cmdline, exe/cwd; locked fields
+shown as `lock`, never errors. **Resources** — stacked per-core CPU,
+memory+swap, network, PSI chips, load/uptime summary, temperature/frequency
+chips. **Disks** — per-device rates, per-mount usage, live plug events.
+**Logs** — sidebar submenu (Journal / Kernel / Auth / Applications / Saved
+Views), journalctl-backed, substring+regex search, time-jump, follow mode,
+priority coloring, saved views + cursor flags, export. **Live control** —
+interval selector, pause/resume, refresh now; sampling backs off when
+hidden.
 
 ## 5. UI direction (see docs/mockups/)
 
@@ -78,6 +91,8 @@ Four mockups on the real starter palette (`#2d2d2d` window, `#353535` sidebar,
 | B — Process Tree | same page, tree mode, kernel threads grouped | verifying hierarchy affordances |
 | C — Resources | per-core stacked CPU, memory+swap, network, PSI chips | the cairo graph targets |
 | D — Action Dialogs | kill confirm + renice + signal picker over dimmed table | the permission/safety UX |
+| E — Logs: Journal | sidebar submenu, search bar, priority coloring, follow | the mandated logs feature, primary look |
+| F — Logs: Saved Views | saved views management + flags | the organize model |
 
 Open decisions for the operator:
 1. Is A (sidebar + details fold-out) the primary direction, as it was for linfilesearch?
@@ -118,21 +133,45 @@ Open decisions for the operator:
 | Risk | Mitigation |
 |---|---|
 | /proc parse edge cases | parse-after-last-`)` rule + hostile fixtures (procfs-data.md) |
-| PID recycling mid-action | (pid, starttime) guard (actions-permissions.md) |
+| PID recycling mid-action | fresh-stat (pid, starttime) check at click time (actions-permissions.md) |
 | UI jank on sort-heavy refresh | block-sort around diff batches; typed columns (process-table.md) |
 | Freeze from walking smaps for all PIDs | selected-process only, by design (procfs-data.md) |
-| Hardened /proc (hidepid) / restricted io | "—" cells + `lock`; degrade, never error |
+| Hardened /proc (hidepid) / restricted io | minimal locked rows, distinct from exit-drop (procfs-data.md) |
+| Fork-bomb PID flood freezes the manager | row budget + filter suspension + cadence coarsening (process-table.md) |
+| Sampler thread dies silently | loop watchdog + "sampling stalled" banner (sampling-pipeline.md) |
+| Journal flood / huge initial read | -n cap, cursor paging, coalesced drop-oldest appends (logs-journal.md) |
+| Journal access varies by user group | startup probe, locked sources with remedy text, never elevate (logs-journal.md) |
 
-## 9. Roadmap
+## 9. Roadmap — phased precedence (adversarially reviewed, r039)
 
-1. Vendor starter into `src/`, wire Processes page shell; replace the
-   starter's venv/pip `run.sh` with a direct system-python launcher
-   (build-principles.md §4).
-2. `procfs.py` readers + fixture unit tests (hostile stat lines, CLK_TCK).
-3. Sampler thread → flat table end-to-end, diff-in-place updates.
-4. Sort, filter, scope chips, selection stability.
-5. Actions + PID guard + permission UX (mockup D flows).
-6. Tree view with kernel-thread grouping.
-7. Details pane incl. PSS/IO/cmdline.
-8. Resources page graphs + PSI.
-9. Settings/persistence, installer (linfilesearch `install.sh` pattern), v1 tag.
+Docs are amended before code (the binding-doc rule); each phase lands with
+its module doc's tests green.
+
+- **Phase 1 — Data core.** Vendor starter, page shells, direct system-python
+  launcher; `procfs.py` + `sysfs.py` readers with hostile fixtures,
+  hidepid/EACCES taxonomy, system-math formulas (btime, busy fields,
+  memory-used, ncpu, counter resets, lo exclusion).
+- **Phase 2 — Live table.** Sampler (watchdog, queue drop-oldest, interval
+  semantics settled) → flat table diff-in-place (RowReference keys, explicit
+  move op designed now for the later tree), sort/filter/scope, selection
+  stability, VmSwap column, keyboard operation, settings.json skeleton
+  persisting sort/columns/interval now.
+- **Phase 3 — Control & safety.** Actions (fresh-stat PID guard, corrected
+  renice rule, affinity), dialogs, multi-select bulk actions, status
+  contract ("signal sent", not "ended").
+- **Phase 4 — Tree & details.** TreeStore tree with kthread grouping,
+  orphan relocation; details pane incl. PSS/IO/cmdline/swap.
+- **Phase 5 — Resources + sensors.** Timestamped ring buffers, per-core
+  stacked charts, memory/network, PSI chips, temperature/frequency/GPU chips
+  (sysfs).
+- **Phase 6 — Disks.** diskstats rates + mount usage page.
+- **Phase 7 — Logs (large — size like phases 1–2).** journalctl engine under
+  the argv contract, four presets, follow/tail, search + time-jump,
+  priority coloring, saved views + flags, export.
+- **Phase 8 — Ship.** Installer, version stamp, v1 tag.
+
+Post-v1 backlog (respects §7): memory maps, oom_score/wchan, AppArmor
+context, regex filter port, CSV table export, watch/pin rows, container
+scope grouping, window-finder (X11 only), threshold notifications (operator
+gate). Per-process network columns: rejected — needs eBPF/root, violates
+the no-elevation mandate.

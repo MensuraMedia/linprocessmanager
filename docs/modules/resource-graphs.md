@@ -2,26 +2,30 @@
 
 Part of the linprocman modular docs. Siblings: [procfs-data.md](procfs-data.md) ·
 [sampling-pipeline.md](sampling-pipeline.md) · [process-table.md](process-table.md) ·
-[actions-permissions.md](actions-permissions.md) · [persistence-config.md](persistence-config.md).
-Overview: [../process-manager-concept.md](../process-manager-concept.md).
+[actions-permissions.md](actions-permissions.md) · [persistence-config.md](persistence-config.md) ·
+[logs-journal.md](logs-journal.md) · [disks-filesystems.md](disks-filesystems.md) ·
+[sysfs-data.md](sysfs-data.md). Overview: [../process-manager-concept.md](../process-manager-concept.md).
 
 ## Purpose
 
 System-level history and its cairo rendering: per-core CPU, memory+swap,
-network, and pressure (PSI) chips. Pure display of accumulated samples —
+network, pressure chips, sensor chips. Pure display of accumulated samples —
 this module samples nothing itself.
 
 ## Interface
 
-Consumes: the `system` section of every `Snapshot` (cpu jiffies, meminfo,
-net counters, pressure values) from
-[sampling-pipeline.md](sampling-pipeline.md).
+Consumes: the `system` section of every `Snapshot` (rates precomputed) from
+[sampling-pipeline.md](sampling-pipeline.md); sensor values from
+[sysfs-data.md](sysfs-data.md).
 
 Provides:
-- Ring buffers — `collections.deque(maxlen=300)` ≈ 5 min at 1 s — one per
-  series: per-core totals, mem used, swap used, net rx/tx, PSI avg10s.
-- `DrawingArea` draw callbacks per chart; no timers beyond the sampler
-  (redraw rides the snapshot-apply + window expose).
+- Ring buffers holding **`(ts, value)` tuples** — never positional values —
+  sized for ~5 min at the current period. Gaps (backoff, pause, counter
+  resets) render as gaps; a 3-minute hidden window must not masquerade as
+  18 seconds of activity. Per-core series are **pinned to a fixed max core
+  index** so CPU hotplug/offline shifts a series rather than scrambling
+  them.
+- `DrawingArea` draw callbacks per chart; no timers beyond the sampler.
 
 ## Charts
 
@@ -31,21 +35,23 @@ Provides:
   per-theme assets. Gridlines at 25/50/75%.
 - **Memory — area + line:** used (area) with swap (dashed line), labeled
   against MemTotal.
-- **Network — two lines with soft fills:** rx/tx byte deltas per interval.
+- **Network — two lines with soft fills:** rx/tx rates (reset-aware).
 - **PSI — numeric chips** (`gauge`): some avg10/avg60/avg300 for cpu; some
-  and full for memory and io. Numbers, not charts — pressure is a rate, and
-  numbers don't lie at a glance.
+  and full for memory and io. Numbers, not charts.
+- **Sensors — chips only in v1** (`waveform`): hwmon temperatures, CPU
+  frequency min/avg/max, AMD gpu_busy_percent when present; chips hide
+  themselves when the source is absent.
 
 ## Rules
 
-- Y-scale choices: CPU fixed 0–100%×ncore-normalized; memory fixed 0–total;
+- Y-scales: CPU fixed 0–100% per-core-normalized; memory fixed 0–total;
   network auto-scaled with the current ceiling shown.
-- History depth is fixed (5 min) in v1 — no persistence of buffers across
-  restarts.
-- Colors: series palette derives from the theme accent at runtime; nothing
-  is hardcoded per theme.
+- History is not persisted across restarts.
+- Series palette derives from the theme accent at runtime; nothing
+  hardcoded per theme.
 
 ## Tests
 
-Ring-buffer semantics (maxlen eviction), delta→rate math for net series,
-theme-color derivation smoke test against all 7 starter themes.
+Ring semantics (maxlen eviction, gap rendering, backoff exclusion), per-core
+pinning under CPU offline, reset-aware rate feeding, theme-color derivation
+smoke against all 7 starter themes.

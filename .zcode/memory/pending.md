@@ -1,12 +1,15 @@
 # Pending
 
-- Operator must review docs/process-manager-concept.md and pick a mockup
-  direction (A processes+details is the primary candidate).
-- Open decisions (concept §8): primary layout; CPU % normalization default;
-  refresh defaults (2 s table / 1 s graphs); kernel threads hidden default;
-  brand mark pulse vs gauge.
-- Starter not yet vendored into src/ — roadmap step 1 in the concept doc.
-- Then: procfs.py readers + fixture tests → sampler → flat table → actions →
-  tree → details → resources graphs → settings/installer.
+- Operator must review the adversarially re-cut plan (concept §9 phases 1–8)
+  and the logs mockups E/F at docs/mockups/index.html (loopback server or
+  files). Direction decisions from r036 still open: primary layout (A?),
+  CPU % normalization default, refresh default, kernel threads hidden,
+  pulse vs gauge brand mark. Logs-specific: submenu structure as mocked?
+  Saved Views + Flags as the organize model? 20k line cap OK?
+- Implementation not started. Phase 1 (vendor starter + procfs/sysfs
+  readers + fixtures) is next once the operator blesses the phase order.
 - Remind operator: open ~/projects/linprocman as the ZCode workspace for
-  working sessions (context injection applies there).
+  working sessions.
+- Mockup HTTP server (port 8931) may still be running in the linfilesearch
+  session — stop it when done viewing.
+

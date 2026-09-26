@@ -58,4 +58,17 @@ dots-three            row overflow menu
 target                selected-PID indicator
 crosshair             "find in tree" (jump from flat row to tree)
 
-54 icons total: 44 regular + 10 fill.
+# --- system logs (r039) ---
+scroll                 Logs nav group; Journal submenu/view (fill = active/logo-weight)
+file-text              log entry rows
+lock                   Auth submenu; locked sources
+user-circle            Applications submenu (user units)
+notebook               Saved Views submenu + views panel
+flag                   Flags collection (cursor bookmarks)
+calendar-blank         time-range picker (--since/--until)
+download-simple        export current view
+arrows-down-up         sort order (newest/oldest first)
+text-aa                case toggle in log search
+bookmark-simple        save current view
+
+64 icons total: 53 regular + 11 fill.
