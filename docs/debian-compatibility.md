@@ -107,10 +107,6 @@ strategy: every variance above already has a defined graceful path.
 - **Desktop shells:** Cinnamon/MATE/XFCE/GNOME/KDE/budgie all honor the
   same `.desktop` + StartupWMClass + hicolor contract; no shell-specific
   code (and no libadwaita — decided in gtk4-port.md §6).
-- **Explicitly rejected: snap and flatpak.** Not ideology — function: a
-  sandboxed process manager cannot reliably read host `/proc/<pid>` detail
-  or send signals to host processes, which is the entire product. The
-  offline mandate also forbids store runtimes. Deb-native only.
 
 ## 7. Display servers & security contexts
 
