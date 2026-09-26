@@ -144,9 +144,16 @@ def test_dwall_guard_skips_rates_when_interval_too_short():
 
     r2 = make_readers(pids=[100], stat={100: stat_rec(100, utime=200)},
                       status={100: status_rec(100)})
-    # Δwall = 1.0 s < one 2.0 s period -> rate fields None despite a real delta.
+    # r058 P2-5: guard floor is 0.5×period — jitter above it is ACCEPTED.
+    # Δwall = 1.0 s ≥ 0.5×(2.0 s) -> rates compute despite sub-period gap.
     snap2 = manager_sampler.build_snapshot(snap1, 1001.0, make_clock(period=2.0), r2)
-    assert snap2.procs[(100, 111)]["cpu_pct"] is None
+    assert snap2.procs[(100, 111)]["cpu_pct"] == 100.0
+
+    # Δwall = 0.5 s < 0.5×period (double-tick) -> rate fields None.
+    r3 = make_readers(pids=[100], stat={100: stat_rec(100, utime=300)},
+                      status={100: status_rec(100)})
+    snap3 = manager_sampler.build_snapshot(snap2, 1001.5, make_clock(period=2.0), r3)
+    assert snap3.procs[(100, 111)]["cpu_pct"] is None
 
 
 def test_counter_reset_emits_none():

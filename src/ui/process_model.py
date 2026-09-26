@@ -189,10 +189,13 @@ class ProcessTableModel:
             hb = model.get_value(b, has_col)
             if not ha and not hb:
                 pass  # both unknown -> fall through to value compare (both -1)
-            elif not ha:
-                return -1  # unknown sorts below known (last under DESC)
-            elif not hb:
-                return 1
+            elif not ha or not hb:
+                # unknowns land VISUALLY LAST regardless of direction: GTK
+                # negates the comparator under DESC, so the sign flips there.
+                asc = not self._sort_desc
+                if not ha:
+                    return 1 if asc else -1
+                return -1 if asc else 1
         va = self._sort_value(model, a, value_col)
         vb = self._sort_value(model, b, value_col)
         return (va > vb) - (va < vb)
@@ -226,6 +229,17 @@ class ProcessTableModel:
         return None
 
     # -- filter -----------------------------------------------------------
+
+    def visible_count(self):
+        """Rows passing the current scope+filter (r058 close-review P2-6 —
+        the strip must reflect what the operator actually sees)."""
+        it = self.filter.iter_children(None)
+        n = 0
+        while it is not None:
+            n += 1
+            it = self.filter.iter_next(it)
+        return n
+
 
     def set_query(self, text, regex=False):
         self._query = text or ""
@@ -328,12 +342,15 @@ class ProcessTableModel:
     def _diff(self, rows):
         # Update existing rows in place; append genuinely new pids.
         for key, row in rows.items():
-            ref = self._refs.get(key)
+            # store-side identity uses the COERCED starttime (None->0) that
+            # row-8 holds, so key_at_child_path round-trips exactly (r058 P2-8)
+            store_key = (key[0], key[1] if key[1] is not None else 0)
+            ref = self._refs.get(store_key)
             if ref is not None and ref.valid():
                 self._update_row(self.store.get_iter(ref.get_path()), row)
             else:
                 it = self.store.append(row)
-                self._refs[key] = Gtk.TreeRowReference.new(
+                self._refs[store_key] = Gtk.TreeRowReference.new(
                     self.store, self.store.get_path(it))
 
         # Remove pids gone this snapshot. Re-fetch the iter from the row

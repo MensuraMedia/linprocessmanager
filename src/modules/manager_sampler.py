@@ -258,7 +258,10 @@ def build_snapshot(prev, now, clock, readers):
     dwall = None
     if prev_raw is not None:
         candidate = now - prev_raw.ts
-        if candidate >= clock.period:
+        if candidate >= 0.5 * clock.period:  # r058 close-review P2-5:
+            # catch double-ticks, not normal jitter (full-period floor
+            # dropped rate fields intermittently)
+
             dwall = candidate
 
     procs, procs_raw = _build_procs(prev_raw, dwall, clock, readers)

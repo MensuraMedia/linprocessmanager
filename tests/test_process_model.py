@@ -124,6 +124,18 @@ def test_unknown_values_sort_last_under_desc():
     knowns = [r[pm.COL_CPU] for r in store_rows(model) if r[pm.COL_CPU_HAS]]
     assert knowns == sorted(knowns, reverse=True)
 
+def test_unknown_values_sort_last_under_asc():
+    """r058 close-review P1: under ASCENDING the GTK comparator flips, so the
+    pre-fix code floated unknowns to the TOP. They must land last here too."""
+    model = pm.ProcessTableModel()
+    model.set_sort("cpu", descending=False)
+    model.apply_snapshot(procs(
+        rec(1, cpu=5.0), rec(2, cpu=None), rec(3, cpu=50.0), rec(4, cpu=None)))
+    has_flags = [r[pm.COL_CPU_HAS] for r in store_rows(model)]
+    assert has_flags == sorted(has_flags, reverse=True)  # unknowns last
+    knowns = [r[pm.COL_CPU] for r in store_rows(model) if r[pm.COL_CPU_HAS]]
+    assert knowns == sorted(knowns)
+
 
 # --- filter ------------------------------------------------------------------
 

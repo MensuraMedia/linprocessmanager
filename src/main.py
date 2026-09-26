@@ -40,8 +40,12 @@ class LinprocmanApplication(Gtk.Application):
                 self.navigation_manager, sampler=self.sampler, application=self
             )
             self.window.show_all()
-        self.sampler.start()
         self.window.present()
+        # r058 close-review P2-7: honor the page's pause state across
+        # re-activation — never silently restart a paused sampler.
+        page = self.navigation_manager.get_page_widget("processes")
+        if page is None or not getattr(page, "_paused", False):
+            self.sampler.start()
 
     def _on_shutdown(self, _app):
         """Stop the sampler thread cleanly on application shutdown."""

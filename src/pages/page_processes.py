@@ -89,6 +89,7 @@ class ProcessesPage(BasePage):
         self.sampler = None
         self._app = None
         self._drain_source_id = None
+        self._width_save_id = None
         self._paused = False
         self._built = False
 
@@ -422,7 +423,10 @@ class ProcessesPage(BasePage):
 
     def _update_status(self, snapshot):
         model = self.model
-        parts = [self._span("%d processes" % model.last_shown, "#d0d0d0")]
+        visible = model.visible_count()  # r058 P2-6: reflect scope+filter
+        parts = [self._span("%d of %d processes shown" % (visible, model.last_total)
+                            if visible < model.last_total else
+                            "%d processes" % model.last_total, "#d0d0d0")]
         if model.last_total > model.last_shown:
             parts[0] = "%d of %d processes" % (model.last_shown, model.last_total)
         cpu = (snapshot.system or {}).get("cpu", {}).get("pct")
@@ -482,7 +486,7 @@ class ProcessesPage(BasePage):
         if self.sampler is None:
             return
         if paused:
-            self.sampler.stop()
+            self.sampler.stop(timeout=1.0)  # r058 P2-4: never block the UI thread
         else:
             self.sampler.start()
 
@@ -531,7 +535,16 @@ class ProcessesPage(BasePage):
         if width <= 0:
             return
         self.settings.set_column_width(key, width)
+        # r058 close-review P1: notify::fixed-width fires continuously during
+        # a drag — debounce to one atomic save after motion settles.
+        if self._width_save_id is not None:
+            GLib.source_remove(self._width_save_id)
+        self._width_save_id = GLib.timeout_add(500, self._flush_width_save)
+
+    def _flush_width_save(self):
+        self._width_save_id = None
         self.settings.save()
+        return False
 
     def _on_row_activated(self, _treeview, _path, _column):
         # Details pane is Phase 4; Enter just selects (the activation already
