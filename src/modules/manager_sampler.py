@@ -62,7 +62,7 @@ _LOG = logging.getLogger("linprocman.sampler")
 # a defect. The schema test asserts every record's keys equal this set.
 RECORD_FIELDS = frozenset({
     "pid", "starttime", "name", "user", "state", "ppid",
-    "cpu_pct", "mem_rss", "mem_vsize", "mem_shared",
+    "cpu_pct", "mem_rss", "mem_vsize", "mem_shared", "mem_swap",
     "io_read_rate", "io_write_rate", "nice", "threads", "unit",
     "is_kthread", "is_defunct", "from_backoff", "rollup",
 })
@@ -328,6 +328,7 @@ def _one_proc(pid, prev_raw, dwall, clock, readers):
     mem_rss = status.get("vm_rss_bytes") if status else None
     mem_vsize = status.get("vm_size_bytes") if status else None
     mem_shared = status.get("shared_bytes") if status else None
+    mem_swap = status.get("vm_swap_bytes") if status else None
 
     cur_read = io.get("read_bytes") if io else None
     cur_write = io.get("write_bytes") if io else None
@@ -366,6 +367,7 @@ def _one_proc(pid, prev_raw, dwall, clock, readers):
         "mem_rss": mem_rss,
         "mem_vsize": mem_vsize,
         "mem_shared": mem_shared,
+        "mem_swap": mem_swap,
         "io_read_rate": io_read_rate,
         "io_write_rate": io_write_rate,
         "nice": stat.get("nice"),
