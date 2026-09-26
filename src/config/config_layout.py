@@ -7,10 +7,10 @@ class Dimensions:
     """Layout dimension constants"""
     
     # Sidebar
-    SIDEBAR_WIDTH = 150
+    SIDEBAR_WIDTH = 170
     
     # Logo area
-    LOGO_AREA_WIDTH = 150
+    LOGO_AREA_WIDTH = 170
     LOGO_AREA_HEIGHT = 150
     LOGO_IMAGE_SIZE = 145
     

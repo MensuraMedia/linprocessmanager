@@ -42,12 +42,12 @@ window {
 .sidebar {
     background-color: #353535;
     border-right: 1px solid #1a1a1a;
-    min-width: 150px;
+    min-width: 170px;
 }
 
 /* Logo area - square 150x150 */
 .logo-area {
-    background-color: #3a3a3a;
+    background-color: #353535;
     border-bottom: 1px solid #1a1a1a;
     padding: 0;
     min-height: 150px;
@@ -276,9 +276,11 @@ textview text selection {
    TreeView / ListView Styles
    ============================================ */
 
+/* r054 contrast pass — mockup palette: rows #262626 sit on panes #303030,
+   hairlines #1a1a1a; distinct surfaces instead of one washed #2e2e33. */
 treeview {
-    background-color: #2d2d2d;
-    color: #d0d0d0;
+    background-color: #262626;
+    color: #e0e0e0;
 }
 
 treeview:selected {
@@ -286,15 +288,16 @@ treeview:selected {
     color: #ffffff;
 }
 
-treeview:hover {
-    background-color: #353535;
+treeview:hover:not(:selected) {
+    background-color: #303030;
 }
 
 treeview header {
-    background-color: #3a3a3a;
+    background-color: #313131;
     border-bottom: 1px solid #1a1a1a;
     font-weight: bold;
     padding: 5px;
+    color: #aaaaaa;
 }
 
 /* ============================================

@@ -65,15 +65,14 @@ class Sidebar(Gtk.Box):
         layout.box_add(self, logo_box, False, False, 0)
     
     def get_logo_path(self):
-        """Get path to logo image"""
-        return os.path.join(
-            os.path.dirname(__file__), '..', '..',
-            'resources', 'images', 'logo.png'
-        )
+        """Get path to logo image (r054: pulse mark replaced starter raster)"""
+        base = os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'images')
+        svg = os.path.join(base, 'logo.svg')  # r054: pulse mark (starter raster retired)
+        return svg if os.path.exists(svg) else os.path.join(base, 'logo.png')
     
     def add_fallback_logo(self, container):
         """Add fallback logo text"""
-        logo_label = Gtk.Label(label="DASHBOARD")
+        logo_label = Gtk.Label(label="LINPROCMAN")
         css.add_css_class(logo_label, 'logo-text')
         logo_label.set_xalign(0.5)
         layout.box_add(container, logo_label, True, True, 0)

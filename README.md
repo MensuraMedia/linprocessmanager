@@ -41,6 +41,30 @@ DISPLAY=:0 python3 tests/live_gui_walk.py   # live navigation walk + screenshots
 Workflow, gates, task contracts, and the ZCode⇄Claude collaboration:
 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
+## Screenshots
+
+**The live app** (Phase 2 — real process table; sidebar 170 px, mockup palette):
+
+![live app](docs/mockups/app-live-r054.png)
+
+**Design mockups by feature** (HTML sources in [docs/mockups/](docs/mockups/index.html), each with rendered PNG):
+
+| Feature | Mockup |
+|---|---|
+| Live process table + details pane (primary) | [A](docs/mockups/mockup-a-processes.png) |
+| Process tree + kernel-thread grouping | [B](docs/mockups/mockup-b-tree.png) |
+| Resources: per-core CPU, memory, network, PSI | [C](docs/mockups/mockup-c-resources.png) |
+| Actions: kill / renice / signal / status results | [D](docs/mockups/mockup-d-actions.png) |
+| Logs: journal view, search, follow | [E](docs/mockups/mockup-e-logs.png) |
+| Logs: saved views + flags (organize) | [F](docs/mockups/mockup-f-views.png) |
+| Logs: context menu + Frequency analytics | [G](docs/mockups/mockup-g-frequency.png) |
+| Sidebar width study (170 px adopted) | [H](docs/mockups/mockup-h-sidebar.png) |
+| Extended columns (22-metric chooser, I/O + net) | [I](docs/mockups/mockup-i-extended-columns.png) |
+| Process preview pane + context menu | [J](docs/mockups/mockup-j-preview-context.png) |
+
+Feature-to-spec mapping lives in the module docs
+([docs/modules/](docs/modules/)); mockups are the visual contract for each.
+
 ## Documentation map
 
 | Doc | What it holds |

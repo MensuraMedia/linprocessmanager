@@ -26,20 +26,29 @@ class ThemeApplicator:
         # Generate CSS with theme colors
         css_content = self.generate_css(theme_def)
         
-        # Load CSS
+        # Load static component stylesheet first (resources/css/style.css),
+        # then the dynamic theme block on top. r052 regression: the starter's
+        # dead ThemeManager used to load this file; routing it here.
+        import os
+        static_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            "resources", "css", "style.css")
         try:
-            self.css_provider.load_from_data(css_content.encode())
+            with open(static_path) as f:
+                static_css = f.read()
+        except OSError as e:
+            static_css = ""
+            print(f"✗ static css missing: {e}")
+        # one load: CssProvider.load_from_data REPLACES prior data, so the
+        # dynamic block must be appended, not loaded separately (r054 fix).
+        self.css_provider.load_from_data((static_css + "\n" + css_content).encode())
 
-            # Register the provider app-wide through the compat seam, which
-            # picks per-screen (GTK3) vs per-display (GTK4) registration.
-            css.add_provider(self.css_provider)
+        # Register the provider app-wide through the compat seam, which
+        # picks per-screen (GTK3) vs per-display (GTK4) registration.
+        css.add_provider(self.css_provider)
 
-            print(f"✓ Applied theme: {theme_def.name}")
-            return True
-            
-        except Exception as e:
-            print(f"✗ Error applying theme: {e}")
-            return False
+        print(f"✓ Applied theme: {theme_def.name}")
+        return True
     
     def generate_css(self, theme_def):
         """
