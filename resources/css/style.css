@@ -288,16 +288,25 @@ treeview:selected {
     color: #ffffff;
 }
 
-treeview:hover:not(:selected) {
-    background-color: #303030;
-}
-
+/* GTK3 row-hover is not per-row by default — a whole-widget :hover flashes
+   the table; deliberately omitted (adversarial r054). */
 treeview header {
     background-color: #313131;
     border-bottom: 1px solid #1a1a1a;
     font-weight: bold;
     padding: 5px;
     color: #aaaaaa;
+}
+
+/* GTK3 paints header buttons as real button nodes over the gadget —
+   style them or the generic button rule wins (adversarial r054). */
+treeview header button {
+    background-color: #313131;
+    border: none;
+    border-right: 1px solid #1a1a1a;
+    color: #aaaaaa;
+    padding: 5px 8px;
+    font-weight: bold;
 }
 
 /* ============================================

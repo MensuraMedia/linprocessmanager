@@ -45,8 +45,10 @@ class Sidebar(Gtk.Box):
         )
         css.add_css_class(logo_box, 'logo-area')
 
-        logo_path = self.get_logo_path()
-        if os.path.exists(logo_path):
+        logo_image = None
+        for logo_path in self.get_logo_paths():
+            if not os.path.exists(logo_path):
+                continue
             try:
                 pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
                     logo_path,
@@ -55,20 +57,21 @@ class Sidebar(Gtk.Box):
                     True
                 )
                 logo_image = icons.image_from_pixbuf(pixbuf)
-                layout.box_add(logo_box, logo_image, True, True, 0)
+                break
             except Exception as e:
-                print(f"Could not load logo: {e}")
-                self.add_fallback_logo(logo_box)
+                print(f"logo candidate failed ({logo_path}): {e}")
+        if logo_image is not None:
+            layout.box_add(logo_box, logo_image, True, True, 0)
         else:
             self.add_fallback_logo(logo_box)
 
         layout.box_add(self, logo_box, False, False, 0)
     
-    def get_logo_path(self):
-        """Get path to logo image (r054: pulse mark replaced starter raster)"""
+    def get_logo_paths(self):
+        """Logo candidates in preference order (r054 adversarial fix: svg needs
+        the optional librsvg pixbuf loader — fall through to png, then text)."""
         base = os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'images')
-        svg = os.path.join(base, 'logo.svg')  # r054: pulse mark (starter raster retired)
-        return svg if os.path.exists(svg) else os.path.join(base, 'logo.png')
+        return [os.path.join(base, 'logo.svg'), os.path.join(base, 'logo.png')]
     
     def add_fallback_logo(self, container):
         """Add fallback logo text"""
