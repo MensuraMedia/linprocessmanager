@@ -131,3 +131,13 @@ Record architectural decisions with rationale. Newest at the bottom.
     dh_python3, no maintainer-script cache calls (dpkg triggers own it),
     #!/usr/bin/python3 shebang. Distro matrix mostly knowledge-verified —
     only noble machine-tested; keep floors boring so the gap stays boring.
+20. **Direct collaboration + Phase 2a (r046).** Claude now co-drafts
+    contracts in consult sessions before dispatch (first: task 003; it
+    found the None-vs-sentinel seam bug across 003/004 — schema-freeze
+    gate instituted). Task 002 merged: compat/ nine adapters, Application
+    lifecycle, three gate tiers, raw-gi-import ban repo-wide. Lessons:
+    resume via --session-id fails while a session is held open ('already
+    in use') — fallback = fresh session with prior conclusions embedded;
+    EVERY dispatch needs its own --permission-mode acceptEdits (missing
+    it = silent write-denials, executor reports honestly); dead-code
+    deletion stays ZCode's (git rm -f for executor-touched files).
