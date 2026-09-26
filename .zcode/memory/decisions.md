@@ -89,3 +89,14 @@ Record architectural decisions with rationale. Newest at the bottom.
     Lessons: changelog append-mistake happened a THIRD time (r040→r041);
     the decisions.md rule from #14 now also applies mechanically — never
     use a previous entry as old_string unless new_string starts with it.
+16. **Executor collaboration LIVE (r042).** First real dispatches ran:
+    AGENTS.md loads natively in Claude Code ($0.01 probe). Review dispatch
+    ($0.89) found 3 P1s ZCode's own three-agent pass missed — independent
+    vendor review has real value (doctrine P3 argument confirmed). Task 001
+    ($6.08, 23.6 min, acceptEdits, no Bash) delivered in-scope, 49/49
+    tests, zero deviations; executor cannot `rm` files (acceptEdits has no
+    Bash) — ZCode handles deletions in staging/verification. Verification
+    chain worked end-to-end incl. live X11 window pixel proof
+    (app-live-phase1.png). cgroup display: strip .scope/.service suffixes.
+    Session ids are strict UUIDs (a friendly-name --session-id silently
+    fails with empty stdout).

@@ -19,3 +19,7 @@
 
 
 
+- Task 002 cleanup riders: stale strings in page_settings.py, window title
+  'Dashboard' → 'linprocman' (executor flagged both as out-of-scope).
+- Phase 2 (live table: sampler → flat table, diff-in-place, sort/filter,
+  VmSwap, keyboard, settings skeleton) is the next contract to draft.
