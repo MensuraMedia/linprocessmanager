@@ -8,12 +8,12 @@ seam, never from gi.repository directly.
 
 import sys
 
-from log import setup_logging, log_exception
+from log import setup_logging, log_exception, get_logger
 
 setup_logging()  # r064: native logging first, so everything after this
                  # lands in ~/.local/state/linprocman/
 
-from ui.compat import Gtk
+from ui.compat import Gtk, GLib
 
 from ui.dashboard_window import DashboardWindow
 from modules.manager_navigation import NavigationManager
@@ -54,8 +54,10 @@ class LinprocmanApplication(Gtk.Application):
                 self.navigation_manager, sampler=self.sampler, application=self
             )
             self.window.show_all()
-        self._ensure_baseline()
         self.window.present()
+        # r071: baseline loads/applies off the UI thread — the ~6 s idle
+        # sampling must never freeze the first launch.
+        GLib.timeout_add(200, self._ensure_baseline)
         # r058 close-review P2-7: honor the page's pause state across
         # re-activation — never silently restart a paused sampler.
         page = self.navigation_manager.get_page_widget("processes")
@@ -63,22 +65,36 @@ class LinprocmanApplication(Gtk.Application):
             self.sampler.start()
 
     def _ensure_baseline(self):
-        """First-run: derive performance thresholds from this machine
-        (r071). Runs before the sampler starts; the ~6 s idle sampling
-        happens before the window is shown, so the UI never waits."""
+        """Apply the stored baseline, or capture one in a background thread
+        on first run (r071; adversarial P0-2 + P1-2 fixes)."""
+        import threading
         page = self.navigation_manager.get_page_widget("processes")
-        if page is not None and getattr(page, "settings", None) is not None:
-            if page.settings.get("baseline") is None:
+        if page is None or getattr(page, "settings", None) is None:
+            return False
+        baseline = page.settings.get("baseline")
+        if baseline and baseline.get("thresholds"):
+            page.set_thresholds(
+                manager_baseline.Thresholds(baseline["thresholds"]))
+            log.info("baseline applied (stored)")
+            return False  # one-shot
+        def work():
+            specs, thresholds = manager_baseline.capture()
+            def apply():
                 try:
-                    specs, thresholds = manager_baseline.capture()
                     page.settings.set("baseline", {
                         "specs": specs, "thresholds": thresholds,
                         "schema": manager_baseline.SCHEMA})
                     page.settings.save()
-                    page.set_thresholds(manager_baseline.Thresholds(thresholds))
+                    page.set_thresholds(
+                        manager_baseline.Thresholds(thresholds))
+                    log.info("baseline captured: %s", thresholds)
                 except Exception as e:
                     from log import get_logger
-                    get_logger("baseline").error("%s", log_exception("baseline capture", e))
+                    get_logger("baseline").error(
+                        "%s", log_exception("baseline apply", e))
+            GLib.idle_add(apply)
+        threading.Thread(target=work, daemon=True).start()
+        return False
 
     def _on_shutdown(self, _app):
         """Stop the sampler thread cleanly on application shutdown."""

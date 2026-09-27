@@ -5,7 +5,7 @@ Updated: Accurate tree structure after cleanup
 """
 
 from ui.compat import layout
-from ui.compat import GLib
+from ui.compat import Gtk, GLib, css, layout
 
 from pages.page_base import BasePage
 from config.config_themes import get_all_themes, get_theme

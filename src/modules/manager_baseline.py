@@ -97,18 +97,16 @@ def capture(idle_seconds=6.0, sample_step=0.5, sleep_func=time.sleep,
     while monotonic_func() < deadline:
         stat = procfs.system_stat()
         ncpu = stat.get("ncpu", ncpu) or 1
-        busy = stat.get("busy_total")
-        if busy is None:
-            # fall back to summing per-cpu busy if the key differs
-            busy = sum(stat.get("per_cpu_busy", [0.0]))
-        idle_j = stat.get("idle_total")
-        if prev is not None and idle_j is not None:
-            total = busy + idle_j
-            dtotal = total - prev[0]
-            dbusy = busy - prev[1]
-            if dtotal > 0:
-                total_jiffies.append(100.0 * dbusy / dtotal)
-        prev = (busy, idle_j)
+        totals = stat.get("total") or {}
+        busy = totals.get("busy")
+        idle_j = totals.get("idle")
+        if busy is not None and idle_j is not None:
+            if prev is not None:
+                dtotal = (busy + idle_j) - (prev[0] + prev[1])
+                dbusy = busy - prev[0]
+                if dtotal > 0:
+                    total_jiffies.append(100.0 * dbusy / dtotal)
+            prev = (busy, idle_j)
         sleep_func(sample_step)
 
     mem = procfs.system_meminfo()
@@ -118,10 +116,13 @@ def capture(idle_seconds=6.0, sample_step=0.5, sleep_func=time.sleep,
     ssd = True
     try:
         for entry in os.listdir("/sys/block"):
-            with open(f"/sys/block/{entry}/queue/rotary") as f:
-                if f.read().strip() == "1":
-                    ssd = False
-                    break
+            try:
+                with open(f"/sys/block/{entry}/queue/rotational") as f:
+                    if f.read().strip() == "1":
+                        ssd = False
+                        break
+            except OSError:
+                continue  # queue/rotational absent on some devices
     except OSError:
         pass
 
