@@ -190,7 +190,12 @@ class Sidebar(Gtk.Box):
         if is_group:
             hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
             lbl = Gtk.Label(label=label, xalign=0)
-            lbl.set_hexpand(True)
+            # r080: NO set_hexpand here. GTK3 propagates a child's hexpand up
+            # every ancestor, so the Sidebar itself became expansion-hungry:
+            # the window's spare width was handed to the 171px sidebar, which
+            # then floated centered (dead strips both flanks, table squeezed
+            # to 537px). The pack flags below already expand the label within
+            # the button — nothing else is needed.
             layout.box_add(hbox, lbl, True, True, 0)
             layout.set_child(button, hbox)  # GTK3 add / GTK4 set_child
         else:
