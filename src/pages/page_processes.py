@@ -30,11 +30,9 @@ from modules import manager_rank as mr
 _BAND_GAUGES = [
     ("cpu", "CPU"),
     ("memory", "Memory"),
-    ("swap", "Swap"),
     ("disk", "Disk I/O"),
     ("network", "Network"),
-    ("load", "Load"),
-]
+]  # r060: Swap and Load moved to the Graphs feature (sidebar)
 
 # Cairo fill colors per capacity zone (mirror the page's _cap_zone hexes).
 _ZONE_RGB = {
@@ -485,6 +483,11 @@ class ProcessesPage(BasePage):
         value.set_halign(Gtk.Align.END)
         css.add_css_class(value, "gauge-v")
         value.set_markup(self._span("—", "#888888"))
+        # r060 defect fix: variable-width value text changed the gauge's
+        # minimum requisition, so cards expanded/contracted with the bar.
+        # Pin the text width (ellipsis) — cards stay fixed; only the bar moves.
+        value.set_width_chars(11)
+        value.set_ellipsize(Pango.EllipsizeMode.END)
         layout.box_add(head, name, False, False, 0)
         layout.box_add(head, value, True, True, 0)
         layout.box_add(box, head, False, False, 0)
@@ -499,7 +502,8 @@ class ProcessesPage(BasePage):
 
         caption = Gtk.Label()
         caption.set_xalign(0)
-        css.add_css_class(caption, "gauge-sub")
+        caption.set_width_chars(26)
+        caption.set_ellipsize(Pango.EllipsizeMode.END)
         layout.box_add(box, caption, False, False, 0)
 
         gesture = events.click_gesture(

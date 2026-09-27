@@ -45,11 +45,14 @@ def procs(*records):
 
 # --- band layout ------------------------------------------------------------
 
-def test_band_has_six_variant2_gauges_in_order():
+def test_band_has_four_variant2_gauges_in_order():
     metrics = [m for m, _label in pp._BAND_GAUGES]
-    assert metrics == ["cpu", "memory", "swap", "disk", "network", "load"]
-    # Both the band and the Basics page expose the same six, same order.
-    assert [m for m, _l in pb._GAUGES] == metrics
+    # r060: Swap + Load moved OUT of the band (they live on Basics now,
+    # and move into the Graphs pages when that feature lands)
+    assert metrics == ["cpu", "memory", "disk", "network"]
+    # Basics keeps the full six-gauge summary
+    assert [m for m, _l in pb._GAUGES] == [
+        "cpu", "memory", "swap", "disk", "network", "load"]
 
 
 def test_network_empty_state_is_honest_and_shared():

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup L — Graphs hub + detail page</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:Ubuntu, Cantarell, sans-serif; }
+  body { background:#1a1a1a; padding:24px; display:flex; flex-direction:column; gap:26px; align-items:center; }
+  h2 { color:#ccc; font-size:14px; font-weight:normal; }
+  .window { width:1200px; background:#2d2d2d; color:#eee; border:1px solid #000; display:flex; }
+  .titlebar { background:#222; color:#ccc; font-size:12px; padding:5px 10px; border-bottom:1px solid #1a1a1a; }
+  .sidebar { width:150px; background:#353535; border-right:1px solid #1a1a1a; display:flex; flex-direction:column; flex:none; }
+  .logo-area { height:110px; display:flex; align-items:center; justify-content:center; border-bottom:1px solid #1a1a1a; }
+  .logo-area .ic { width:44px; height:44px; filter:invert(27%) sepia(96%) saturate(1400%) hue-rotate(197deg) brightness(96%); }
+  .nav-button { display:flex; align-items:center; gap:8px; padding:8px 12px; font-size:13px; color:#eee; border-bottom:1px solid #1a1a1a; cursor:pointer; }
+  .nav-button.active { background:#0078D7; color:#fff; }
+  .nav-button .ic { width:15px; height:15px; }
+  .spacer { flex:1; }
+  .content { flex:1; padding:20px 20px 16px 24px; display:flex; flex-direction:column; gap:12px; min-width:0; }
+  .page-title { font-size:20px; font-weight:bold; color:#fff; }
+  .sub { font-size:11.5px; color:#888; }
+  .grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .chart-card { background:#262626; border:1px solid #1a1a1a; padding:10px 12px; cursor:pointer; }
+  .chart-card:hover { border-color:#0078D7; }
+  .cc-head { display:flex; align-items:center; gap:8px; font-size:12px; color:#ddd; }
+  .cc-head .ic { width:13px; height:13px; }
+  .cc-head .v { margin-left:auto; font-size:14px; font-variant-numeric:tabular-nums; }
+  .g { background:#3a3a3a; }
+  .g-g { fill:#3fbf6f; } .g-a { fill:#e8c268; } .g-r { fill:#e04c4c; }
+  .cc-note { font-size:9.5px; color:#777; margin-top:4px; }
+  .zones { display:flex; height:3px; margin-top:4px; }
+  .zones span { flex:1; opacity:.5; }
+
+  /* detail page */
+  .detail-head { display:flex; align-items:center; gap:10px; }
+  .crumb { font-size:11px; color:#888; }
+  .crumb b { color:#9cd0ff; font-weight:normal; }
+  .windows { margin-left:auto; display:flex; gap:6px; }
+  .win { padding:4px 10px; background:#353535; border:1px solid #1a1a1a; font-size:11px; color:#ccc; cursor:pointer; }
+  .win.on { background:#0078D7; color:#fff; border-color:#0078D7; }
+  .bigchart { background:#262626; border:1px solid #1a1a1a; padding:10px; }
+  .stats { display:flex; gap:10px; }
+  .stat { flex:1; background:#262626; border:1px solid #1a1a1a; padding:8px 10px; text-align:center; }
+  .stat .v { font-size:16px; font-variant-numeric:tabular-nums; }
+  .stat .k { font-size:9px; color:#888; text-transform:uppercase; letter-spacing:.8px; }
+  .panel { background:#262626; border:1px solid #1a1a1a; padding:10px 12px; }
+  .panel .p-head { font-size:11px; color:#aaa; margin-bottom:6px; }
+  .contrib { display:flex; align-items:center; gap:8px; padding:4px 6px; font-size:12px; color:#ccc; cursor:pointer; border-radius:2px; }
+  .contrib:hover { background:#373737; }
+  .contrib .rank { color:#888; width:18px; }
+  .contrib .nm { flex:1; }
+  .contrib .val { font-variant-numeric:tabular-nums; color:#7fd0a0; }
+  .cores { display:flex; flex-direction:column; gap:4px; }
+  .core-row { display:flex; align-items:center; gap:8px; font-size:11px; color:#bbb; }
+  .core-row .cl { width:52px; color:#888; }
+  .core-row .cbar { flex:1; height:8px; background:#3a3a3a; border-radius:1px; overflow:hidden; }
+  .core-row .cfill { height:100%; background:#0078D7; }
+  .core-row .cv { width:44px; text-align:right; font-variant-numeric:tabular-nums; }
+  .note { color:#888; font-size:11px; line-height:1.55; max-width:1200px; }
+  .note b { color:#ccc; }
+</style>
+</head>
+<body>
+
+<h2>Graphs hub — seven live mini-charts, every one clickable</h2>
+<div class="window">
+  <div class="titlebar">linprocman — Graphs</div>
+  <div style="display:flex;">
+    <div class="sidebar">
+      <div class="logo-area"><img class="ic" src="../../resources/icons/fill/pulse.svg"></div>
+      <div class="nav-button"><img class="ic" src="../../resources/icons/regular/list-magnifying-glass.svg">Processes</div>
+      <div class="nav-button active"><img class="ic" src="../../resources/icons/regular/chart-line-up.svg">Graphs</div>
+      <div class="nav-button"><img class="ic" src="../../resources/icons/regular/hard-drive.svg">Disks</div>
+      <div class="nav-button"><img class="ic" src="../../resources/icons/regular/scroll.svg">Logs</div>
+      <div class="nav-button"><img class="ic" src="../../resources/icons/regular/notebook.svg">Basics</div>
+      <div class="nav-button"><img class="ic" src="../../resources/icons/regular/info.svg">About</div>
+      <div class="spacer"></div>
+      <div class="nav-button"><img class="ic" src="../../resources/icons/regular/gear-six.svg">Settings</div>
+    </div>
+    <div class="content">
+      <div class="page-title">Graphs</div>
+      <div class="sub">Live performance charts — click any chart for its dedicated page · rings are in-memory (restart clears)</div>
+      <div class="grid">
+        <div class="chart-card">
+          <div class="cc-head"><img class="ic" src="../../resources/icons/fill/cpu.svg">CPU <span class="v" style="color:#3fbf6f">8%</span></div>
+          <svg viewBox="0 0 240 46" class="g" preserveAspectRatio="none" width="100%" height="46"><polyline fill="none" stroke="#3fbf6f" stroke-width="1.5" points="0,38 30,34 60,39 90,28 120,35 150,24 180,32 210,26 240,30"/></svg>
+          <div class="zones"><span style="background:#3fbf6f"></span><span style="background:#e8c268"></span><span style="background:#e04c4c"></span></div>
+          <div class="cc-note">total · 4 cores · 5 min</div>
+        </div>
+        <div class="chart-card">
+          <div class="cc-head"><img class="ic" src="../../resources/icons/fill/memory.svg">Memory <span class="v" style="color:#e8c268">68%</span></div>
+          <svg viewBox="0 0 240 46" class="g" preserveAspectRatio="none" width="100%" height="46"><polyline fill="none" stroke="#e8c268" stroke-width="1.5" points="0,16 40,15 80,16 120,14 160,15 200,14 240,15"/></svg>
+          <div class="zones"><span style="background:#3fbf6f"></span><span style="background:#e8c268"></span><span style="background:#e04c4c"></span></div>
+          <div class="cc-note">10.9 / 16 GB · swap 0.2%</div>
+        </div>
+        <div class="chart-card">
+          <div class="cc-head"><img class="ic" src="../../resources/icons/fill/drop-half-bottom.svg">Swap <span class="v" style="color:#3fbf6f">0.2%</span></div>
+          <svg viewBox="0 0 240 46" class="g" preserveAspectRatio="none" width="100%" height="46"><polyline fill="none" stroke="#3fbf6f" stroke-width="1.5" points="0,44 240,43"/></svg>
+          <div class="zones"><span style="background:#3fbf6f"></span><span style="background:#e8c268"></span><span style="background:#e04c4c"></span></div>
+          <div class="cc-note">16 MB / 8 GB</div>
+        </div>
+        <div class="chart-card">
+          <div class="cc-head"><img class="ic" src="../../resources/icons/regular/hard-drive.svg">Disk I/O <span class="v" style="color:#3fbf6f">6.4%</span></div>
+          <svg viewBox="0 0 240 46" class="g" preserveAspectRatio="none" width="100%" height="46"><polyline fill="none" stroke="#3fbf6f" stroke-width="1.5" points="0,42 30,40 60,43 90,36 120,41 150,28 180,38 210,42 240,39"/></svg>
+          <div class="zones"><span style="background:#3fbf6f"></span><span style="background:#e8c268"></span><span style="background:#e04c4c"></span></div>
+          <div class="cc-note">busiest: nvme0n1 · r 140 KB/s · w 2 MB/s</div>
+        </div>
+        <div class="chart-card">
+          <div class="cc-head"><img class="ic" src="../../resources/icons/fill/arrows-left-right.svg">Network <span class="v" style="color:#3fbf6f">1.4 MB/s</span></div>
+          <svg viewBox="0 0 240 46" class="g" preserveAspectRatio="none" width="100%" height="46"><polyline fill="none" stroke="#3fbf6f" stroke-width="1.5" points="0,36 30,22 60,30 90,12 120,26 150,34 180,14 210,28 240,20"/></svg>
+          <div class="zones"><span style="background:#3fbf6f"></span><span style="background:#e8c268"></span><span style="background:#e04c4c"></span></div>
+          <div class="cc-note">↓1.2 · ↑0.2 MB/s · ceiling 6 MB/s</div>
+        </div>
+        <div class="chart-card">
+          <div class="cc-head"><img class="ic" src="../../resources/icons/regular/gauge.svg">Pressure (PSI) <span class="v" style="color:#3fbf6f">io 1.1</span></div>
+          <svg viewBox="0 0 240 46" class="g" preserveAspectRatio="none" width="100%" height="46"><polyline fill="none" stroke="#888" stroke-width="1.5" points="0,40 40,40 80,38 120,40 160,36 200,40 240,38"/></svg>
+          <div class="zones"><span style="background:#3fbf6f"></span><span style="background:#e8c268"></span><span style="background:#e04c4c"></span></div>
+          <div class="cc-note">cpu 0.0 · mem 0.3 · io 1.1 (avg10)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2>Graphs ▸ CPU — dedicated detail page (window selector, stats, contributors, per-core)</h2>
+<div class="window">
+  <div class="titlebar">linprocman — Graphs ▸ CPU</div>
+  <div style="display:flex;">
+    <div class="sidebar">
+      <div class="logo-area"><img class="ic" src="../../resources/icons/fill/pulse.svg"></div>
+      <div class="nav-button"><img class="ic" src="../../resources/icons/regular/list-magnifying-glass.svg">Processes</div>
+      <div class="nav-button active"><img class="ic" src="../../resources/icons/regular/chart-line-up.svg">Graphs</div>
+      <div class="nav-button"><img class="ic" src="../../resources/icons/regular/hard-drive.svg">Disks</div>
+      <div class="nav-button"><img class="ic" src="../../resources/icons/regular/scroll.svg">Logs</div>
+      <div class="nav-button"><img class="ic" src="../../resources/icons/regular/notebook.svg">Basics</div>
+      <div class="nav-button"><img class="ic" src="../../resources/icons/regular/info.svg">About</div>
+      <div class="spacer"></div>
+      <div class="nav-button"><img class="ic" src="../../resources/icons/regular/gear-six.svg">Settings</div>
+    </div>
+    <div class="content">
+      <div class="detail-head">
+        <div class="page-title">CPU</div>
+        <div class="crumb">Graphs ▸ <b>CPU</b> · per-core normalized · 100% = one core</div>
+        <div class="windows"><span class="win">1 m</span><span class="win on">5 m</span><span class="win">15 m</span><span class="win">session</span></div>
+      </div>
+      <div class="bigchart">
+        <svg viewBox="0 0 900 150" preserveAspectRatio="none" width="100%" height="150">
+          <rect x="0" y="0" width="900" height="22" fill="#3fbf6f" opacity=".05"/>
+          <rect x="0" y="22" width="900" height="38" fill="#e8c268" opacity=".05"/>
+          <rect x="0" y="60" width="900" height="90" fill="#e04c4c" opacity=".05"/>
+          <line x1="0" y1="37" x2="900" y2="37" stroke="#333"/><line x1="0" y1="75" x2="900" y2="75" stroke="#333"/><line x1="0" y1="112" x2="900" y2="112" stroke="#333"/>
+          <polygon fill="#0078D7" opacity=".85" points="0,128 60,124 120,130 180,118 240,126 300,112 360,122 420,106 480,120 540,102 600,116 660,98 720,112 780,104 840,120 900,110 900,150 0,150"/>
+        </svg>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="v" style="color:#3fbf6f">9%</div><div class="k">current</div></div>
+        <div class="stat"><div class="v">3%</div><div class="k">min</div></div>
+        <div class="stat"><div class="v">11%</div><div class="k">avg</div></div>
+        <div class="stat"><div class="v">38%</div><div class="k">max</div></div>
+        <div class="stat"><div class="v">14:02h</div><div class="k">cpu time ∑all</div></div>
+      </div>
+      <div style="display:flex; gap:12px;">
+        <div class="panel" style="flex:1;">
+          <div class="p-head">Top contributors — click to select in Processes</div>
+          <div class="contrib"><span class="rank">1.</span><span class="nm">zcode (vte-spawn…)</span><span class="val">47.5%</span></div>
+          <div class="contrib"><span class="rank">2.</span><span class="nm">cinnamon [session-c2]</span><span class="val">15.5%</span></div>
+          <div class="contrib"><span class="rank">3.</span><span class="nm">python3 [app-zcode-352683]</span><span class="val">9.0%</span></div>
+          <div class="contrib"><span class="rank">4.</span><span class="nm">Xorg [lightdm]</span><span class="val">7.0%</span></div>
+          <div class="contrib"><span class="rank">5.</span><span class="nm">librewolf [app-flatpak…]</span><span class="val">5.0%</span></div>
+        </div>
+        <div class="panel" style="flex:1;">
+          <div class="p-head">Per-core breakdown</div>
+          <div class="cores">
+            <div class="core-row"><span class="cl">core 0</span><div class="cbar"><div class="cfill" style="width:12%"></div></div><span class="cv">12%</span></div>
+            <div class="core-row"><span class="cl">core 1</span><div class="cbar"><div class="cfill" style="width:34%"></div></div><span class="cv">34%</span></div>
+            <div class="core-row"><span class="cl">core 2</span><div class="cbar"><div class="cfill" style="width:8%"></div></div><span class="cv">8%</span></div>
+            <div class="core-row"><span class="cl">core 3</span><div class="cbar"><div class="cfill" style="width:21%"></div></div><span class="cv">21%</span></div>
+            <div class="core-row"><span class="cl">core 4</span><div class="cbar"><div class="cfill" style="width:5%"></div></div><span class="cv">5%</span></div>
+            <div class="core-row"><span class="cl">core 5</span><div class="cbar"><div class="cfill" style="width:15%"></div></div><span class="cv">15%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note"><b>Design notes:</b> the hub grid is the entry — every card is a live mini-chart with zone-tinted value and a click-through to a dedicated page.
+Detail pages share one base (window selector 1 m/5 m/15 m/session, min/avg/max strip, Top contributors wired to the Processes selection, per-core/per-device/per-iface breakdown slots).
+Zone bands are drawn behind the big chart at the r057 thresholds. Load and Swap pages live here (r060 move). The Resources sidebar entry is retired when these pages ship — no dead nav.
+Rings are in-memory: restart clears history, stated on-page.</div>
+</body>
+</html>

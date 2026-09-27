@@ -8,7 +8,7 @@ point of the GTK3→4 port is ``gtk_env.py``.
 """
 
 from .gtk_env import (
-    Gtk, Gdk, GdkPixbuf, GLib, Gio, GObject,
+    Gtk, Gdk, GdkPixbuf, GLib, Gio, GObject, Pango,
     GTK_MAJOR, GTK_MINOR, GTK_MICRO,
     compute_capability_flags,
     HAS_ALERT_DIALOG, HAS_GESTURE_CLICK, HAS_TEXTURE, HAS_DISPLAY_PROVIDER,
@@ -18,7 +18,7 @@ from . import layout, menu, events, dialogs, charts, icons, css
 
 __all__ = [
     # re-exported toolkit symbols
-    "Gtk", "Gdk", "GdkPixbuf", "GLib", "Gio", "GObject",
+    "Gtk", "Gdk", "GdkPixbuf", "GLib", "Gio", "GObject", "Pango",
     # version identity + capability flags
     "GTK_MAJOR", "GTK_MINOR", "GTK_MICRO", "compute_capability_flags",
     "HAS_ALERT_DIALOG", "HAS_GESTURE_CLICK", "HAS_TEXTURE",

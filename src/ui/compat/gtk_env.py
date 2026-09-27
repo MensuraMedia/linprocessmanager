@@ -22,7 +22,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
 
-from gi.repository import Gtk, Gdk, GdkPixbuf, GLib, Gio, GObject  # noqa: E402
+from gi.repository import Gtk, Gdk, GdkPixbuf, GLib, Gio, GObject, Pango  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Version identity — the one place the running toolkit is interrogated.
