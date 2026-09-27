@@ -19,13 +19,12 @@ from log import get_logger
 
 log = get_logger("tray")
 
-ICON_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "..",
-    "resources", "images", "icon-128.png")
+# r082: the brand raster path is owned by ui.branding and passed in by
+# main — this seam no longer hardcodes resource locations.
 ICON_NAME = "linprocman"
 
 
-def _try_xapp(on_activate, on_quit):
+def _try_xapp(on_activate, on_quit, icon_path=None):
     XApp = load_repository("XApp", "1.0")
     icon = XApp.StatusIcon()
     icon.set_icon_name(ICON_NAME)
@@ -51,11 +50,14 @@ def _try_xapp(on_activate, on_quit):
     return icon, "xapp"
 
 
-def _try_indicator(on_activate, on_quit):
+def _try_indicator(on_activate, on_quit, icon_path=None):
     AppIndicator = load_repository("AyatanaAppIndicator3", "0.1")
     icon = AppIndicator.Indicator.new(
         "linprocman", ICON_NAME, AppIndicator.IndicatorCategory.APPLICATION_STATUS)
     icon.set_status(AppIndicator.IndicatorStatus.ACTIVE)
+    # r082: an explicit brand raster wins over the theme-name lookup
+    if icon_path:
+        icon.set_icon_full(icon_path, "linprocman")
     menu = Gtk.Menu()
     item_show = Gtk.MenuItem(label="Show / Hide")
     item_show.connect("activate", lambda _i: on_activate())
@@ -69,8 +71,8 @@ def _try_indicator(on_activate, on_quit):
     return icon, "ayatana"
 
 
-def _try_statusicon(on_activate, on_quit):
-    icon = Gtk.StatusIcon.new_from_file(ICON_PATH)
+def _try_statusicon(on_activate, on_quit, icon_path=None):
+    icon = Gtk.StatusIcon.new_from_file(icon_path)
     icon.set_tooltip_text("linprocman — process manager")
     icon.connect("activate", lambda _i: on_activate())  # left click
     menu = Gtk.Menu()
@@ -87,17 +89,19 @@ def _try_statusicon(on_activate, on_quit):
     return icon, "gtk-statusicon"
 
 
-def create(on_toggle, on_quit):
+def create(on_toggle, on_quit, icon_path=None):
     """Build the tray icon via the first available backend.
 
     on_toggle: called on left-click/Show-Hide (bring the window back).
     on_quit:   called for the tray Quit item.
+    icon_path: brand raster (r082) — passed in by main from ui.branding;
+               XApp keeps the theme-name lookup so panel scaling stays crisp.
     Returns (backend_name, icon) or (None, None) when unsupported.
     """
     last_error = None
     for builder in (_try_xapp, _try_indicator, _try_statusicon):
         try:
-            icon, backend = builder(on_toggle, on_quit)
+            icon, backend = builder(on_toggle, on_quit, icon_path=icon_path)
             log.info("tray icon active via %s", backend)
             return backend, icon
         except Exception as e:  # noqa: BLE001 — optional backends only

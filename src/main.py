@@ -18,6 +18,7 @@ setup_logging()  # r064: native logging first, so everything after this
 
 from ui.compat import Gtk, GLib
 
+from ui import branding
 from ui.dashboard_window import DashboardWindow
 from ui.compat import tray
 from modules.manager_navigation import NavigationManager
@@ -59,22 +60,14 @@ class LinprocmanApplication(Gtk.Application):
             )
             self.window.show_all()
         self.window.present()
-        # r072: window icon (ALT+Tab / taskbar) + optional tray icon
-        icon_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "..", "resources", "images", "icon-128.png")
-        if os.path.exists(icon_path):
-            from ui.compat import GdkPixbuf
-            try:
-                icon = GdkPixbuf.Pixbuf.new_from_file(icon_path)
-                Gtk.Window.set_default_icon(icon)
-                self.window.set_icon(icon)
-            except Exception as e:
-                log.warning("window icon failed: %s", e)
+        # r082: every brand placement flows through ui.branding
+        if not branding.set_window_icon(self.window):
+            log.warning("window icon failed: brand raster missing")
         if not getattr(self, "_tray", None):
             self._tray = tray.create(
                 on_toggle=self._toggle_window,
-                on_quit=self.quit)
+                on_quit=self.quit,
+                icon_path=branding.tray_icon_path())
         # r058 close-review P2-7 (r073 placement fix): the sampler gate lives
         # in _do_activate — an r072 refactor had swallowed it into
         # _toggle_window, so menu/launcher launches ran with no data.

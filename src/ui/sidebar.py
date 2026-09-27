@@ -5,6 +5,7 @@ Updated: Home button has top border, Settings has top border
 """
 
 from .compat import Gtk, GdkPixbuf, GObject, css, icons, layout, events
+from . import branding
 import os
 
 from config.config_layout import Layout
@@ -61,7 +62,7 @@ class Sidebar(Gtk.Box):
     
     def build_logo_area(self):
         """Build logo area"""
-        
+
         logo_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         logo_box.set_size_request(
             Layout.dimensions.LOGO_AREA_WIDTH,
@@ -69,33 +70,17 @@ class Sidebar(Gtk.Box):
         )
         css.add_css_class(logo_box, 'logo-area')
 
-        logo_image = None
-        for logo_path in self.get_logo_paths():
-            if not os.path.exists(logo_path):
-                continue
-            try:
-                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                    logo_path,
-                    Layout.dimensions.LOGO_IMAGE_SIZE,
-                    Layout.dimensions.LOGO_IMAGE_SIZE,
-                    True
-                )
-                logo_image = icons.image_from_pixbuf(pixbuf)
-                break
-            except Exception as e:
-                log.exception(f"logo candidate failed ({logo_path}): {e}")
-        if logo_image is not None:
-            layout.box_add(logo_box, logo_image, True, True, 0)
+        # r082: the mark is owned by the branding module (one source for
+        # sidebar / tray / ALT+Tab / menu); PNG first, SVG fallback, then
+        # the text fallback.
+        pixbuf = branding.logo_pixbuf(Layout.dimensions.LOGO_IMAGE_SIZE)
+        if pixbuf is not None:
+            layout.box_add(logo_box, icons.image_from_pixbuf(pixbuf),
+                           True, True, 0)
         else:
             self.add_fallback_logo(logo_box)
 
         layout.box_add(self, logo_box, False, False, 0)
-    
-    def get_logo_paths(self):
-        """Logo candidates in preference order (r054 adversarial fix: svg needs
-        the optional librsvg pixbuf loader — fall through to png, then text)."""
-        base = os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'images')
-        return [os.path.join(base, 'logo.svg'), os.path.join(base, 'logo.png')]
     
     def add_fallback_logo(self, container):
         """Add fallback logo text"""
