@@ -44,6 +44,8 @@ class Sidebar(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         
         self.nav_manager = navigation_manager
+        self.submenus = {}
+        self.submenu_boxes = {}
         
         self.set_size_request(Layout.dimensions.SIDEBAR_WIDTH, -1)
         css.add_css_class(self, 'sidebar')
@@ -114,15 +116,34 @@ class Sidebar(Gtk.Box):
             button = self.create_nav_button(label, page_id, is_top=is_top)
             children = SUBMENUS.get(page_id)
             if children:
-                # group row: caret + navigate-to-hub on click
+                # r073: collapsible group — expands DOWNWARD, caret rotates;
+                # clicking the group navigates to the hub and expands.
                 css.add_css_class(button, "nav-group")
+                caret = Gtk.Image.new_from_file(os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)), "..", "..",
+                    "resources", "icons", "regular", "caret-right.svg"))
+                caret.set_pixel_size(11)
+                caret.set_halign(Gtk.Align.END)
+                caret.set_hexpand(True)
+                css.add_css_class(caret, "nav-caret")
+                box = button.get_child()
+                if isinstance(box, Gtk.Box):
+                    layout.box_add(box, caret, False, False, 8)
+                self.submenus[page_id] = {"caret": caret, "children": []}
                 layout.box_add(nav_box_top, button, False, False, 0)
                 self.nav_buttons[page_id] = button
+
+                child_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
+                                    spacing=0)
+                child_box.set_visible(False)   # collapsed until expanded
                 for child_label, child_id in children:
                     child = self.create_nav_button(
                         child_label, child_id, is_top=False, indent=True)
-                    layout.box_add(nav_box_top, child, False, False, 0)
+                    layout.box_add(child_box, child, False, False, 0)
                     self.nav_buttons[child_id] = child
+                    self.submenus[page_id]["children"].append(child)
+                layout.box_add(nav_box_top, child_box, False, False, 0)
+                self.submenu_boxes[page_id] = child_box
             else:
                 layout.box_add(nav_box_top, button, False, False, 0)
                 self.nav_buttons[page_id] = button
@@ -189,8 +210,28 @@ class Sidebar(Gtk.Box):
         css.add_css_class(button, 'active')
         self.active_button = button
     
+    def expand_submenu(self, page_id, expanded=True):
+        """Show/hide a group's children; caret rotates to point down/up."""
+        info = self.submenus.get(page_id)
+        box = self.submenu_boxes.get(page_id)
+        if info is None or box is None:
+            return
+        box.set_visible(expanded)
+        info["caret"].set_from_file(os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "..", "..",
+            "resources", "icons", "regular",
+            "caret-down.svg" if expanded else "caret-right.svg"))
+
     def on_nav_clicked(self, button, page_id):
         """Handle navigation click"""
+        if page_id in self.submenu_boxes and \
+                self.submenu_boxes[page_id].get_visible():
+            # expanded group clicked again → collapse (children included)
+            self.expand_submenu(page_id, False)
         self.set_active_button(button)
         self.nav_manager.navigate_to(page_id)
+        # r073: a child click expands its parent's submenu (downward)
+        for parent, info in self.submenus.items():
+            if any(child is button for child in info["children"]):
+                self.expand_submenu(parent, True)
         self.emit('page-changed', page_id)

@@ -808,3 +808,6 @@ scale slider:hover {
     border: 1px solid #8a7a40;
     padding: 8px 12px;
 }
+
+/* r073 — collapsible submenu caret (right-alignment set in code: GTK3 CSS
+   has no margin:auto and no transition property — both broke parsing) */

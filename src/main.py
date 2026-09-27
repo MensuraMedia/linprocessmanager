@@ -75,26 +75,22 @@ class LinprocmanApplication(Gtk.Application):
             self._tray = tray.create(
                 on_toggle=self._toggle_window,
                 on_quit=self.quit)
-
-    def _toggle_window(self):
-        page = self.navigation_manager.get_page_widget("processes")
-        _ = page  # navigation unaffected; toggle visibility of the window
-        if self.window is None:
-            return
-        win = self.window
-        visible = win.get_visible()
-        if visible:
-            win.hide()
-        else:
-            win.present()
-        # r071: baseline loads/applies off the UI thread — the ~6 s idle
-        # sampling must never freeze the first launch.
-        GLib.timeout_add(200, self._ensure_baseline)
-        # r058 close-review P2-7: honor the page's pause state across
-        # re-activation — never silently restart a paused sampler.
+        # r058 close-review P2-7 (r073 placement fix): the sampler gate lives
+        # in _do_activate — an r072 refactor had swallowed it into
+        # _toggle_window, so menu/launcher launches ran with no data.
         page = self.navigation_manager.get_page_widget("processes")
         if page is None or not getattr(page, "_paused", False):
             self.sampler.start()
+
+    def _toggle_window(self):
+        """Tray Show/Hide — visibility toggle only."""
+        if self.window is None:
+            return
+        win = self.window
+        if win.get_visible():
+            win.hide()
+        else:
+            win.present()
 
     def _ensure_baseline(self):
         """Apply the stored baseline, or capture one in a background thread

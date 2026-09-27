@@ -43,7 +43,12 @@ class ThemeApplicator:
             log.error("static css missing: %s", e)
         # one load: CssProvider.load_from_data REPLACES prior data, so the
         # dynamic block must be appended, not loaded separately (r054 fix).
-        self.css_provider.load_from_data((static_css + "\n" + css_content).encode())
+        try:
+            self.css_provider.load_from_data(
+                (static_css + "\n" + css_content).encode())
+        except Exception as e:
+            log.error("theme CSS failed to parse: %s", e)
+            return False
 
         # Register the provider app-wide through the compat seam, which
         # picks per-screen (GTK3) vs per-display (GTK4) registration.
