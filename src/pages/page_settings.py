@@ -128,7 +128,6 @@ class SettingsPage(BasePage):
         from modules import manager_baseline
 
         self.baseline_button.set_sensitive(False)
-        self.add_paragraph.__self__ if False else None
 
         def work():
             specs, thresholds = manager_baseline.capture()

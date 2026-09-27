@@ -48,7 +48,8 @@ COL_IS_KTHREAD = 18
 COL_IS_DEFUNCT = 19
 COL_NAME_SORT = 20   # r067: clean casefolded name — stable sort key for the
                      # Process column (markup changes must not reorder rows)
-N_COLUMNS = 20
+N_COLUMNS = 21   # r081 fix: COL_NAME_SORT (20) was excluded by the old 20 —
+                 # row updates never rewrote the sort key on a process rename
 
 STORE_TYPES = [
     int,                    # COL_PID

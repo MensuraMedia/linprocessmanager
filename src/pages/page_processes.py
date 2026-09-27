@@ -151,10 +151,6 @@ class ProcessesPage(BasePage):
         # Metric band state (Variant 2). The band replaces the text strip; the
         # strip survives as a compact fallback behind basics.compact_strip.
         self._compact_strip = bool(self.settings.get("basics.compact_strip", False))
-        self._band_popover = None
-        self._band_anchor = None
-        self._drill_metric = None
-        self._drill_mode = "by_process"
         self._gauges = {}          # metric -> widget refs
         self._gauge_state = {}     # metric -> {"fraction", "zone"}
         self._gauge_prev = {}      # metric -> previous scalar (delta arrows)
@@ -186,8 +182,6 @@ class ProcessesPage(BasePage):
         self._build_notice()
         self._build_table()
         self._build_row_actions()
-        if not self._compact_strip:
-            self._build_band_actions()
         self._built = True
 
     # -- snapshot observers (single-drain law, r046) ----------------------
@@ -547,7 +541,7 @@ class ProcessesPage(BasePage):
         area.set_size_request(-1, 10)
         area.set_hexpand(True)
         area.set_tooltip_text(
-            _NET_EMPTY if metric == "network" else "Click for the top 10")
+            _NET_EMPTY if metric == "network" else "Click for Basics")
         layout.box_add(box, area, False, True, 0)
 
         caption = Gtk.Label()
@@ -673,113 +667,17 @@ class ProcessesPage(BasePage):
         ncpu = mr.load_reading(system)["ncpu"] or 0
         return None, None, self._span("—", "#888888"), "1 min · cores: %d" % ncpu, None
 
-    # -- band click-through: top-10 popover + drill-downs -----------------
-
-    def _build_band_actions(self):
-        """The ``band`` action group backs the popover rows: select a process,
-        or re-rank into a drill mode. Inserted on the page so the popover (a
-        descendant) resolves ``band.*`` via the widget hierarchy."""
-        group = Gio.SimpleActionGroup()
-        str_t = GLib.VariantType.new("s")
-        group.add_action(events.make_action(
-            "select", lambda a, p: self._band_select(p.get_string()), str_t))
-        group.add_action(events.make_action(
-            "drill", lambda a, p: self._band_drill(p.get_string()), str_t))
-        self.insert_action_group("band", group)
-        self._band_action_group = group
+    # -- band click-through (r081) ----------------------------------------
 
     def _on_gauge_pressed(self, metric):
-        anchor = self._gauges[metric]["area"]
-        self._open_rank_popover(metric, "by_process", anchor=anchor)
-
-    def _open_rank_popover(self, metric, mode, anchor=None):
-        if anchor is not None:
-            self._band_anchor = anchor
-        self._drill_metric = metric
-        self._drill_mode = mode
-        model = self._build_rank_menu(metric, mode)
-        popover = menu.model_popover(model, relative_to=self._band_anchor)
-        self._band_popover = popover  # keep a reference alive
-        popover.popup()
-
-    def _build_rank_menu(self, metric, mode):
-        model = Gio.Menu()
-
-        if metric == "network":
-            # Honest permanent empty-state — an item with no action renders
-            # disabled (spec §2: not a deferred promise; no reader backs it).
-            section = Gio.Menu()
-            section.append(_NET_EMPTY, None)
-            model.append_section("Network", section)
-            return model
-
-        procs = self._last_procs or {}
-        rows = mr.rank(procs, metric, mode=mode)
-        rows_menu = Gio.Menu()
-        if not rows:
-            rows_menu.append("No contributors (—)", None)
-        else:
-            for rank, row in enumerate(rows, 1):
-                rows_menu.append(
-                    self._rank_row_label(rank, row, metric),
-                    "band.select::%d,%d" % (
-                        row["key"][0], row["key"][1] if row["key"][1] is not None else 0))
-        model.append_section(self._breadcrumb(metric, mode), rows_menu)
-
-        drill = Gio.Menu()
-        if mode != "by_process":
-            drill.append("◂ Back to by process", "band.drill::%s:by_process" % metric)
-        if mode != "by_tree":
-            drill.append("Group by parent tree", "band.drill::%s:by_tree" % metric)
-        if mode != "by_unit":
-            drill.append("Group by unit", "band.drill::%s:by_unit" % metric)
-        model.append_section(None, drill)
-        return model
-
-    _METRIC_TITLE = {"cpu": "CPU", "memory": "Memory", "swap": "Swap",
-                     "disk": "Disk I/O", "load": "Load"}
-    _MODE_TITLE = {"by_process": "by process", "by_tree": "by parent tree",
-                   "by_unit": "by unit"}
-
-    def _breadcrumb(self, metric, mode):
-        crumb = "%s ▸ %s" % (self._METRIC_TITLE.get(metric, metric),
-                             self._MODE_TITLE.get(mode, mode))
-        if metric == "disk":
-            crumb += " — throughput (bytes/s), not device %"
-        elif metric == "load":
-            crumb += " — ranked by CPU"
-        return crumb
-
-    def _rank_row_label(self, rank, row, metric):
-        unit = " [%s]" % row["unit"] if row["unit"] else ""
-        extra = " ×%d" % row["count"] if row.get("count", 1) > 1 else ""
-        return "%d. %s%s (%s)%s — %s" % (
-            rank, row["name"], unit, row["user"], extra,
-            self._rank_value_text(metric, row["value"]))
-
-    @staticmethod
-    def _rank_value_text(metric, value):
-        if metric in ("cpu", "load"):
-            return "%.1f%%" % value
-        if metric == "disk":
-            return _fmt_rate(value)
-        return _fmt_bytes(value)
-
-    def _band_select(self, target):
-        pid_s, _, start_s = target.partition(",")
-        try:
-            key = (int(pid_s), int(start_s))
-        except ValueError:
-            return
-        if self._band_popover is not None:
-            self._band_popover.popdown()
-        self._select_and_scroll(key)
-
-    def _band_drill(self, target):
-        metric, _, mode = target.partition(":")
-        if self._band_popover is not None:
-            self._band_popover.popdown()
-        self._open_rank_popover(metric, mode)
+        # r081 (operator): a band-chart click opens the BASICS page, which
+        # hosts the large gauges and top-contributor cards; the sidebar
+        # auto-expands the Graphs group for it (on_navigate hook in
+        # dashboard_window). The r059 top-10 drill popover was superseded
+        # by this navigation and DELETED (r081, adversarial P2: ~110 lines
+        # unreachable after the supersession — git history preserves it).
+        if self._app is not None:
+            self._app.navigation_manager.navigate_to("basics")
 
     def select_process(self, key):
         """Public entry (Basics jump): select ``key`` ((pid, starttime)) in the
@@ -1174,15 +1072,18 @@ class ProcessesPage(BasePage):
     def _on_row_menu(self, _gesture, _n_press, x, y):
         # r075: a right-click over the COLUMN HEADER opens the column
         # chooser; only right-clicks on data rows open the process menu.
-        path = self.treeview.get_path_at_pos(x, y)
+        # r081 fix (operator report): the header test used WIDGET coords,
+        # but GTK3's get_path_at_pos expects BIN-WINDOW coords — a header
+        # click slid into the first data row, returned a path, and the
+        # header opened the PROCESS menu instead of the chooser. _path_at
+        # does the conversion; None now reliably means "no row" (header
+        # band, or the empty margin beside the last column).
+        path = self._path_at(x, y)
         if path is None:
             self._open_column_chooser(x, y)
             return
-        if self._compact_strip or True:
-            pass
         # Right-click selects the row under the pointer unless it is already
         # part of a multi-selection (then the menu acts on the whole set).
-        path = self._path_at(x, y)
         selection = self.treeview.get_selection()
         if path is not None and not selection.path_is_selected(path):
             selection.unselect_all()

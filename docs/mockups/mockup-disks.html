@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>mockup — Disks page (Phase 6)</title>
+<style>
+  /* linprocman design language — sampled from the live app (r080):
+     window #262626 · sidebar #353535 · accent #0078D7 · rows #3a3a3a
+     hairline #1a1a1a · labels 8–9pt. Doc: docs/modules/disks-filesystems.md */
+  * { margin: 0; padding: 0; box-sizing: border-box;
+      font-family: Ubuntu, Cantarell, sans-serif; }
+  body { background: #262626; color: #eeeeee; width: 1200px; }
+  .shell { display: flex; height: 800px; }
+
+  /* sidebar */
+  .sidebar { width: 170px; background: #353535; border-right: 1px solid #1a1a1a;
+             display: flex; flex-direction: column; }
+  .logo { width: 110px; height: 78px; margin: 26px auto 20px; background: #111;
+          border-radius: 10px; display: flex; align-items: center;
+          justify-content: center; }
+  .logo svg { width: 64px; height: 44px; }
+  .nav { display: flex; flex-direction: column; }
+  .nav a { display: block; padding: 11px 18px; font-size: 9.5pt; color: #ddd;
+           text-decoration: none; border-left: none; }
+  .nav a.active { background: #0078D7; color: #fff; }
+  .nav a.sub { padding-left: 34px; font-size: 9pt; color: #c0c0c0; }
+  .nav .spacer { flex: 1; }
+  .settings { padding: 11px 18px; font-size: 9.5pt; color: #ddd;
+              border-top: 1px solid #1a1a1a; }
+
+  /* content */
+  .content { flex: 1; padding: 22px 24px; overflow: hidden; }
+  h1 { font-size: 17pt; font-weight: 600; margin-bottom: 16px; }
+  .band { display: flex; gap: 10px; margin-bottom: 16px; }
+  .card { flex: 1; background: #2b2b2b; border: 1px solid #1a1a1a;
+          border-radius: 3px; padding: 9px 12px; }
+  .card .k { font-size: 8pt; color: #9a9a9a; }
+  .card .v { font-size: 12pt; margin-top: 2px; }
+  .card .cap { font-size: 7.5pt; color: #8a8a8a; margin-top: 2px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 9pt;
+          border: 1px solid #1a1a1a; }
+  th { background: #2e2e2e; color: #b5b5b5; text-align: left; font-weight: 400;
+       padding: 7px 10px; border: 1px solid #1a1a1a; }
+  td { padding: 8px 10px; background: #3a3a3a; border: 1px solid #1a1a1a;
+       color: #e6e6e6; }
+  td.dim { color: #9a9a9a; }
+  .bar { height: 8px; background: #1f1f1f; border-radius: 2px; min-width: 90px; }
+  .bar i { display: block; height: 8px; border-radius: 2px;
+           background: #0078D7; }
+  .warn { color: #d9a53f; }
+  .count { margin-top: 12px; font-size: 8.5pt; color: #8a8a8a; }
+  .hint { margin-top: 14px; font-size: 8pt; color: #7a7a7a; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="sidebar">
+    <div class="logo">
+      <svg viewBox="0 0 64 44"><polyline points="4,36 16,36 22,10 30,30 36,20 42,26 60,26"
+        fill="none" stroke="#3aa0ff" stroke-width="4"
+        stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="nav">
+      <a href="#">Processes</a>
+      <a href="#">Graphs</a>
+      <a href="#" class="sub">Basics</a>
+      <a href="#" class="active">Disks</a>
+      <a href="#" style="color:#8f8f8f">Peripherals</a>
+      <a href="#">Logs</a>
+      <a href="#">About</a>
+      <div class="spacer"></div>
+    </div>
+    <div class="settings">Settings</div>
+  </div>
+
+  <div class="content">
+    <h1>Disks</h1>
+
+    <div class="band">
+      <div class="card"><div class="k">Devices</div><div class="v">5</div>
+        <div class="cap">3 mounted · 2 unmounted (flagged)</div></div>
+      <div class="card"><div class="k">Read</div><div class="v">1.2 MB/s</div>
+        <div class="cap">all devices · sampler deltas</div></div>
+      <div class="card"><div class="k">Write</div><div class="v">310 KB/s</div>
+        <div class="cap">all devices · counter-reset clamped</div></div>
+      <div class="card"><div class="k">Busiest</div><div class="v">nvme0n1</div>
+        <div class="cap">busy 14% · util from diskstats</div></div>
+    </div>
+
+    <table>
+      <tr><th>Device</th><th>Mount</th><th>Type</th><th>Total</th>
+          <th>Used</th><th>Free</th><th style="width:170px">Usage</th>
+          <th>Read/s</th><th>Write/s</th><th>Busy %</th></tr>
+      <tr><td>nvme0n1p2</td><td>/</td><td>ext4</td><td>468 GB</td>
+          <td>212 GB</td><td>232 GB</td>
+          <td><div class="bar"><i style="width:45%"></i></div></td>
+          <td>640 KB/s</td><td>210 KB/s</td><td>12</td></tr>
+      <tr><td>nvme0n1p3</td><td>/home</td><td>ext4</td><td>1.8 TB</td>
+          <td>1.1 TB</td><td>620 GB</td>
+          <td><div class="bar"><i style="width:61%"></i></div></td>
+          <td>580 KB/s</td><td>96 KB/s</td><td>9</td></tr>
+      <tr><td>nvme0n1p1</td><td class="dim">not mounted</td><td>vfat</td>
+          <td>512 MB</td><td class="warn">— flagged</td><td>—</td>
+          <td><div class="bar"><i style="width:0%"></i></div></td>
+          <td class="dim">0 B/s</td><td class="dim">0 B/s</td><td class="dim">—</td></tr>
+      <tr><td>sr0</td><td class="dim">not mounted</td><td>iso9660</td>
+          <td>—</td><td class="warn">— flagged</td><td>—</td>
+          <td><div class="bar"><i style="width:0%"></i></div></td>
+          <td class="dim">0 B/s</td><td class="dim">0 B/s</td><td class="dim">—</td></tr>
+      <tr><td>nvme1n1</td><td>/mnt/data</td><td>btrfs</td><td>3.6 TB</td>
+          <td>740 GB</td><td>2.8 TB</td>
+          <td><div class="bar"><i style="width:20%"></i></div></td>
+          <td>8.1 KB/s</td><td>4.4 KB/s</td><td>2</td></tr>
+    </table>
+
+    <div class="count">14 pseudo/loop devices hidden (snap squashfs) — show</div>
+    <div class="hint">Read-only · /proc/diskstats + statvfs · mount events via
+      Gio.UnixMountMonitor · rates share the sampler's delta machinery (no
+      second timer) · no mount/eject actions in v1 (elevation forbidden).</div>
+  </div>
+</div>
+</body>
+</html>

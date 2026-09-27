@@ -33,6 +33,11 @@ class DashboardWindow(Gtk.ApplicationWindow):
 
         self.sidebar = Sidebar(self.nav_manager)
         self.sidebar.connect("page-changed", self.on_page_changed)
+        # r081: watch the navigation manager once, at construction — moves
+        # the active highlight and expands the destination's parent group
+        # for EVERY navigation path (programmatic navigation used to leave
+        # the sidebar unhighlighted).
+        self.nav_manager.on_navigate(self.sidebar.on_navigated)
         layout.box_add(main_box, self.sidebar, False, False, 0)
 
         self.content_area = ContentArea(self.nav_manager)
@@ -53,6 +58,8 @@ class DashboardWindow(Gtk.ApplicationWindow):
     def on_page_changed(self, sidebar, page_name):
         """Handle page change"""
         self.content_area.show_page(page_name)
+        # highlight + group expansion live in the nav_manager.on_navigate
+        # hook (sidebar.on_navigated) — it covers every navigation path.
 
     def _on_activity_changed(self, *_args):
         self._push_activity()

@@ -81,6 +81,12 @@ class LinprocmanApplication(Gtk.Application):
         page = self.navigation_manager.get_page_widget("processes")
         if page is None or not getattr(page, "_paused", False):
             self.sampler.start()
+        # r081 (adversarial finding P1): r073's sampler-gate fix deleted the
+        # r071 startup call below — stored thresholds were never re-applied
+        # on launch (page silently fell back to fixed 60/85 until
+        # Recalibrate was clicked). One-shot idle: apply the stored baseline
+        # or capture first-run in a background thread.
+        GLib.idle_add(self._ensure_baseline)
 
     def _toggle_window(self):
         """Tray Show/Hide — visibility toggle only."""

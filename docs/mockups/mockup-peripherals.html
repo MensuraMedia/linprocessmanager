@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>mockup — Peripherals page (sensors/hwmon)</title>
+<style>
+  /* linprocman design language — sampled from the live app (r080).
+     Doc: docs/modules/sysfs-data.md + HANDOFF "Peripherals" queued item.
+     Rule honored: missing hwmon/cpufreq files are normal — chips HIDE
+     themselves (VMs show nothing and work fine). No extra sampler cadence. */
+  * { margin: 0; padding: 0; box-sizing: border-box;
+      font-family: Ubuntu, Cantarell, sans-serif; }
+  body { background: #262626; color: #eeeeee; width: 1200px; }
+  .shell { display: flex; height: 800px; }
+  .sidebar { width: 170px; background: #353535; border-right: 1px solid #1a1a1a;
+             display: flex; flex-direction: column; }
+  .logo { width: 110px; height: 78px; margin: 26px auto 20px; background: #111;
+          border-radius: 10px; display: flex; align-items: center;
+          justify-content: center; }
+  .logo svg { width: 64px; height: 44px; }
+  .nav { display: flex; flex-direction: column; }
+  .nav a { display: block; padding: 11px 18px; font-size: 9.5pt; color: #ddd;
+           text-decoration: none; }
+  .nav a.sub { padding-left: 34px; font-size: 9pt; color: #c0c0c0; }
+  .nav a.active { background: #0078D7; color: #fff; }
+  .nav .spacer { flex: 1; }
+  .settings { padding: 11px 18px; font-size: 9.5pt; color: #ddd;
+              border-top: 1px solid #1a1a1a; }
+  .content { flex: 1; padding: 22px 24px; }
+  h1 { font-size: 17pt; font-weight: 600; margin-bottom: 6px; }
+  .sub { font-size: 8.5pt; color: #8a8a8a; margin-bottom: 18px; }
+  h2 { font-size: 10pt; color: #9a9a9a; font-weight: 400;
+       margin: 18px 0 8px; letter-spacing: .4px; }
+  .grid { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip { width: 200px; background: #2b2b2b; border: 1px solid #1a1a1a;
+          border-radius: 3px; padding: 10px 12px; }
+  .chip .k { font-size: 8pt; color: #9a9a9a; }
+  .chip .v { font-size: 15pt; margin: 2px 0 4px; }
+  .chip .v small { font-size: 8.5pt; color: #9a9a9a; }
+  .chip .bar { height: 6px; background: #1f1f1f; border-radius: 2px; }
+  .chip .bar i { display: block; height: 6px; border-radius: 2px;
+                 background: #3a9d5f; }
+  .green { color: #3a9d5f; } .yellow { color: #d9a53f; } .red { color: #d9534f; }
+  .freq { width: 320px; }
+  .cores { display: flex; gap: 3px; margin-top: 6px; align-items: flex-end;
+           height: 34px; }
+  .cores i { flex: 1; background: #0078D7; border-radius: 1px; opacity: .85; }
+  .note { margin-top: 18px; font-size: 8pt; color: #7a7a7a; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="sidebar">
+    <div class="logo">
+      <svg viewBox="0 0 64 44"><polyline points="4,36 16,36 22,10 30,30 36,20 42,26 60,26"
+        fill="none" stroke="#3aa0ff" stroke-width="4"
+        stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="nav">
+      <a href="#">Processes</a>
+      <a href="#">Graphs</a>
+      <a href="#" class="sub">Basics</a>
+      <a href="#">Disks</a>
+      <a href="#" class="active">Peripherals</a>
+      <a href="#">Logs</a>
+      <a href="#">About</a>
+      <div class="spacer"></div>
+    </div>
+    <div class="settings">Settings</div>
+  </div>
+
+  <div class="content">
+    <h1>Peripherals</h1>
+    <div class="sub">Hardware sensors — read-only, from /sys/class/hwmon and
+      cpufreq. This machine: 12 cores · AMD GPU present.</div>
+
+    <h2>TEMPERATURES · /sys/class/hwmon</h2>
+    <div class="grid">
+      <div class="chip"><div class="k">Tctl (k10temp)</div>
+        <div class="v green">54<small> °C</small></div>
+        <div class="bar"><i style="width:36%"></i></div></div>
+      <div class="chip"><div class="k">CORE 0 (coretemp)</div>
+        <div class="v green">49<small> °C</small></div>
+        <div class="bar"><i style="width:31%"></i></div></div>
+      <div class="chip"><div class="k">ACPI TZ00</div>
+        <div class="v yellow">67<small> °C</small></div>
+        <div class="bar"><i style="width:67%; background:#d9a53f"></i></div></div>
+      <div class="chip"><div class="k">nvme (Composite)</div>
+        <div class="v green">41<small> °C</small></div>
+        <div class="bar"><i style="width:26%"></i></div></div>
+    </div>
+
+    <h2>FANS · hwmon fan*_input</h2>
+    <div class="grid">
+      <div class="chip"><div class="k">Fan 1 (it8603)</div>
+        <div class="v">1,240 <small>RPM</small></div></div>
+      <div class="chip"><div class="k">Fan 2 (it8603)</div>
+        <div class="v">0 <small>RPM · stopped</small></div></div>
+    </div>
+
+    <h2>CPU FREQUENCY · scaling_cur_freq</h2>
+    <div class="grid">
+      <div class="chip freq"><div class="k">Per-core current</div>
+        <div class="v">3.6 <small>GHz max · avg 2.9 · min 1.4</small></div>
+        <div class="cores">
+          <i style="height:30%"></i><i style="height:55%"></i><i style="height:42%"></i>
+          <i style="height:78%"></i><i style="height:36%"></i><i style="height:60%"></i>
+          <i style="height:48%"></i><i style="height:88%"></i><i style="height:28%"></i>
+          <i style="height:52%"></i><i style="height:40%"></i><i style="height:66%"></i>
+        </div></div>
+    </div>
+
+    <h2>GPU · /sys/class/drm (amdgpu)</h2>
+    <div class="grid">
+      <div class="chip"><div class="k">AMD GPU busy (card0)</div>
+        <div class="v green">7<small> %</small></div>
+        <div class="bar"><i style="width:7%"></i></div></div>
+    </div>
+
+    <div class="note">Chips hide themselves when their hwmon/cpufreq files are
+      absent — a VM with no sensors shows an empty page and works fine
+      (universality mandate). Sampled by the existing sampler thread; no extra
+      cadence. Missing files are normal, never errors. Threshold coloring uses
+      the r071 baseline system (docs/modules/perf-thresholds.md).</div>
+  </div>
+</div>
+</body>
+</html>

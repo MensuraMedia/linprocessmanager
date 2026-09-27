@@ -4,7 +4,7 @@ Fixed sidebar with logo and navigation
 Updated: Home button has top border, Settings has top border
 """
 
-from .compat import Gtk, GdkPixbuf, GObject, css, icons, layout
+from .compat import Gtk, GdkPixbuf, GObject, css, icons, layout, events
 import os
 
 from config.config_layout import Layout
@@ -133,8 +133,22 @@ class Sidebar(Gtk.Box):
                 # sit RIGHT-ALIGNED as a persistent submenu indicator (the
                 # label-only child silently dropped it — r073 defect).
                 gbox = button.get_child()  # HBox from is_group=True
-                layout.box_add(gbox, caret, False, False, 0)
-                self.submenus[page_id] = {"caret": caret, "children": []}
+                # r081: the caret is the expand/collapse TOGGLE — left-click
+                # expands the children downward or contracts them upward
+                # without navigating (r075 left no collapse path at all).
+                # click_gesture is the compat-sanctioned press path (raw
+                # button-press-event is gate-banned outside the compat
+                # adapters); the EventBox sits above the button, so the
+                # click never reaches it.
+                toggle = Gtk.EventBox(above_child=True)
+                layout.set_child(toggle, caret)
+                gesture = events.click_gesture(
+                    toggle,
+                    lambda g, n, x, y, pid=page_id:
+                        self._on_caret_toggle(pid), button=1)
+                layout.box_add(gbox, toggle, False, False, 0)
+                self.submenus[page_id] = {"caret": caret, "gesture": gesture,
+                                          "children": []}
                 layout.box_add(nav_box_top, button, False, False, 0)
                 self.nav_buttons[page_id] = button
 
@@ -170,6 +184,21 @@ class Sidebar(Gtk.Box):
 
         # Add bottom navigation
         layout.box_add(self, nav_box_bottom, False, False, 0)
+
+        # r081: window show_all() force-shows every descendant, overriding
+        # the constructed collapsed state — groups shipped EXPANDED and
+        # (before the caret toggle existed) could never be collapsed. On
+        # the first map, re-assert the designed collapsed start.
+        self._collapse_pending = True
+        self.connect('map', self._on_sidebar_map)
+
+    def _on_sidebar_map(self, *_args):
+        if not self._collapse_pending:
+            return False
+        self._collapse_pending = False
+        for page_id in self.submenu_boxes:
+            self.expand_submenu(page_id, False)
+        return False
     
     def create_nav_button(self, label, page_id, is_top=False, is_bottom=False,
                           indent=False, is_group=False):
@@ -242,6 +271,35 @@ class Sidebar(Gtk.Box):
             "caret-down.svg" if expanded else "caret-right.svg")
         info["caret"].set_from_pixbuf(
             GdkPixbuf.Pixbuf.new_from_file_at_size(caret_path, 11, 11))
+
+    def _on_caret_toggle(self, page_id):
+        """r081: caret click toggles the group's submenu — expands the
+        children downward, contracts them upward. The EventBox sits above
+        the group button, so the click never navigates."""
+        box = self.submenu_boxes.get(page_id)
+        self.expand_submenu(page_id,
+                            not (box.get_visible() if box else False))
+
+    def ensure_group_expanded(self, page_id):
+        """r081: when navigation lands on a submenu child (Basics via a
+        band-chart click), expand its parent group so the destination is
+        visible in the sidebar."""
+        for parent, children in SUBMENUS.items():
+            if any(child_id == page_id for _label, child_id in children):
+                box = self.submenu_boxes.get(parent)
+                if box is not None and not box.get_visible():
+                    self.expand_submenu(parent, True)
+                return
+
+    def on_navigated(self, page_id):
+        """r081: navigation-manager hook for ALL navigation paths — moves
+        the active highlight (programmatic navigation used to leave the
+        sidebar unhighlighted) and expands the destination's parent group.
+        Idempotent for clicks that already did both."""
+        self.ensure_group_expanded(page_id)
+        button = self.nav_buttons.get(page_id)
+        if button is not None:
+            self.set_active_button(button)
 
     def on_nav_clicked(self, button, page_id):
         """Handle navigation click"""
