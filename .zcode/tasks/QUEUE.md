@@ -47,3 +47,21 @@ system python3 — no network for app code, ever)
 | r043 | gtk4-port factual review | $0.35 |
 | r044 | upgrade-architecture factual review | $0.49 |
 | r045 | debian-compatibility factual review | $0.49 |
+
+## Work order r081 (2026-09-27, operator) — DONE
+
+Adversarial follow-up on the last-10 feature requests + corrections.
+Orchestration: Z fixed/verified → adversarial verifier (subagent) checked
+every item → Z applied verifier findings → C cross-review of da875fc
+(design/philosophy guardrail, plan-mode consult). Agents checked each
+other's work in that chain.
+
+- Header right-click opens the column chooser again (bin-window coords;
+  the process menu had swallowed header + margin clicks).
+- Graphs caret toggles Basics down/up; groups start collapsed again.
+- Band-chart click → Basics + auto-expanded Graphs group + highlight moves.
+- Adversarial: 9/10 requests ACCOMPLISHED; r071 thresholds PARTIAL → P1
+  fixed (baseline startup call restored, live-verified in the journal).
+- P2s fixed: N_COLUMNS off-by-one; dead rank-popover machinery deleted;
+  page_resources.py removed. 243+5 tests. Mockups: Disks + Peripherals
+  served at :8931 for operator review (Phase 6 / Peripherals decision).

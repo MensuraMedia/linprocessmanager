@@ -33,3 +33,11 @@
   Peripherals per operator mandate (mockups first, concept docs updated).
 - issues.md tail entries are historical (all resolved by r073/r075) — keep
   for triage context only.
+
+- r081 leftovers: (1) group-action permission-guard test was dropped in the
+  r075 churn with no replacement — re-add; (2) unchecking the LAST visible
+  column silently resets to all-columns on next launch (_validate_columns
+  divergence) — decide policy; (3) tray fallback logs a StatusIcon
+  set_title attr error before ayatana resolves — downgrade or guard;
+  (4) Disks + Peripherals mockups await operator pick, then concept docs
+  update + contracts.
