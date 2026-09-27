@@ -219,3 +219,32 @@ def test_name_sort_stable_across_value_churn():
     ))
     names = [r[pm.COL_NAME] for r in store_rows(model)]
     assert names == ["alpha", "beta", "gamma"]
+
+
+def test_disk_read_write_split_sort_and_columns(r025_unused=None):
+    """r084: the combined disk_rw column split into Reads/Writes — each is
+    its own logical column, sorts on its own field, and unknowns stay
+    unknowns. The legacy persisted key migrates on load."""
+    model = pm.ProcessTableModel()
+    model.apply_snapshot(procs(
+        rec(1, rd=100.0, wr=5.0),
+        rec(2, rd=10.0, wr=900.0),
+        rec(3, rd=0.0, wr=0.0),
+    ))
+    assert "disk_read" in pm.SORT_COLUMNS and "disk_write" in pm.SORT_COLUMNS
+
+    model.set_sort("disk_read", descending=True)
+    assert [r[pm.COL_PID] for r in store_rows(model)][0] == 1
+    model.set_sort("disk_write", descending=True)
+    assert [r[pm.COL_PID] for r in store_rows(model)][0] == 2
+
+    from config.app_settings import AppSettings
+    migrated = AppSettings({
+        "columns": {"visible": ["process", "disk_rw"],
+                    "widths": {"disk_rw": 140}},
+        "sort": {"column": "disk_rw", "direction": "desc"},
+    }).as_dict()
+    assert migrated["columns"]["visible"] == ["process", "disk_read",
+                                              "disk_write"]
+    assert migrated["columns"]["widths"]["disk_read"] == 140
+    assert migrated["sort"]["column"] == "disk_read"

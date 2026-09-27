@@ -70,12 +70,14 @@ STORE_TYPES = [
 ]
 
 # Logical (persisted) sort-key -> the (value_col, has_col) it maps to. Columns
-# always present (pid) carry has_col=None. "disk_rw" sorts on read+write.
+# always present (pid) carry has_col=None. r084: disk reads/writes are
+# separate columns and sort on their own field.
 SORT_COLUMNS = {
     "cpu": (COL_CPU, COL_CPU_HAS),
     "memory": (COL_MEM, COL_MEM_HAS),
     "swap": (COL_SWAP, COL_SWAP_HAS),
-    "disk_rw": (COL_DISK_R, COL_DISK_R_HAS),   # secondary handled in _num_sort
+    "disk_read": (COL_DISK_R, COL_DISK_R_HAS),
+    "disk_write": (COL_DISK_W, COL_DISK_W_HAS),
     "nice": (COL_NICE, COL_NICE_HAS),
     "pid": (COL_PID, None),
     "process": (COL_NAME, None),
@@ -87,7 +89,8 @@ SORT_COLUMNS = {
 _SORT_RECORD_FIELD = {
     "cpu": "cpu_pct", "memory": "mem_rss", "swap": "mem_swap",
     "nice": "nice", "pid": "pid", "process": "name", "user": "user",
-    "state": "state",
+    "state": "state", "disk_read": "io_read_rate", "disk_write":
+    "io_write_rate",
 }
 
 DEFAULT_ROW_BUDGET = 5000
@@ -182,7 +185,7 @@ class ProcessTableModel:
         for value_col, has_col in (
             (COL_CPU, COL_CPU_HAS), (COL_MEM, COL_MEM_HAS),
             (COL_SWAP, COL_SWAP_HAS), (COL_NICE, COL_NICE_HAS),
-            (COL_DISK_R, COL_DISK_R_HAS),
+            (COL_DISK_R, COL_DISK_R_HAS), (COL_DISK_W, COL_DISK_W_HAS),
         ):
             self.store.set_sort_func(
                 value_col, self._num_sort, (value_col, has_col))
@@ -211,10 +214,8 @@ class ProcessTableModel:
 
     @staticmethod
     def _sort_value(model, it, value_col):
-        if value_col == COL_DISK_R:  # "Disk r/w" sorts on read+write combined
-            r = model.get_value(it, COL_DISK_R)
-            w = model.get_value(it, COL_DISK_W)
-            return (r if r >= 0 else 0) + (w if w >= 0 else 0)
+        # r084: reads/writes sort on their own field — the read+write
+        # combined comparator went with the combined column.
         return model.get_value(it, value_col)
 
     def _name_sort(self, model, a, b, _data):
@@ -317,10 +318,6 @@ class ProcessTableModel:
 
         def key_func(item):
             rec = item[1]
-            if self._sort_key == "disk_rw":
-                r = rec.get("io_read_rate") or 0
-                w = rec.get("io_write_rate") or 0
-                return (True, r + w)
             value = rec.get(field)
             # Unknowns to the extreme end so a trimmed set keeps real rows.
             return (value is not None, value if value is not None else -1)

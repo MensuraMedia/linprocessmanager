@@ -357,18 +357,20 @@ class ProcessesPage(BasePage):
 
     _COLUMN_TITLES = {
         "process": "Process", "user": "User", "cpu": "CPU %", "memory": "Memory",
-        "swap": "Swap", "disk_rw": "Disk r/w", "nice": "Nice", "pid": "PID",
-        "state": "State",
+        "swap": "Swap", "disk_read": "Reads", "disk_write": "Writes",
+        "nice": "Nice", "pid": "PID", "state": "State",
     }
     _COLUMN_MINW = {
         "process": 200, "user": 90, "cpu": 70, "memory": 100, "swap": 90,
-        "disk_rw": 120, "nice": 55, "pid": 75, "state": 80,
+        "disk_read": 90, "disk_write": 90, "nice": 55, "pid": 75,
+        "state": 80,
     }
 
     def _make_column(self, key):
         renderer = Gtk.CellRendererText()
         # Right-align the numeric columns.
-        if key in ("cpu", "memory", "swap", "disk_rw", "nice", "pid"):
+        if key in ("cpu", "memory", "swap", "disk_read", "disk_write",
+                   "nice", "pid"):
             renderer.set_property("xalign", 1.0)
         column = Gtk.TreeViewColumn(self._COLUMN_TITLES[key], renderer)
         column.set_resizable(True)
@@ -421,12 +423,16 @@ class ProcessesPage(BasePage):
             has = model.get_value(it, pm.COL_SWAP_HAS)
             cell.set_property(
                 "text", _fmt_bytes(model.get_value(it, pm.COL_SWAP)) if has else "—")
-        elif key == "disk_rw":
-            rh = model.get_value(it, pm.COL_DISK_R_HAS)
-            wh = model.get_value(it, pm.COL_DISK_W_HAS)
-            r = _fmt_rate(model.get_value(it, pm.COL_DISK_R)) if rh else "—"
-            w = _fmt_rate(model.get_value(it, pm.COL_DISK_W)) if wh else "—"
-            cell.set_property("text", "↓%s  ↑%s" % (r, w))
+        elif key == "disk_read":
+            has = model.get_value(it, pm.COL_DISK_R_HAS)
+            cell.set_property(
+                "text", _fmt_rate(model.get_value(it, pm.COL_DISK_R))
+                if has else "—")
+        elif key == "disk_write":
+            has = model.get_value(it, pm.COL_DISK_W_HAS)
+            cell.set_property(
+                "text", _fmt_rate(model.get_value(it, pm.COL_DISK_W))
+                if has else "—")
         elif key == "nice":
             has = model.get_value(it, pm.COL_NICE_HAS)
             cell.set_property(

@@ -27,16 +27,41 @@ MAX_INTERVAL = 5.0
 DEFAULT_INTERVAL = 2.0
 
 # Canonical process-table column keys (order = default display order).
+# r084: disk_rw split into disk_read / disk_write (separate columns).
 COLUMN_KEYS = [
-    "process", "user", "cpu", "memory", "swap", "disk_rw", "nice", "pid",
-    "state",
+    "process", "user", "cpu", "memory", "swap", "disk_read", "disk_write",
+    "nice", "pid", "state",
 ]
+
+# r084 migration: persisted settings still carrying a legacy key expand to
+# its replacements before validation (visible entries, widths, sort column).
+_LEGACY_COLUMN_MAP = {"disk_rw": ("disk_read", "disk_write")}
+
+
+def _migrate_legacy_columns(raw):
+    """Expand legacy column keys in a raw settings dict (r084)."""
+    if not isinstance(raw, dict):
+        return raw
+    visible = raw.get("visible")
+    if isinstance(visible, list):
+        expanded = []
+        for key in visible:
+            expanded.extend(_LEGACY_COLUMN_MAP.get(key, (key,)))
+        raw["visible"] = expanded
+    widths = raw.get("widths")
+    if isinstance(widths, dict):
+        for legacy, replacements in _LEGACY_COLUMN_MAP.items():
+            if legacy in widths:
+                width = widths.pop(legacy)
+                for replacement in replacements:
+                    widths.setdefault(replacement, width)
+    return raw
 
 # Enforced per-column minimum widths (linfilesearch r025 lesson: a persisted
 # width can never collapse a column below usability).
 COLUMN_MIN_WIDTH = {
     "process": 200, "user": 90, "cpu": 70, "memory": 100, "swap": 90,
-    "disk_rw": 120, "nice": 55, "pid": 75, "state": 80,
+    "disk_read": 90, "disk_write": 90, "nice": 55, "pid": 75, "state": 80,
 }
 
 VIEW_MODES = ("flat", "tree")
@@ -83,6 +108,7 @@ def _bool(value, default):
 
 
 def _validate_columns(raw):
+    raw = _migrate_legacy_columns(raw)
     if not isinstance(raw, dict):
         raw = {}
     visible_raw = raw.get("visible")
@@ -110,7 +136,10 @@ def _validate_columns(raw):
 def _validate_sort(raw):
     if not isinstance(raw, dict):
         raw = {}
-    column = _enum(raw.get("column"), COLUMN_KEYS, "cpu")
+    column = raw.get("column")
+    if isinstance(column, str):
+        column = _LEGACY_COLUMN_MAP.get(column, (column,))[0]
+    column = _enum(column, COLUMN_KEYS, "cpu")
     direction = _enum(raw.get("direction"), SORT_DIRECTIONS, "desc")
     return {"column": column, "direction": direction}
 
