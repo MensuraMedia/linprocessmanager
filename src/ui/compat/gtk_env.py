@@ -73,3 +73,13 @@ __all__ = [
     "HAS_ALERT_DIALOG", "HAS_GESTURE_CLICK", "HAS_TEXTURE",
     "HAS_DISPLAY_PROVIDER",
 ]
+
+
+def load_repository(name, version=None):
+    """Import an OPTIONAL gi repository inside the compat seam (r072: tray
+    backends). Only this module may touch gi — the raw-import ban holds."""
+    if version:
+        gi = __import__("gi")
+        gi.require_version(name, version)
+    module = __import__(f"gi.repository.{name}", fromlist=[name])
+    return module

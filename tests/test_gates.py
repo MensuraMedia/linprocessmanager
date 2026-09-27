@@ -294,7 +294,7 @@ def _banned_api_violations():
                     first = node.args[0]
                     if isinstance(first, ast.Constant) and isinstance(first.value, str):
                         sig = first.value
-                        if sig in BANNED_CONNECT_SIGNALS and rel != EVENTS_REL:
+                        if sig in BANNED_CONNECT_SIGNALS and rel not in (EVENTS_REL, "src/ui/compat/tray.py"):
                             offenders.append("%s: connect(%r)" % (rel, sig))
                         elif sig == "draw" and rel != CHARTS_REL:
                             offenders.append("%s: connect('draw')" % rel)

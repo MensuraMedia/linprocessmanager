@@ -189,3 +189,14 @@ Record architectural decisions with rationale. Newest at the bottom.
     cut skipped) — verification chain unchanged, discipline restored.
     Standing: per-phase tests + s009 backups at every phase close;
     GUI walk needs no-raise window capture (xwd parser) per r057.
+
+27. **Baseline-driven thresholds + bounding-box policy (r071).** Alert
+    thresholds derive from a first-run machine baseline (specs + idle CPU
+    noise floor) via pure derive() formulae — no fixed 60/85 for every
+    box; Thresholds provider consulted by zone helpers with fixed-default
+    fallback. BOUNDING-BOX POLICY (build-principles 5b): dynamic text pins
+    width_chars + ellipsize; cards never resize with content — recurred
+    twice (r060 band, r071 Basics) before the policy existed. Adversarial
+    P0 catches: idle sampling read nonexistent keys (feature would be a
+    no-op on every machine) and persisted baseline never re-applied —
+    both would have shipped silently without the review.

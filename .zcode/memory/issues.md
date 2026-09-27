@@ -8,3 +8,4 @@
 - 2026-09-27 00:45 | do_activate | NameError: name 'css' is not defined
 - 2026-09-27 00:46 | do_activate | NameError: name 'GLib' is not defined
 - 2026-09-27 00:47 | baseline apply | NameError: name 'log' is not defined
+- 2026-09-27 10:12 | do_activate | NameError: name 'os' is not defined

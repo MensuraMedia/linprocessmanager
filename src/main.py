@@ -6,9 +6,12 @@ upgrade-architecture.md §2 app layer). Toolkit symbols come from the compat
 seam, never from gi.repository directly.
 """
 
+import os
 import sys
 
 from log import setup_logging, log_exception, get_logger
+
+log = get_logger("app")
 
 setup_logging()  # r064: native logging first, so everything after this
                  # lands in ~/.local/state/linprocman/
@@ -16,6 +19,7 @@ setup_logging()  # r064: native logging first, so everything after this
 from ui.compat import Gtk, GLib
 
 from ui.dashboard_window import DashboardWindow
+from ui.compat import tray
 from modules.manager_navigation import NavigationManager
 from modules.manager_theme_applicator import ThemeApplicator
 from modules.manager_sampler import Sampler
@@ -55,6 +59,34 @@ class LinprocmanApplication(Gtk.Application):
             )
             self.window.show_all()
         self.window.present()
+        # r072: window icon (ALT+Tab / taskbar) + optional tray icon
+        icon_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "..", "resources", "images", "icon-128.png")
+        if os.path.exists(icon_path):
+            from ui.compat import GdkPixbuf
+            try:
+                icon = GdkPixbuf.Pixbuf.new_from_file(icon_path)
+                Gtk.Window.set_default_icon(icon)
+                self.window.set_icon(icon)
+            except Exception as e:
+                log.warning("window icon failed: %s", e)
+        if not getattr(self, "_tray", None):
+            self._tray = tray.create(
+                on_toggle=self._toggle_window,
+                on_quit=self.quit)
+
+    def _toggle_window(self):
+        page = self.navigation_manager.get_page_widget("processes")
+        _ = page  # navigation unaffected; toggle visibility of the window
+        if self.window is None:
+            return
+        win = self.window
+        visible = win.get_visible()
+        if visible:
+            win.hide()
+        else:
+            win.present()
         # r071: baseline loads/applies off the UI thread — the ~6 s idle
         # sampling must never freeze the first launch.
         GLib.timeout_add(200, self._ensure_baseline)
