@@ -457,18 +457,13 @@ class ProcessesPage(BasePage):
             return "#e8c268"
         return "#7fd0a0"
 
-    def _fmt_cpu(self, cpu, prev):
-        """CPU: threshold-colored value (r057) + delta arrow (r056 convention:
-        increase RED ▲, decrease GREEN ▼, flat gray ·)."""
+    def _fmt_cpu(self, cpu, _prev=None):
+        """CPU: threshold-colored value only (r070: delta arrows removed —
+        advanced charts carry the trend)."""
         if cpu is None:
             return self._span("CPU —", "#888888")
-        value = self._span("CPU %d%%" % round(cpu),
-                           self._cap_zone(cpu) or "#d0d0d0")
-        if prev is None or abs(cpu - prev) < 1.0:
-            return value + " " + self._span(self._FLAT, "#d0d0d0")
-        if cpu > prev:
-            return value + " " + self._span(self._UP, "#e04c4c")
-        return value + " " + self._span(self._DOWN, "#3fbf6f")
+        return self._span("CPU %d%%" % round(cpu),
+                          self._cap_zone(cpu) or "#d0d0d0")
 
     # -- statusbar --------------------------------------------------------
 
@@ -624,24 +619,16 @@ class ProcessesPage(BasePage):
             return "#d0d0d0"
         return "#%02x%02x%02x" % tuple(int(c * 255) for c in rgb)
 
-    def _band_arrow(self, metric, cur, threshold):
-        """Delta arrow (r056: increase red ▲, decrease green ▼, flat gray ·)."""
-        prev = self._gauge_prev.get(metric)
-        if cur is None or prev is None or abs(cur - prev) < threshold:
-            return self._span(self._FLAT, "#d0d0d0")
-        if cur > prev:
-            return self._span(self._UP, "#e04c4c")
-        return self._span(self._DOWN, "#3fbf6f")
-
     def _pct_gauge(self, metric, pct, fmt, caption, threshold):
+        # r070: delta arrows removed — the threshold-colored value + the live
+        # bar carry the trend (operator note).
         frac = None if pct is None else max(0.0, min(1.0, pct / 100.0))
         zone = self._cap_zone(pct)
-        arrow = self._band_arrow(metric, pct, threshold)
         if pct is None:
             value = self._span("—", "#888888")
         else:
             value = self._span(fmt % pct, self._zone_hex(zone))
-        return frac, zone, value + " " + arrow, caption, pct
+        return frac, zone, value, caption, pct
 
     def _read_gauge(self, metric, system, ceiling, net):
         """Return ``(fraction, zone, value_markup, caption, scalar)`` for a
@@ -666,8 +653,7 @@ class ProcessesPage(BasePage):
             frac = mr.fraction(total, ceiling)
             zone = (mr.capacity_zone((frac or 0.0) * 100.0)
                     if total is not None else None)
-            arrow = self._band_arrow("network", total, 1024.0)
-            markup = self._span(_fmt_rate(total), self._zone_hex(zone)) + " " + arrow
+            markup = self._span(_fmt_rate(total), self._zone_hex(zone))
             cap = "↓%s ↑%s · ceiling %s" % (
                 _fmt_rate(net["rx"]), _fmt_rate(net["tx"]), _fmt_rate(ceiling))
             return frac, zone, markup, cap, total
@@ -894,9 +880,7 @@ class ProcessesPage(BasePage):
         if model.last_total > model.last_shown:
             parts[0] = "%d of %d processes" % (model.last_shown, model.last_total)
         cpu = (snapshot.system or {}).get("cpu", {}).get("pct")
-        prev_cpu = getattr(self, "_last_strip_cpu", None)
-        self._last_strip_cpu = cpu
-        parts.append(self._fmt_cpu(cpu, prev_cpu))
+        parts.append(self._fmt_cpu(cpu))
         if model.last_kthreads_hidden:
             parts.append(self._span("%d kernel threads hidden" % model.last_kthreads_hidden, "#888888"))
         if snapshot.from_backoff:

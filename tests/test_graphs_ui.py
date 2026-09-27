@@ -26,6 +26,7 @@ except (ImportError, ValueError) as exc:  # missing typelib etc.
     pytest.skip("GTK bindings unavailable: %s" % exc, allow_module_level=True)
 
 from modules import manager_rank as mr
+from ui.compat import charts
 
 
 # --- Resources retirement / Graphs arrival ----------------------------------
@@ -124,6 +125,98 @@ def _rec(pid, starttime=111, cpu=0.0):
             "io_read_rate": 0.0, "io_write_rate": 0.0, "nice": 0, "threads": 1,
             "is_kthread": False, "is_defunct": False, "from_backoff": False,
             "rollup": None}
+
+
+# --- Multi-series chart traces (r068, mockup M) -----------------------------
+
+def test_chart_traces_network_is_rx_tx_local_green_amber():
+    traces, kind = gd.chart_traces("graphs_network", 4, "rate", "network", ())
+    assert kind == "rate"
+    assert [t["label"] for t in traces] == ["down (rx)", "up (tx)"]
+    assert [t["key"] for t in traces] == ["rx", "tx"]
+    assert all(t["store"] == "local" for t in traces)     # not in the shared ring
+    assert traces[0]["primary"] and not traces[1]["primary"]
+    assert traces[0]["color"] == charts.RX_RGB             # rx green family
+    assert traces[1]["color"] == charts.TX_RGB             # tx amber family
+    assert traces[0]["fill"] and traces[1]["fill"]
+
+
+def test_chart_traces_cpu_total_plus_shade_stepped_per_core():
+    traces, kind = gd.chart_traces("graphs_cpu", 3, "pct", "cpu", (), "CPU")
+    assert kind == "pct"
+    assert traces[0]["label"] == "total"
+    assert traces[0]["store"] == "history" and traces[0]["primary"]
+    cores = traces[1:]
+    assert [t["label"] for t in cores] == ["core 0", "core 1", "core 2"]
+    assert [t["key"] for t in cores] == ["core0", "core1", "core2"]
+    assert all(t["store"] == "local" for t in cores)
+    # r042: the per-core palette is *generated* from the accent, not hardcoded.
+    assert [t["color"] for t in cores] == charts.series_palette(
+        charts.ACCENT_RGB, 3)
+
+
+def test_chart_traces_memory_used_plus_swap_from_shared_rings():
+    traces, kind = gd.chart_traces("graphs_memory", 2, "pct", "memory", ())
+    assert kind == "pct"
+    assert [t["key"] for t in traces] == ["memory", "swap"]
+    assert all(t["store"] == "history" for t in traces)
+
+
+def test_chart_traces_disk_read_write_is_rate():
+    traces, kind = gd.chart_traces("graphs_disk", 1, "pct", "disk", ())
+    assert kind == "rate"
+    assert [t["key"] for t in traces] == ["read", "write"]
+    assert all(t["store"] == "local" for t in traces)
+
+
+def test_chart_traces_pressure_triple_from_history():
+    traces, kind = gd.chart_traces(
+        "graphs_pressure", 1, "pressure", "psi_cpu", ("psi_mem", "psi_io"))
+    assert kind == "pressure"
+    assert [t["key"] for t in traces] == ["psi_cpu", "psi_mem", "psi_io"]
+    assert [t["label"] for t in traces] == ["cpu", "mem", "io"]
+
+
+def test_chart_traces_single_series_default():
+    traces, kind = gd.chart_traces("graphs_swap", 1, "pct", "swap", (), "Swap")
+    assert kind == "pct"
+    assert len(traces) == 1
+    assert traces[0]["key"] == "swap" and traces[0]["primary"]
+
+
+def test_disk_rw_rates_sums_devices_and_reports_gaps_as_none():
+    system = {"disks": {
+        "sda": {"read_rate": 1000.0, "write_rate": None},
+        "sdb": {"read_rate": 500.0, "write_rate": 200.0}}}
+    read, write = gd._disk_rw_rates(system)
+    assert read == 1500.0
+    assert write == 200.0
+    assert gd._disk_rw_rates({}) == (None, None)   # absent, never a 0
+
+
+# --- Hub cards carry the same multi-series (compact) -------------------------
+
+def test_hub_network_and_disk_cards_are_multi_series():
+    net, _kind = gd.chart_traces("graphs_network", 4, "rate", "network", ())
+    disk, _kind = gd.chart_traces("graphs_disk", 4, "pct", "disk", ())
+    assert len(net) == 2 and len(disk) == 2   # two mini-lines + legend on the hub
+    # The hub imports the shared trace builder, so its legends stay in lockstep.
+    assert pg.chart_traces is gd.chart_traces
+
+
+# --- Basics split cards: contributor mini-bars proportional to the leader ----
+
+def test_basics_contrib_fractions_proportional_to_leader():
+    assert pb.contrib_fractions([100.0, 50.0, 25.0]) == [1.0, 0.5, 0.25]
+    assert pb.contrib_fractions([]) == []
+    assert pb.contrib_fractions([0.0, 0.0]) == [0.0, 0.0]
+    # A None contribution is a gap, never a fabricated bar.
+    assert pb.contrib_fractions([None, 40.0]) == [0.0, 1.0]
+
+
+def test_basics_contrib_bar_colour_defined_per_drillable_metric():
+    for metric in ("cpu", "memory", "swap", "disk", "load"):
+        assert metric in pb._CONTRIB_BAR_RGB
 
 
 def test_cpu_contributor_key_resolves_in_process_model():

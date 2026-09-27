@@ -20,7 +20,8 @@ from ui.compat import Gtk, css, layout, charts
 
 from pages.page_base import BasePage
 from modules import manager_rank as mr
-from pages.graph_details import DETAIL_SPECS
+from modules import manager_history as mh
+from pages.graph_details import DETAIL_SPECS, chart_traces, _disk_rw_rates
 
 # The seven hub charts are exactly the seven detail specs, in order.
 HUB_CHARTS = list(DETAIL_SPECS)
@@ -73,6 +74,11 @@ class GraphsHubPage(BasePage):
         self._navigate = None
         self._last_system = {}
         self._cards = {}   # series -> {"value": label, "spark": ChartArea}
+        # Page-local ring for the decomposed sub-series (per-core / rx-tx /
+        # read-write) the shared store does not carry — same ring law, fed from
+        # on_snapshot, so the mini-charts can draw the same multi-series as the
+        # detail pages (spec §2b.4). Compact: no crosshair on the hub.
+        self._local = mh.History()
 
         self.add_title("Graphs")
         self.add_markup_label(
@@ -122,6 +128,11 @@ class GraphsHubPage(BasePage):
         layout.box_add(head, value, True, True, 0)
         layout.box_add(card, head, False, False, 0)
 
+        # Compact legend row (chip + label + live value per series).
+        legend_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        css.add_css_class(legend_box, "graph-card-legend")
+        layout.box_add(card, legend_box, False, False, 0)
+
         spark = charts.ChartArea(
             draw_func=lambda a, cr, w, h, s=spec: self._draw_spark(cr, w, h, s))
         spark.set_size_request(220, 72)
@@ -130,17 +141,115 @@ class GraphsHubPage(BasePage):
         layout.box_add(card, spark, True, True, 0)
 
         layout.set_child(button, card)
-        self._cards[spec.series] = {"value": value, "spark": spark, "spec": spec}
+        self._cards[spec.series] = {
+            "value": value, "spark": spark, "spec": spec,
+            "legend_box": legend_box, "legend_keys": None,
+            "legend_labels": {}, "legend_rows": [],
+        }
         return button
 
     # -- snapshot application (forwarded by the Processes page) -----------
 
     def on_snapshot(self, snapshot):
         self._last_system = snapshot.system or {}
+        self._record_local(snapshot)
         for spec in HUB_CHARTS:
             refs = self._cards[spec.series]
             refs["value"].set_markup(self._current_markup(spec))
+            self._sync_card_legend(spec, refs)
             refs["spark"].queue_draw()
+
+    def _record_local(self, snapshot):
+        """Feed the decomposed sub-series (per-core / rx-tx / read-write) into
+        the page-local ring — the shared store carries only the totals."""
+        ts = snapshot.ts
+        backoff = snapshot.from_backoff
+        system = snapshot.system or {}
+        per_core = (system.get("cpu") or {}).get("per_core") or {}
+        for idx, value in per_core.items():
+            self._local.insert("core%d" % idx, ts, value, from_backoff=backoff)
+        net = mr.net_reading(system)
+        self._local.insert("rx", ts, net["rx"], from_backoff=backoff)
+        self._local.insert("tx", ts, net["tx"], from_backoff=backoff)
+        read, write = _disk_rw_rates(system)
+        self._local.insert("read", ts, read, from_backoff=backoff)
+        self._local.insert("write", ts, write, from_backoff=backoff)
+
+    # -- traces + legend --------------------------------------------------
+
+    def _traces(self, spec):
+        """The card's chart traces + axis kind (shared with the detail page).
+
+        The per-core CPU legend is collapsed to just ``total`` on the compact
+        hub card (the detail page carries the full per-core legend); every other
+        card lists all its series.
+        """
+        traces, axis_kind = chart_traces(
+            spec.page_id, self._ncpu(), spec.kind, spec.series,
+            spec.extra_series, spec.title)
+        legend = traces[:1] if spec.page_id == "graphs_cpu" else traces
+        return traces, legend, axis_kind
+
+    def _ncpu(self):
+        return (self._last_system.get("cpu") or {}).get("ncpu") or 1
+
+    def _slice(self, desc):
+        if desc["store"] == "history":
+            return self._history.slice(desc["key"], _HUB_WINDOW_S) \
+                if self._history else []
+        return self._local.slice(desc["key"], _HUB_WINDOW_S)
+
+    def _last_of(self, desc):
+        store = self._history if desc["store"] == "history" else self._local
+        if store is None:
+            return None
+        point = store.last(desc["key"])
+        return point[1] if point is not None else None
+
+    def _sync_card_legend(self, spec, refs):
+        _traces, legend, axis_kind = self._traces(spec)
+        keys = tuple(t["key"] for t in legend)
+        extra = (" <span foreground='#666666'>+%d cores</span>" % (self._ncpu())
+                 if spec.page_id == "graphs_cpu" else "")
+        if keys != refs["legend_keys"]:
+            for child in refs["legend_rows"]:
+                layout.box_remove(refs["legend_box"], child)
+            refs["legend_rows"] = []
+            refs["legend_labels"] = {}
+            for trace in legend:
+                label = Gtk.Label()
+                label.set_use_markup(True)
+                label.set_xalign(0)
+                css.add_css_class(label, "graph-card-legend-item")
+                layout.box_add(refs["legend_box"], label, False, False, 0)
+                label.show()
+                refs["legend_labels"][trace["key"]] = label
+            refs["legend_keys"] = keys
+        for i, trace in enumerate(legend):
+            label = refs["legend_labels"].get(trace["key"])
+            if label is None:
+                continue
+            value = self._last_of(trace)
+            chip = "#%02x%02x%02x" % tuple(int(c * 255) for c in trace["color"])
+            label.set_markup(
+                "<span foreground='%s'>■</span> "
+                "<span foreground='#b0b0b0'>%s</span> "
+                "<span foreground='#e8e8e8'>%s</span>%s" % (
+                    chip, _escape(trace["label"]),
+                    _escape(self._fmt_axis(axis_kind, value)),
+                    extra if i == len(legend) - 1 else ""))
+
+    @staticmethod
+    def _fmt_axis(axis_kind, value):
+        if value is None:
+            return "—"
+        if axis_kind in ("pct", "pressure"):
+            return "%.1f%%" % value
+        if axis_kind == "rate":
+            return _fmt_rate(value)
+        if axis_kind == "load":
+            return "%.2f" % value
+        return "%.1f" % value
 
     # -- current value + zone ---------------------------------------------
 
@@ -198,60 +307,33 @@ class GraphsHubPage(BasePage):
     # -- cairo drawing ----------------------------------------------------
 
     def _draw_spark(self, cr, width, height, spec):
-        series_list = [spec.series] + list(spec.extra_series)
-        all_points = [
-            (self._history.slice(s, _HUB_WINDOW_S) if self._history else [])
-            for s in series_list]
+        traces, _legend, axis_kind = self._traces(spec)
+        all_points = [self._slice(t) for t in traces]
 
-        vmax = self._spark_max(spec, all_points)
+        vmax = self._spark_max(axis_kind, all_points)
         if vmax <= 0:
             return
-        t0 = t1 = None
-        for pts in all_points:
-            if pts:
-                t0 = pts[0][0] if t0 is None else min(t0, pts[0][0])
-                t1 = pts[-1][0] if t1 is None else max(t1, pts[-1][0])
-        if t0 is None:
-            return
-        span = max(1e-6, (t1 - t0))
-        for idx, pts in enumerate(all_points):
-            rgb = (_PSI_TRACE_RGB[idx % len(_PSI_TRACE_RGB)]
-                   if spec.kind == "pressure" else _TRACE_RGB)
-            self._draw_trace(cr, width, height, pts, t0, span, vmax, rgb)
+        primary_index = next(
+            (i for i, t in enumerate(traces) if t["primary"]), 0)
+        # Compact: fills on the primary, no gridlines/zone bands/crosshair.
+        charts.render_series(
+            cr, width, height, all_points,
+            [t["color"] for t in traces],
+            vmax=vmax,
+            fills=[t["fill"] for t in traces],
+            line_widths=[max(1.0, t["width"] - 0.6) for t in traces],
+            primary_index=primary_index,
+            gridlines=False, zone_bands=False, endpoint_dot=False,
+            gap_s=_GAP_S)
 
-    def _spark_max(self, spec, all_points):
-        if spec.kind in ("pct", "pressure"):
+    def _spark_max(self, axis_kind, all_points):
+        if axis_kind in ("pct", "pressure"):
             return 100.0
         peak = 0.0
         for pts in all_points:
             for _ts, value in pts:
                 if value is not None and value > peak:
                     peak = value
-        if spec.kind == "load":
-            ncpu = (self._last_system.get("cpu") or {}).get("ncpu") or 1
-            return max(float(ncpu), peak)
+        if axis_kind == "load":
+            return max(float(self._ncpu()), peak)
         return max(1024.0, peak * 1.2)  # rate auto-scale
-
-    def _draw_trace(self, cr, width, height, pts, t0, span, vmax, rgb):
-        if len(pts) < 2:
-            return
-        cr.set_source_rgb(*rgb)
-        cr.set_line_width(1.5)
-        started = False
-        prev_t = None
-        for ts, value in pts:
-            if value is None:
-                started = False
-                prev_t = ts
-                continue
-            if started and prev_t is not None and (ts - prev_t) > _GAP_S:
-                started = False
-            x = (ts - t0) / span * width
-            y = height - min(1.0, max(0.0, value / vmax)) * (height - 2) - 1
-            if not started:
-                cr.move_to(x, y)
-                started = True
-            else:
-                cr.line_to(x, y)
-            prev_t = ts
-        cr.stroke()

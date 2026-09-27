@@ -1,9 +1,12 @@
 """Basics page — the read-only "am I OK?" system summary (Phase 4.5).
 
-Spec: docs/modules/metric-band-basics.md §3. The calm, glanceable counterpart to
-the Processes page: the same six gauges rendered large, each with a 5-minute
-mini-sparkline and a persistent top-contributor list. No editing, no actions —
-power features stay on Processes.
+Spec: docs/modules/metric-band-basics.md §3 + graphs-hub.md §3 (r068, mockup M).
+The calm, glanceable counterpart to the Processes page: the same six gauges as
+**split cards** — a fixed gauge block on the LEFT (title + big bar + zone
+caption) and the top contributing processes on the RIGHT (rank, name, mini-bar
+proportional to the leader, value; click a row to select it on Processes). This
+supersedes the earlier gauge-plus-sparkline layout — history now lives on the
+Graphs surfaces. No editing, no actions — power features stay on Processes.
 
 Boundary law: this page consumes snapshots only. It installs NO sampler drain of
 its own — the Processes page owns the single GLib drain source (r046) and
@@ -20,7 +23,7 @@ gone); the same ``(ts, value)`` contract, now shared with the Graphs surfaces.
 
 from collections import deque
 
-from ui.compat import Gtk, css, layout, charts
+from ui.compat import Gtk, Pango, css, layout, charts
 
 from pages.page_base import BasePage
 from config.app_settings import AppSettings
@@ -52,8 +55,34 @@ _ZONE_RGB = {
 }
 _TROUGH_RGB = (0x3a / 255.0, 0x3a / 255.0, 0x3a / 255.0)
 
+# Contributor mini-bar colour per metric (mockup M): cpu/disk/load ride the
+# theme accent, the memory family a lighter blue. Network has no per-process
+# contributors (honest empty-state), so no bar.
+_CONTRIB_BAR_RGB = {
+    "cpu": (0x00 / 255.0, 0x78 / 255.0, 0xD7 / 255.0),
+    "disk": (0x00 / 255.0, 0x78 / 255.0, 0xD7 / 255.0),
+    "load": (0x00 / 255.0, 0x78 / 255.0, 0xD7 / 255.0),
+    "memory": (0x2e / 255.0, 0xa6 / 255.0, 0xff / 255.0),
+    "swap": (0x2e / 255.0, 0xa6 / 255.0, 0xff / 255.0),
+}
+_CONTRIB_BAR_TROUGH = (0x1b / 255.0, 0x1b / 255.0, 0x1b / 255.0)
+
 _NET_EMPTY = ("per-process network not available from /proc — "
               "interface totals on the Network graph")
+
+
+def contrib_fractions(values):
+    """Mini-bar fractions proportional to the leader (largest value).
+
+    Pure + fixture-testable (mockup M: each contributor's bar is sized against
+    the top row). ``None`` values and a non-positive leader yield ``0.0`` — an
+    absent contribution is never a fabricated bar.
+    """
+    nums = [v for v in values if v is not None]
+    leader = max(nums) if nums else 0.0
+    if leader <= 0:
+        return [0.0 for _ in values]
+    return [(v / leader) if v is not None else 0.0 for v in values]
 
 
 def _fmt_bytes(value):
@@ -80,8 +109,6 @@ class BasicsPage(BasePage):
 
     def build_content(self):
         self.settings = AppSettings.load()
-        self._show_sparklines = bool(
-            self.settings.get("basics.show_sparklines", True))
         self._jump = None
         self._history = None   # shared manager_history rings (injected)
         self._last_procs = {}
@@ -118,8 +145,14 @@ class BasicsPage(BasePage):
     # -- gauge construction ----------------------------------------------
 
     def _build_gauge(self, metric, label):
-        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        # Split card (mockup M / spec §3): fixed gauge block on the LEFT (title +
+        # big bar + zone caption), top contributing processes on the RIGHT.
+        card = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         css.add_css_class(card, "basics-card")
+
+        left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        css.add_css_class(left, "basics-left")
+        left.set_size_request(300, -1)
 
         head = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         name = Gtk.Label(label=label)
@@ -133,41 +166,31 @@ class BasicsPage(BasePage):
         value.set_markup("<span foreground='#888888'>—</span>")
         layout.box_add(head, name, False, False, 0)
         layout.box_add(head, value, True, True, 0)
-        layout.box_add(card, head, False, False, 0)
+        layout.box_add(left, head, False, False, 0)
 
         bar = charts.ChartArea(
             draw_func=lambda a, cr, w, h, m=metric: self._draw_bar(cr, w, h, m))
-        bar.set_size_request(-1, 16)
+        bar.set_size_request(-1, 14)
         bar.set_hexpand(True)
-        layout.box_add(card, bar, False, True, 0)
-
-        spark = None
-        if self._show_sparklines:
-            spark = charts.ChartArea(
-                draw_func=lambda a, cr, w, h, m=metric: self._draw_spark(cr, w, h, m))
-            spark.set_size_request(-1, 44)
-            spark.set_hexpand(True)
-            css.add_css_class(spark, "basics-spark")
-            layout.box_add(card, spark, False, True, 0)
+        layout.box_add(left, bar, False, True, 0)
 
         caption = Gtk.Label()
         caption.set_xalign(0)
         css.add_css_class(caption, "basics-gauge-sub")
-        layout.box_add(card, caption, False, False, 0)
+        layout.box_add(left, caption, False, False, 0)
+        layout.box_add(card, left, False, True, 0)
 
-        contrib_title = Gtk.Label(label="Top contributors")
-        contrib_title.set_xalign(0)
-        css.add_css_class(contrib_title, "basics-contrib-title")
-        layout.box_add(card, contrib_title, False, False, 0)
-
+        # Right: the processes driving this metric, mini-bar proportional to the
+        # leader. Populated by _rebuild_contrib on every snapshot.
         contrib = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        layout.box_add(card, contrib, False, False, 0)
+        css.add_css_class(contrib, "basics-right")
+        layout.box_add(card, contrib, True, True, 0)
 
         layout.box_add(self, card, False, False, 0)
         self._state[metric] = {"fraction": None, "zone": None}
         self._gauges[metric] = {
             "value": value, "caption": caption, "bar": bar,
-            "spark": spark, "contrib": contrib, "rows": [],
+            "contrib": contrib, "rows": [],
         }
 
     # -- snapshot application (forwarded by the Processes page) -----------
@@ -192,12 +215,6 @@ class BasicsPage(BasePage):
             refs["caption"].set_text(caption)
             self._state[metric] = {"fraction": frac, "zone": zone}
             refs["bar"].queue_draw()
-
-            # Ring inserts happen in the shared manager_history writer (content
-            # area, single drain thread) — here we only ask the spark to redraw
-            # from that ring.
-            if refs["spark"] is not None:
-                refs["spark"].queue_draw()
 
             self._prev[metric] = scalar
             self._rebuild_contrib(metric)
@@ -287,14 +304,15 @@ class BasicsPage(BasePage):
             self._add_note(refs, _NET_EMPTY)
             return
 
-        rows = mr.rank(self._last_procs, metric, mode="by_process", limit=5)
+        rows = mr.rank(self._last_procs, metric, mode="by_process", limit=4)
         if not rows:
             self._add_note(refs, "No contributors (—)")
             return
 
+        fractions = contrib_fractions([r["value"] for r in rows])
         note = " · ranks by CPU" if metric == "load" else ""
-        for i, row in enumerate(rows, 1):
-            self._add_row(refs, i, row, metric, note if i == 1 else "")
+        for i, (row, frac) in enumerate(zip(rows, fractions), 1):
+            self._add_row(refs, i, row, metric, frac, note if i == 1 else "")
 
     def _add_note(self, refs, text):
         label = Gtk.Label()
@@ -305,22 +323,47 @@ class BasicsPage(BasePage):
         label.show()
         refs["rows"].append(label)
 
-    def _add_row(self, refs, rank, row, metric, extra):
+    def _add_row(self, refs, rank, row, metric, frac, extra):
         button = Gtk.Button()
         button.set_relief(Gtk.ReliefStyle.NONE)
         css.add_css_class(button, "basics-contrib-row")
-        label = Gtk.Label()
-        label.set_xalign(0)
-        label.set_use_markup(True)
+
+        line = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+
+        rank_lbl = Gtk.Label(label="%d." % rank)
+        rank_lbl.set_xalign(0)
+        css.add_css_class(rank_lbl, "basics-contrib-rank")
+        layout.box_add(line, rank_lbl, False, False, 0)
+
+        name = Gtk.Label()
+        name.set_xalign(0)
+        name.set_use_markup(True)
+        name.set_ellipsize(Pango.EllipsizeMode.END)
         unit = (" <span size='small' foreground='#888888'>%s</span>"
                 % _escape(row["unit"])) if row["unit"] else ""
-        label.set_markup(
-            "%d. %s%s  <span foreground='#888888'>%s</span>%s" % (
-                rank, _escape(row["name"]), unit,
-                _escape(self._value_text(metric, row["value"])),
-                self._span(extra, "#666666")))
-        layout.set_child(button, label)
-        label.show()
+        name.set_markup("%s%s%s" % (
+            _escape(row["name"]), unit, self._span(extra, "#666666")))
+        layout.box_add(line, name, True, True, 0)
+
+        # Mini-bar proportional to the leader (mockup M), drawn via the seam.
+        bar = charts.ChartArea(
+            draw_func=lambda a, cr, w, h, f=frac, m=metric:
+            self._draw_contrib_bar(cr, w, h, f, m))
+        bar.set_size_request(110, 8)
+        bar.set_valign(Gtk.Align.CENTER)
+        layout.box_add(line, bar, False, False, 0)
+
+        value = Gtk.Label()
+        value.set_xalign(1)
+        value.set_use_markup(True)
+        css.add_css_class(value, "basics-contrib-val")
+        value.set_markup(self._span(
+            _escape(self._value_text(metric, row["value"])), "#dddddd"))
+        layout.box_add(line, value, False, False, 0)
+
+        layout.set_child(button, line)
+        for widget in (rank_lbl, name, bar, value, line):
+            widget.show()
         key = row["key"]
         button.connect("clicked", lambda _b, k=key: self._on_row_clicked(k))
         layout.box_add(refs["contrib"], button, False, False, 0)
@@ -358,43 +401,16 @@ class BasicsPage(BasePage):
         cr.rectangle(0, 0, max(0.0, min(1.0, frac)) * width, height)
         cr.fill()
 
-    def _draw_spark(self, cr, width, height, metric):
-        # Load has no Basics reading (the gauge shows "—"), so its spark stays
-        # empty here even though the shared ring now carries real load data —
-        # the Load chart lives on the Graphs page.
-        if metric == "load" or self._history is None:
+    def _draw_contrib_bar(self, cr, width, height, frac, metric):
+        cr.set_source_rgb(*_CONTRIB_BAR_TROUGH)
+        cr.rectangle(0, 0, width, height)
+        cr.fill()
+        if frac <= 0:
             return
-        pts = self._history.slice(metric, _RING_AGE_S)
-        if len(pts) < 2:
-            return
-        if metric == "network":
-            vmax = max((v for _t, v in pts if v is not None), default=0.0) or 1.0
-        else:
-            vmax = 100.0
-        t0 = pts[0][0]
-        span = max(1e-6, pts[-1][0] - t0)
-        rgb = _ZONE_RGB.get(
-            (self._state.get(metric) or {}).get("zone"), _ZONE_RGB[mr.ZONE_NOMINAL])
+        rgb = _CONTRIB_BAR_RGB.get(metric, _CONTRIB_BAR_RGB["cpu"])
         cr.set_source_rgb(*rgb)
-        cr.set_line_width(1.5)
-        started = False
-        prev_t = None
-        for ts, value in pts:
-            if value is None:
-                started = False
-                prev_t = ts
-                continue
-            if started and prev_t is not None and (ts - prev_t) > _GAP_S:
-                started = False  # a pause/backoff window renders as a gap
-            x = (ts - t0) / span * width
-            y = height - min(1.0, max(0.0, value / vmax)) * (height - 2) - 1
-            if not started:
-                cr.move_to(x, y)
-                started = True
-            else:
-                cr.line_to(x, y)
-            prev_t = ts
-        cr.stroke()
+        cr.rectangle(0, 0, max(0.0, min(1.0, frac)) * width, height)
+        cr.fill()
 
 
 def _escape(text):

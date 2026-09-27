@@ -739,6 +739,62 @@ scale slider:hover {
     margin-top: 6px;
 }
 
+/* r068 (mockup M) — chart legends: colour chip + label + live value.
+   Detail-page entries are flat clickable buttons (click-to-isolate a series);
+   hub entries are non-interactive labels. */
+.graph-legend {
+    margin-bottom: 2px;
+}
+
+.graph-legend-item {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    border-radius: 2px;
+    box-shadow: none;
+    padding: 1px 6px;
+    min-height: 0;
+    font-size: 9pt;
+    font-feature-settings: "tnum";
+}
+
+.graph-legend-item:hover {
+    background-color: #303030;
+}
+
+.graph-card-legend {
+    margin: 1px 0 2px 0;
+}
+
+.graph-card-legend-item {
+    font-size: 8pt;
+    color: #b0b0b0;
+    font-feature-settings: "tnum";
+    margin-right: 4px;
+}
+
+/* r068 (mockup M) — Basics split cards: gauge block left, contributors right. */
+.basics-left {
+    border-right: 1px solid #1c1c1c;
+    padding-right: 14px;
+}
+
+.basics-right {
+    padding-left: 12px;
+}
+
+.basics-contrib-rank {
+    font-size: 9pt;
+    color: #777777;
+    font-feature-settings: "tnum";
+}
+
+.basics-contrib-val {
+    font-size: 9pt;
+    color: #dddddd;
+    font-feature-settings: "tnum";
+}
+
 /* r062 — Graphs submenu: indented child buttons (Basics) */
 .nav-button.nav-sub {
     padding-left: 34px;

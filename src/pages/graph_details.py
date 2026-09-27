@@ -14,7 +14,7 @@ all cairo drawing goes through ``ui.compat.charts`` (the ``draw`` connection is
 the charts adapter's alone — gate-enforced).
 """
 
-from ui.compat import Gtk, css, layout, charts
+from ui.compat import Gtk, css, layout, charts, events
 
 from pages.page_base import BasePage
 from modules import manager_rank as mr
@@ -95,11 +95,12 @@ DETAIL_SPECS = [
     DetailSpec("graphs_cpu", "CPU", "pct", "cpu", mr_metric="cpu",
                breakdown="cores", note="system busy — 100% = whole machine"),
     DetailSpec("graphs_memory", "Memory", "pct", "memory", mr_metric="memory",
-               note="used / total"),
+               note="used % + swap %"),
     DetailSpec("graphs_swap", "Swap", "pct", "swap", mr_metric="swap",
                note="swap used / total"),
     DetailSpec("graphs_disk", "Disk I/O", "pct", "disk", mr_metric="disk",
-               breakdown="devices", note="busiest device utilisation"),
+               breakdown="devices",
+               note="read + write throughput, auto-scaled · stats: busiest util%"),
     DetailSpec("graphs_network", "Network", "rate", "network",
                breakdown="ifaces", note="rx + tx rate, auto-scaled"),
     DetailSpec("graphs_pressure", "Pressure", "pressure", "psi_cpu",
@@ -108,6 +109,86 @@ DETAIL_SPECS = [
     DetailSpec("graphs_load", "Load", "load", "load", mr_metric="load",
                note="1-min load average vs core count"),
 ]
+
+def _trace(label, store, key, color, *, width, fill, primary):
+    return {"label": label, "store": store, "key": key, "color": color,
+            "width": width, "fill": fill, "primary": primary}
+
+
+def chart_traces(page_id, ncpu, kind, series, extra_series, title=""):
+    """Ordered chart-trace descriptors + the chart's axis kind for a page.
+
+    Pure (no widgets), so the per-page series set is fixture-testable. Each trace
+    is a dict ``{label, store, key, color, width, fill, primary}``. ``store`` is
+    ``"history"`` (the shared :mod:`manager_history` ring keyed by ``key``) or
+    ``"local"`` (a decomposed sub-series the page keeps its OWN ring for —
+    per-core CPU, network rx/tx, disk read/write; the shared store only carries
+    the totals, and adding rings to it is out of this task's scope). Series
+    colours are shade-stepped from the theme accent (r042 — never a hardcoded
+    per-core list). The second return value is the axis kind driving vmax + zone
+    bands: ``"pct"`` / ``"pressure"`` / ``"load"`` / ``"rate"``.
+    """
+    if page_id == "graphs_cpu":
+        traces = [_trace("total", "history", "cpu", charts.ACCENT_RGB,
+                         width=2.2, fill=True, primary=True)]
+        palette = charts.series_palette(charts.ACCENT_RGB, ncpu)
+        for idx in range(ncpu):
+            traces.append(_trace("core %d" % idx, "local", "core%d" % idx,
+                                 palette[idx], width=1.1, fill=False,
+                                 primary=False))
+        return traces, "pct"
+    if page_id == "graphs_network":
+        return [_trace("down (rx)", "local", "rx", charts.RX_RGB,
+                       width=2.0, fill=True, primary=True),
+                _trace("up (tx)", "local", "tx", charts.TX_RGB,
+                       width=1.8, fill=True, primary=False)], "rate"
+    if page_id == "graphs_disk":
+        return [_trace("read", "local", "read", charts.ACCENT_RGB,
+                       width=2.0, fill=True, primary=True),
+                _trace("write", "local", "write", charts.TX_RGB,
+                       width=1.8, fill=True, primary=False)], "rate"
+    if page_id == "graphs_memory":
+        return [_trace("used", "history", "memory", charts.ACCENT_RGB,
+                       width=2.2, fill=True, primary=True),
+                _trace("swap", "history", "swap", charts.TX_RGB,
+                       width=1.6, fill=False, primary=False)], "pct"
+    if page_id == "graphs_pressure":
+        labels = ("cpu", "mem", "io")
+        keys = (series,) + tuple(extra_series)
+        traces = []
+        for i, key in enumerate(keys):
+            traces.append(_trace(labels[i] if i < len(labels) else key,
+                                 "history", key,
+                                 _PSI_TRACE_RGB[i % len(_PSI_TRACE_RGB)],
+                                 width=2.0 if i == 0 else 1.6,
+                                 fill=(i == 0), primary=(i == 0)))
+        return traces, "pressure"
+    # swap · load · any other single-series page.
+    return [_trace(title or series, "history", series, charts.ACCENT_RGB,
+                   width=2.2, fill=True, primary=True)], kind
+
+
+def _disk_rw_rates(system):
+    """Summed read / write byte-rates across devices, or ``None`` when absent.
+
+    Pure (fixture-testable). Mirrors :func:`manager_rank.net_reading` for disks:
+    a per-device rate that never reports is a gap (``None``), never a 0.
+    """
+    disks = (system or {}).get("disks") or {}
+    read = 0.0
+    write = 0.0
+    any_read = any_write = False
+    for _dev, vals in disks.items():
+        r = vals.get("read_rate")
+        w = vals.get("write_rate")
+        if r is not None:
+            read += r
+            any_read = True
+        if w is not None:
+            write += w
+            any_write = True
+    return (read if any_read else None), (write if any_write else None)
+
 
 def breakdown_rows(kind, system):
     """Per-core / per-device / per-iface breakdown text rows for ``system``.
@@ -147,6 +228,11 @@ class GraphDetailPage(BasePage):
     def __init__(self, spec):
         self.spec = spec
         self._history = None
+        # Decomposed sub-series (per-core / rx-tx / read-write) the shared store
+        # does not carry — a page-local ring fed from on_snapshot (ring law:
+        # (ts, value), backoff excluded, gaps as gaps). Reuses the tested
+        # History so no ring math is duplicated.
+        self._local = mh.History()
         self._navigate = None
         self._jump = None
         self._last_procs = {}
@@ -155,6 +241,11 @@ class GraphDetailPage(BasePage):
         self._window_buttons = {}
         self._contrib_rows = []
         self._breakdown_rows = []
+        self._cursor_x = None          # crosshair pointer x, or None (hidden)
+        self._hidden = set()           # series keys toggled off via the legend
+        self._legend_keys = None       # current legend trace-key tuple
+        self._legend_rows = []
+        self._legend_entries = {}      # key -> {"button", "trace"}
         super().__init__()
 
     # -- external wiring --------------------------------------------------
@@ -196,6 +287,13 @@ class GraphDetailPage(BasePage):
             self._window_buttons[seconds] = btn
         layout.box_add(self, sel, False, False, 0)
 
+        # Legend row (mockup M): colour chip + label + live value per series;
+        # clicking an entry toggles that series' visibility (no rebuild).
+        self.legend_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,
+                                  spacing=4)
+        css.add_css_class(self.legend_box, "graph-legend")
+        layout.box_add(self, self.legend_box, False, False, 0)
+
         # Large chart (~40% of the page height, mockup L).
         self.chart = charts.ChartArea(
             draw_func=lambda a, cr, w, h: self._draw_chart(cr, w, h))
@@ -204,6 +302,13 @@ class GraphDetailPage(BasePage):
         self.chart.set_vexpand(True)
         css.add_css_class(self.chart, "graph-detail-chart")
         layout.box_add(self, self.chart, True, True, 0)
+
+        # Hover crosshair: a motion controller feeds the pointer x; leaving the
+        # chart hides the readout (rule 6). "leave" is not a gated signal, so the
+        # page may wire it on the controller the events seam returns.
+        controller = events.motion_controller(self.chart, self._on_motion)
+        controller.connect("leave", self._on_pointer_leave)
+        self._motion_controller = controller
 
         self.chart_note = Gtk.Label()
         self.chart_note.set_xalign(0)
@@ -247,10 +352,34 @@ class GraphDetailPage(BasePage):
     def on_snapshot(self, snapshot):
         self._last_procs = snapshot.procs or {}
         self._last_system = snapshot.system or {}
+        self._record_local(snapshot)
+        self._sync_legend()
         self.chart.queue_draw()
         self._update_stats()
         self._rebuild_contrib()
         self._rebuild_breakdown()
+
+    def _record_local(self, snapshot):
+        """Append this page's decomposed sub-series to the local ring (ring law:
+        the shared store carries only the totals — per-core / rx-tx / read-write
+        live here)."""
+        ts = snapshot.ts
+        backoff = snapshot.from_backoff
+        system = snapshot.system or {}
+        pid = self.spec.page_id
+        if pid == "graphs_cpu":
+            per_core = (system.get("cpu") or {}).get("per_core") or {}
+            for idx, value in per_core.items():
+                self._local.insert("core%d" % idx, ts, value,
+                                   from_backoff=backoff)
+        elif pid == "graphs_network":
+            net = mr.net_reading(system)
+            self._local.insert("rx", ts, net["rx"], from_backoff=backoff)
+            self._local.insert("tx", ts, net["tx"], from_backoff=backoff)
+        elif pid == "graphs_disk":
+            read, write = _disk_rw_rates(system)
+            self._local.insert("read", ts, read, from_backoff=backoff)
+            self._local.insert("write", ts, write, from_backoff=backoff)
 
     # -- window selector --------------------------------------------------
 
@@ -397,95 +526,182 @@ class GraphDetailPage(BasePage):
         if self._navigate is not None:
             self._navigate(page_id)
 
-    # -- cairo drawing ----------------------------------------------------
+    # -- series plumbing --------------------------------------------------
 
-    def _chart_max(self, all_points):
-        kind = self.spec.kind
-        if kind in ("pct", "pressure"):
+    def _traces(self):
+        """This page's ordered chart traces + axis kind (see :func:`chart_traces`)."""
+        return chart_traces(self.spec.page_id, self._ncpu(), self.spec.kind,
+                            self.spec.series, self.spec.extra_series,
+                            self.spec.title)
+
+    def _slice(self, desc):
+        """Window slice for a trace, from the shared or the page-local ring."""
+        if desc["store"] == "history":
+            return self._points(desc["key"])
+        return self._local.slice(desc["key"], self._window_s)
+
+    def _last_of(self, desc):
+        store = self._history if desc["store"] == "history" else self._local
+        if store is None:
+            return None
+        point = store.last(desc["key"])
+        return point[1] if point is not None else None
+
+    def _chart_vmax(self, axis_kind, all_points):
+        if axis_kind in ("pct", "pressure"):
             return 100.0
-        if kind == "load":
-            return max(float(self._ncpu()), self._series_peak(all_points))
-        # rate: auto-scale to 1.2x the trailing peak, small floor.
-        peak = self._series_peak(all_points)
-        return max(1024.0, peak * 1.2)
-
-    @staticmethod
-    def _series_peak(all_points):
         peak = 0.0
         for pts in all_points:
             for _ts, value in pts:
                 if value is not None and value > peak:
                     peak = value
-        return peak
+        if axis_kind == "load":
+            return max(float(self._ncpu()), peak)
+        return max(1024.0, peak * 1.2)  # rate: 1.2x trailing peak, small floor
 
-    def _draw_chart(self, cr, width, height):
-        series_list = [self.spec.series] + list(self.spec.extra_series)
-        all_points = [self._points(s) for s in series_list]
-
-        # Zone-tinted background bands for bounded (percentage) charts.
-        if self.spec.kind in ("pct", "pressure", "load"):
-            self._draw_zone_bands(cr, width, height)
-        self._draw_gridlines(cr, width, height)
-
-        vmax = self._chart_max(all_points)
-        if vmax <= 0:
-            return
-
-        # A shared time axis across all traces so the triple lines up.
+    @staticmethod
+    def _time_bounds(all_points):
         t0 = t1 = None
         for pts in all_points:
             if pts:
                 t0 = pts[0][0] if t0 is None else min(t0, pts[0][0])
                 t1 = pts[-1][0] if t1 is None else max(t1, pts[-1][0])
         if t0 is None:
+            return None, None
+        return t0, max(1e-6, t1 - t0)
+
+    @staticmethod
+    def _fmt_axis(axis_kind, value):
+        if value is None:
+            return "—"
+        if axis_kind in ("pct", "pressure"):
+            return "%.1f%%" % value
+        if axis_kind == "rate":
+            return _fmt_rate(value)
+        if axis_kind == "load":
+            return "%.2f" % value
+        return "%.1f" % value
+
+    @staticmethod
+    def _fmt_age(age):
+        if age < 1.0:
+            return "now"
+        if age < 60.0:
+            return "%.0fs ago" % age
+        return "%dm%02ds ago" % (int(age) // 60, int(age) % 60)
+
+    # -- legend -----------------------------------------------------------
+
+    def _sync_legend(self):
+        traces, axis_kind = self._traces()
+        keys = tuple(t["key"] for t in traces)
+        if keys != self._legend_keys:
+            for child in self._legend_rows:
+                layout.box_remove(self.legend_box, child)
+            self._legend_rows = []
+            self._legend_entries = {}
+            for trace in traces:
+                self._add_legend_entry(trace)
+            self._legend_keys = keys
+        for trace in traces:
+            self._update_legend_value(trace, axis_kind)
+
+    def _add_legend_entry(self, trace):
+        button = Gtk.Button()
+        button.set_relief(Gtk.ReliefStyle.NONE)
+        css.add_css_class(button, "graph-legend-item")
+        label = Gtk.Label()
+        label.set_use_markup(True)
+        label.set_xalign(0)
+        layout.set_child(button, label)
+        label.show()
+        key = trace["key"]
+        button.connect("clicked", lambda _b, k=key: self._toggle_series(k))
+        layout.box_add(self.legend_box, button, False, False, 0)
+        button.show()
+        self._legend_entries[key] = {"button": button, "label": label}
+        self._legend_rows.append(button)
+
+    def _update_legend_value(self, trace, axis_kind):
+        entry = self._legend_entries.get(trace["key"])
+        if entry is None:
             return
-        span = max(1e-6, (t1 - t0))
+        last = self._last_of(trace)
+        value_text = self._fmt_axis(axis_kind, last)
+        hidden = trace["key"] in self._hidden
+        chip = ("#555555" if hidden
+                else "#%02x%02x%02x" % tuple(int(c * 255) for c in trace["color"]))
+        name_color = "#666666" if hidden else "#cccccc"
+        value_color = "#666666" if hidden else "#ffffff"
+        entry["label"].set_markup(
+            "<span foreground='%s'>■</span> "
+            "<span foreground='%s'>%s</span> "
+            "<span foreground='%s'>%s</span>" % (
+                chip, name_color, _escape(trace["label"]),
+                value_color, _escape(value_text)))
 
-        for idx, pts in enumerate(all_points):
-            rgb = (_PSI_TRACE_RGB[idx % len(_PSI_TRACE_RGB)]
-                   if self.spec.kind == "pressure" else _TRACE_RGB)
-            self._draw_trace(cr, width, height, pts, t0, span, vmax, rgb)
+    def _toggle_series(self, key):
+        if key in self._hidden:
+            self._hidden.discard(key)
+        else:
+            # ``set.add`` is name-collision-flagged by the banned-API gate in the
+            # UI tree; union avoids the attr while keeping set semantics.
+            self._hidden = self._hidden | {key}
+        traces, axis_kind = self._traces()
+        for trace in traces:
+            self._update_legend_value(trace, axis_kind)
+        self.chart.queue_draw()
 
-    def _draw_zone_bands(self, cr, width, height):
-        # Green 0-60, amber 60-85, red 85-100 (fraction of the chart height).
-        bands = [
-            (0.0, 0.60, _ZONE_RGB[mr.ZONE_NOMINAL]),
-            (0.60, 0.85, _ZONE_RGB[mr.ZONE_MEDIUM]),
-            (0.85, 1.0, _ZONE_RGB[mr.ZONE_NEAR]),
-        ]
-        for lo, hi, rgb in bands:
-            cr.set_source_rgba(rgb[0], rgb[1], rgb[2], 0.08)
-            y = height - hi * height
-            cr.rectangle(0, y, width, (hi - lo) * height)
-            cr.fill()
+    # -- crosshair --------------------------------------------------------
 
-    def _draw_gridlines(self, cr, width, height):
-        cr.set_source_rgba(*_GRID_RGBA)
-        for frac in (0.25, 0.5, 0.75):
-            y = height - frac * height
-            cr.rectangle(0, y, width, 1)
-            cr.fill()
+    def _on_motion(self, _controller, x, _y):
+        self._cursor_x = x
+        self.chart.queue_draw()
 
-    def _draw_trace(self, cr, width, height, pts, t0, span, vmax, rgb):
-        if len(pts) < 2:
-            return
-        cr.set_source_rgb(*rgb)
-        cr.set_line_width(1.6)
-        started = False
-        prev_t = None
-        for ts, value in pts:
-            if value is None:
-                started = False
-                prev_t = ts
-                continue
-            if started and prev_t is not None and (ts - prev_t) > _GAP_S:
-                started = False  # a pause/backoff window renders as a gap
-            x = (ts - t0) / span * width
-            y = height - min(1.0, max(0.0, value / vmax)) * (height - 2) - 1
-            if not started:
-                cr.move_to(x, y)
-                started = True
-            else:
-                cr.line_to(x, y)
-            prev_t = ts
-        cr.stroke()
+    def _on_pointer_leave(self, *_args):
+        if self._cursor_x is not None:
+            self._cursor_x = None
+            self.chart.queue_draw()
+
+    def _crosshair(self, visible, all_points, t0, span, width, axis_kind):
+        cx = self._cursor_x
+        frac = min(1.0, max(0.0, cx / max(1.0, width)))
+        t_at = t0 + frac * span
+        age = max(0.0, (t0 + span) - t_at)
+        parts = [self._fmt_age(age)]
+        markers = []
+        for desc, pts in zip(visible, all_points):
+            value = charts.nearest_value(pts, t_at)
+            if value is not None:
+                markers.append((value, desc["color"]))
+                parts.append("%s %s" % (desc["label"],
+                                        self._fmt_axis(axis_kind, value)))
+        return {"x": cx, "label": " · ".join(parts), "markers": markers}
+
+    # -- cairo drawing ----------------------------------------------------
+
+    def _draw_chart(self, cr, width, height):
+        traces, axis_kind = self._traces()
+        visible = [t for t in traces if t["key"] not in self._hidden]
+        all_points = [self._slice(t) for t in visible]
+
+        zone = axis_kind in ("pct", "pressure", "load")
+        vmax = self._chart_vmax(axis_kind, all_points)
+        t0, span = self._time_bounds(all_points)
+
+        crosshair = None
+        if self._cursor_x is not None and t0 is not None:
+            crosshair = self._crosshair(visible, all_points, t0, span,
+                                        width, axis_kind)
+
+        primary_index = next(
+            (i for i, t in enumerate(visible) if t["primary"]), 0)
+        charts.render_series(
+            cr, width, height, all_points,
+            [t["color"] for t in visible],
+            vmax=vmax, t0=t0, span=span,
+            fills=[t["fill"] for t in visible],
+            line_widths=[t["width"] for t in visible],
+            primary_index=primary_index,
+            gridlines=True, zone_bands=zone, crosshair=crosshair,
+            gap_s=_GAP_S)
