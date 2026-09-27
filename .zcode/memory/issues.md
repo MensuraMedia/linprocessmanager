@@ -11,3 +11,6 @@
 - 2026-09-27 10:12 | do_activate | NameError: name 'os' is not defined
 - 2026-09-27 10:36 | do_activate | Error: gtk-css-provider-error-quark: <data>:814:17not a number (1)
 - 2026-09-27 12:09 | group end | NameError: name 'procfs' is not defined
+- 2026-09-27 12:29 | do_activate | AttributeError: 'Button' object has no attribute 'set_child'
+- 2026-09-27 12:30 | do_activate | AttributeError: 'Button' object has no attribute 'set_child'
+- 2026-09-27 12:31 | do_activate | AttributeError: 'Box' object has no attribute 'set_xalign'

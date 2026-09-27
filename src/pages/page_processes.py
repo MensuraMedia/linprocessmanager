@@ -1101,7 +1101,52 @@ class ProcessesPage(BasePage):
         model.append_section(None, later)
         return model
 
+    def _open_column_chooser(self, x, y):
+        """Right-click on the column headers: add/remove columns (r075)."""
+        popover = Gtk.Popover()
+        popover.set_relative_to(self.treeview)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        box.set_margin_top(10); box.set_margin_bottom(10)
+        box.set_margin_start(12); box.set_margin_end(12)
+        head = Gtk.Label(label="Visible columns")
+        head.set_xalign(0)
+        css.add_css_class(head, "gauge-k")
+        layout.box_add(box, head, False, False, 0)
+        for key in COLUMN_KEYS:
+            column = self._columns.get(key)
+            if column is None:
+                continue
+            check = Gtk.CheckButton(label=self._COLUMN_TITLES[key])
+            check.set_active(column.get_visible())
+            check.connect("toggled", self._on_column_toggled, key)
+            layout.box_add(box, check, False, False, 0)
+        layout.set_child(popover, box)  # GTK3 add / GTK4 set_child
+        rectangle = Gdk.Rectangle()
+        rectangle.x, rectangle.y = int(x), int(y)
+        popover.set_pointing_to(rectangle)
+        popover.popup()
+        self._column_popover = popover  # keep alive
+
+    def _on_column_toggled(self, check, key):
+        column = self._columns.get(key)
+        if column is None:
+            return
+        column.set_visible(check.get_active())
+        visible = [k for k, col in self._columns.items() if col.get_visible()]
+        self.settings.set("columns", {
+            "visible": visible,
+            "widths": self.settings.get("columns", {}).get("widths", {})})
+        self.settings.save()
+
     def _on_row_menu(self, _gesture, _n_press, x, y):
+        # r075: a right-click over the COLUMN HEADER opens the column
+        # chooser; only right-clicks on data rows open the process menu.
+        path = self.treeview.get_path_at_pos(x, y)
+        if path is None:
+            self._open_column_chooser(x, y)
+            return
+        if self._compact_strip or True:
+            pass
         # Right-click selects the row under the pointer unless it is already
         # part of a multi-selection (then the menu acts on the whole set).
         path = self._path_at(x, y)

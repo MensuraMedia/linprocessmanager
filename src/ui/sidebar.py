@@ -113,22 +113,27 @@ class Sidebar(Gtk.Box):
         # Main navigation items (linprocman nav shell) — see module NAV_ITEMS.
         self.nav_buttons = {}
         for label, page_id, is_top in NAV_ITEMS:
-            button = self.create_nav_button(label, page_id, is_top=is_top)
+            button = self.create_nav_button(label, page_id, is_top=is_top,
+                                            is_group=True)
             children = SUBMENUS.get(page_id)
             if children:
                 # r073: collapsible group — expands DOWNWARD, caret rotates;
                 # clicking the group navigates to the hub and expands.
                 css.add_css_class(button, "nav-group")
-                caret = Gtk.Image.new_from_file(os.path.join(
-                    os.path.dirname(os.path.abspath(__file__)), "..", "..",
-                    "resources", "icons", "regular", "caret-right.svg"))
-                caret.set_pixel_size(11)
+                # r075: pixbuf-at-size — Gtk.Image.set_pixel_size does not
+                # scale SVG-file images here (the logo path proves the API)
+                caret_pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(
+                    os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                 "..", "..", "resources", "icons", "regular",
+                                 "caret-right.svg"), 11, 11)
+                caret = Gtk.Image.new_from_pixbuf(caret_pixbuf)
                 caret.set_halign(Gtk.Align.END)
-                caret.set_hexpand(True)
                 css.add_css_class(caret, "nav-caret")
-                box = button.get_child()
-                if isinstance(box, Gtk.Box):
-                    layout.box_add(box, caret, False, False, 8)
+                # r075: group buttons carry an HBox child so the caret can
+                # sit RIGHT-ALIGNED as a persistent submenu indicator (the
+                # label-only child silently dropped it — r073 defect).
+                gbox = button.get_child()  # HBox from is_group=True
+                layout.box_add(gbox, caret, False, False, 0)
                 self.submenus[page_id] = {"caret": caret, "children": []}
                 layout.box_add(nav_box_top, button, False, False, 0)
                 self.nav_buttons[page_id] = button
@@ -167,7 +172,7 @@ class Sidebar(Gtk.Box):
         layout.box_add(self, nav_box_bottom, False, False, 0)
     
     def create_nav_button(self, label, page_id, is_top=False, is_bottom=False,
-                          indent=False):
+                          indent=False, is_group=False):
         """
         Create navigation button
 
@@ -181,7 +186,15 @@ class Sidebar(Gtk.Box):
         Returns:
             Gtk.Button: Configured navigation button
         """
-        button = Gtk.Button(label=label)
+        button = Gtk.Button()
+        if is_group:
+            hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            lbl = Gtk.Label(label=label, xalign=0)
+            lbl.set_hexpand(True)
+            layout.box_add(hbox, lbl, True, True, 0)
+            layout.set_child(button, hbox)  # GTK3 add / GTK4 set_child
+        else:
+            button.set_label(label)
         css.add_css_class(button, 'nav-button')
         if indent:
             css.add_css_class(button, 'nav-sub')
@@ -198,7 +211,8 @@ class Sidebar(Gtk.Box):
         button.connect("clicked", self.on_nav_clicked, page_id)
         
         button_label = button.get_child()
-        button_label.set_xalign(0)
+        if hasattr(button_label, "set_xalign"):  # HBox children pre-aligned
+            button_label.set_xalign(0)
         
         return button
     
@@ -217,17 +231,16 @@ class Sidebar(Gtk.Box):
         if info is None or box is None:
             return
         box.set_visible(expanded)
-        info["caret"].set_from_file(os.path.join(
+        caret_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), "..", "..",
             "resources", "icons", "regular",
-            "caret-down.svg" if expanded else "caret-right.svg"))
+            "caret-down.svg" if expanded else "caret-right.svg")
+        info["caret"].set_from_pixbuf(
+            GdkPixbuf.Pixbuf.new_from_file_at_size(caret_path, 11, 11))
 
     def on_nav_clicked(self, button, page_id):
         """Handle navigation click"""
-        if page_id in self.submenu_boxes and \
-                self.submenu_boxes[page_id].get_visible():
-            # expanded group clicked again → collapse (children included)
-            self.expand_submenu(page_id, False)
+        # r075: expansion persists across navigation — no auto-collapse.
         self.set_active_button(button)
         self.nav_manager.navigate_to(page_id)
         # r073: a child click expands its parent's submenu (downward)
