@@ -181,6 +181,8 @@ class ProcessesPage(BasePage):
         if self._compact_strip:
             self._build_statusbar()   # r055 fallback: strip below the filter
         self._build_confirm_bar() # r065: inline confirm (no floating modal)
+        self._fit_source_id = None
+        self._fit_pending = False
         self._build_notice()
         self._build_table()
         self._build_row_actions()
@@ -534,7 +536,7 @@ class ProcessesPage(BasePage):
         # r060 defect fix: variable-width value text changed the gauge's
         # minimum requisition, so cards expanded/contracted with the bar.
         # Pin the text width (ellipsis) — cards stay fixed; only the bar moves.
-        value.set_width_chars(11)
+        value.set_max_width_chars(11)
         value.set_ellipsize(Pango.EllipsizeMode.END)
         layout.box_add(head, name, False, False, 0)
         layout.box_add(head, value, True, True, 0)
@@ -550,7 +552,7 @@ class ProcessesPage(BasePage):
 
         caption = Gtk.Label()
         caption.set_xalign(0)
-        caption.set_width_chars(26)
+        caption.set_max_width_chars(26)
         caption.set_ellipsize(Pango.EllipsizeMode.END)
         layout.box_add(box, caption, False, False, 0)
 
@@ -808,6 +810,9 @@ class ProcessesPage(BasePage):
         self.sampler = sampler
         self._app = app
         sampler.set_interval(self.settings.get("refresh_interval_s", 2.0))
+        toplevel = self.get_toplevel()
+        if toplevel is not self:
+            toplevel.connect("check-resize", self._on_toplevel_resize)
         self._register_actions(app)
         if self._drain_source_id is None:
             self._drain_source_id = GLib.timeout_add(
@@ -985,6 +990,34 @@ class ProcessesPage(BasePage):
             column.set_sort_indicator(active)
             if active:
                 column.set_sort_order(order)
+
+    def _on_toplevel_allocate(self, toplevel, allocation):
+        """r077: proportional column-fit — when the window is narrower than
+        the persisted column widths, scale them down (never below 60px) so
+        the table always fits the window width. Runs debounced."""
+        if self._built:
+            self._fit_columns_to_width()
+
+    def _fit_columns_to_width(self):
+        tv_width = max(120, self.treeview.get_allocated_width() - 20)
+        visible = [c for k, c in self._columns.items() if c.get_visible()]
+        if not visible:
+            return
+        current = sum(c.get_width() or c.get_fixed_width() or 100
+                      for c in visible)
+        if current <= tv_width:
+            return  # fits — leave persisted widths alone
+        scale = tv_width / current
+        for c in visible:
+            w = c.get_width() or 100
+            c.set_fixed_width(max(60, int(w * scale)))
+
+    def _on_toplevel_resize(self, _toplevel):
+        # r077: debounce proportional column fit
+        if self._fit_source_id is not None:
+            GLib.source_remove(self._fit_source_id)
+        self._fit_source_id = GLib.timeout_add(250, self._fit_columns_to_width)
+        return False
 
     def _on_column_width(self, column, _pspec, key):
         if not self._built:
