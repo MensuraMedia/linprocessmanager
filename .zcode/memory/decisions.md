@@ -179,3 +179,13 @@ Record architectural decisions with rationale. Newest at the bottom.
     Window-ID pixel proof without raising: xwd -id <win> + in-repo XWD
     parser (PIL lacks XWD; no convert/netpbm on this box) — immune to
     GNOME focus-stealing-prevention which now blocks wmctrl raises.
+25. **Continuous cycle (r058).** Phase-2 closed (8/8 close-review fixes);
+    Phase 3 actions merged and LIVE-verified (real process killed via the
+    library path, EPERM errno surfaced, guard refuses reused PID).
+    Backlog discipline: .zcode/tasks/BACKLOG.md (OPT/INNOV/DEBT) absorbs
+    optimizations + innovations so mainline stays phase-ordered; backlog
+    items ride executors when scope-adjacent (D6 entry-dialog seam logged
+    by executor itself). PROCESS DEVIATION logged: 006 ran on main (branch
+    cut skipped) — verification chain unchanged, discipline restored.
+    Standing: per-phase tests + s009 backups at every phase close;
+    GUI walk needs no-raise window capture (xwd parser) per r057.
