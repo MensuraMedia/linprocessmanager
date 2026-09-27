@@ -16,7 +16,7 @@ import signal
 import time
 from collections import deque
 
-from ui.compat import (Gtk, Gdk, GdkPixbuf, GLib, Gio, GTK_MAJOR,
+from ui.compat import (Gtk, Gdk, GdkPixbuf, GLib, Gio, Pango, GTK_MAJOR,
                        icons, css, events, layout, menu, dialogs, charts)
 
 from pages.page_base import BasePage
