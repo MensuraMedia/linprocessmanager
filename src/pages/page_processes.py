@@ -536,7 +536,8 @@ class ProcessesPage(BasePage):
         # r060 defect fix: variable-width value text changed the gauge's
         # minimum requisition, so cards expanded/contracted with the bar.
         # Pin the text width (ellipsis) — cards stay fixed; only the bar moves.
-        value.set_max_width_chars(11)
+        value.set_width_chars(11)        # r086: fixed requisition (§5b)
+        value.set_max_width_chars(11)    # r079 cap kept
         value.set_ellipsize(Pango.EllipsizeMode.END)
         layout.box_add(head, name, False, False, 0)
         layout.box_add(head, value, True, True, 0)
@@ -552,6 +553,7 @@ class ProcessesPage(BasePage):
 
         caption = Gtk.Label()
         caption.set_xalign(0)
+        caption.set_width_chars(26)      # r086: fixed requisition (§5b)
         caption.set_max_width_chars(26)
         caption.set_ellipsize(Pango.EllipsizeMode.END)
         layout.box_add(box, caption, False, False, 0)

@@ -114,7 +114,6 @@ class BasicsPage(BasePage):
         self._last_procs = {}
         self._last_system = {}
         self._net_history = deque(maxlen=_RING_MAX)
-        self._prev = {}       # metric -> previous scalar (delta arrows)
         self._state = {}      # metric -> {"fraction", "zone"}
         self._gauges = {}     # metric -> widget refs
 
@@ -165,7 +164,8 @@ class BasicsPage(BasePage):
         css.add_css_class(value, "basics-gauge-v")
         # r071 bounding-box policy: dynamic text is pinned + ellipsized so the
         # card's natural width can never grow with the displayed value.
-        value.set_max_width_chars(12)
+        value.set_width_chars(12)        # r086: fixed requisition (§5b)
+        value.set_max_width_chars(12)    # r079 cap kept
         value.set_ellipsize(Pango.EllipsizeMode.END)
         value.set_markup("<span foreground='#888888'>—</span>")
         layout.box_add(head, name, False, False, 0)
@@ -180,6 +180,7 @@ class BasicsPage(BasePage):
 
         caption = Gtk.Label()
         caption.set_xalign(0)
+        caption.set_width_chars(34)      # r086: fixed requisition (§5b)
         caption.set_max_width_chars(34)
         caption.set_ellipsize(Pango.EllipsizeMode.END)
         css.add_css_class(caption, "basics-gauge-sub")
@@ -222,12 +223,9 @@ class BasicsPage(BasePage):
             self._state[metric] = {"fraction": frac, "zone": zone}
             refs["bar"].queue_draw()
 
-            self._prev[metric] = scalar
             self._rebuild_contrib(metric)
 
     # -- readings + formatting -------------------------------------------
-
-    _UP, _DOWN, _FLAT = "▲", "▼", "·"
 
     @staticmethod
     def _span(text, color):
@@ -238,16 +236,6 @@ class BasicsPage(BasePage):
         if rgb is None:
             return "#d0d0d0"
         return "#%02x%02x%02x" % tuple(int(c * 255) for c in rgb)
-
-    def _arrow(self, metric, cur, threshold):
-        prev = self._prev.get(metric)
-        if cur is None or prev is None:
-            return self._span(self._FLAT, "#d0d0d0")
-        if abs(cur - prev) < threshold:
-            return self._span(self._FLAT, "#d0d0d0")
-        if cur > prev:
-            return self._span(self._UP, "#e04c4c")
-        return self._span(self._DOWN, "#3fbf6f")
 
     def _read(self, metric, system, ceiling, net):
         """Return ``(fraction, zone, value_markup, caption, scalar)`` for a gauge.
@@ -276,8 +264,7 @@ class BasicsPage(BasePage):
             frac = mr.fraction(total, ceiling)
             zone = mr.capacity_zone((frac or 0.0) * 100.0) if total is not None else None
             value = _fmt_rate(total)
-            arrow = self._arrow("network", total, 1024.0)
-            markup = self._span(value, self._zone_hex(zone)) + " " + arrow
+            markup = self._span(value, self._zone_hex(zone))
             cap = "↓%s  ↑%s · ceiling %s" % (
                 _fmt_rate(net["rx"]), _fmt_rate(net["tx"]), _fmt_rate(ceiling))
             return frac, zone, markup, cap, total
@@ -289,12 +276,14 @@ class BasicsPage(BasePage):
     def _pct_gauge(self, metric, pct, fmt, caption, threshold):
         frac = None if pct is None else max(0.0, min(1.0, pct / 100.0))
         zone = mr.capacity_zone(pct)
-        arrow = self._arrow(metric, pct, threshold)
+        # r086: no delta suffix — r070 removed arrows from the band but the
+        # Basics cards kept appending the flat marker "·", leaving every
+        # value rendering as "14% ·". Zone color only, per r070.
         if pct is None:
             value = self._span("—", "#888888")
         else:
             value = self._span(fmt % pct, self._zone_hex(zone))
-        return frac, zone, value + " " + arrow, caption, pct
+        return frac, zone, value, caption, pct
 
     # -- contributor lists ------------------------------------------------
 
