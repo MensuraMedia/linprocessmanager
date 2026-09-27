@@ -133,18 +133,16 @@ class Sidebar(Gtk.Box):
                 # sit RIGHT-ALIGNED as a persistent submenu indicator (the
                 # label-only child silently dropped it — r073 defect).
                 gbox = button.get_child()  # HBox from is_group=True
-                # r081: the caret is the expand/collapse TOGGLE — left-click
-                # expands the children downward or contracts them upward
-                # without navigating (r075 left no collapse path at all).
-                # click_gesture is the compat-sanctioned press path (raw
-                # button-press-event is gate-banned outside the compat
-                # adapters); the EventBox sits above the button, so the
-                # click never reaches it.
+                # r081: the caret is the expand/collapse TOGGLE — click it
+                # to expand the children downward or contract them upward
+                # without navigating. press_swallow (compat seam) STOPS the
+                # press at the EventBox: a real-event test proved the plain
+                # gesture route still activated the group button (the click
+                # toggled AND navigated — cross-review P2-1).
                 toggle = Gtk.EventBox(above_child=True)
                 layout.set_child(toggle, caret)
-                gesture = events.click_gesture(
-                    toggle,
-                    lambda g, n, x, y, pid=page_id:
+                gesture = events.press_swallow(
+                    toggle, lambda x, y, pid=page_id:
                         self._on_caret_toggle(pid), button=1)
                 layout.box_add(gbox, toggle, False, False, 0)
                 self.submenus[page_id] = {"caret": caret, "gesture": gesture,

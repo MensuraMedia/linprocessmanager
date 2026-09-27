@@ -65,3 +65,5 @@ other's work in that chain.
 - P2s fixed: N_COLUMNS off-by-one; dead rank-popover machinery deleted;
   page_resources.py removed. 243+5 tests. Mockups: Disks + Peripherals
   served at :8931 for operator review (Phase 6 / Peripherals decision).
+
+| r081 | design/planning consult + cross-review of da875fc (plan mode, read-only) | cost not captured by harness — first plan-mode dispatch; verdict FIX-FIRST (P2-1 caret real-event proof) → fixed in r081b |
