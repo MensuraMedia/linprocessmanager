@@ -23,3 +23,13 @@
   'Dashboard' → 'linprocman' (executor flagged both as out-of-scope).
 - Phase 2 (live table: sampler → flat table, diff-in-place, sort/filter,
   VmSwap, keyboard, settings skeleton) is the next contract to draft.
+- MACHINE RESTART PENDING (2026-09-27 evening): app stopped via
+  `systemctl --user stop linprocman-app`. After reboot relaunch with:
+  systemd-run --user --unit=linprocman-app --setenv=DISPLAY=:0
+  /home/user/.local/bin/linprocman
+  Then verify per docs/HANDOFF.md §3 (tests → live walk → journal).
+- Next work cycle: task 010 (preview pane per process-preview.md + chart
+  double-click → per-metric contributor pages), then Disks build-out and
+  Peripherals per operator mandate (mockups first, concept docs updated).
+- issues.md tail entries are historical (all resolved by r073/r075) — keep
+  for triage context only.
