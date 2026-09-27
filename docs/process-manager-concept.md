@@ -43,6 +43,7 @@ self-reliant — no web-based resources at build or runtime, ever.
 | [modules/log-frequency.md](modules/log-frequency.md) | `manager_frequency.py` | right-click Frequency: pattern histogram, incident bands, related events, export |
 | [modules/process-preview.md](modules/process-preview.md) | preview pane + columns + menu | extended 22-column chooser, process preview, context menu, per-process net attribution |
 | [modules/telemetry-watch.md](modules/telemetry-watch.md) | `manager_telemetry.py` (concept) | Telemetry Watch: unattended-egress scoring, fingerprint rules, allow/deny — Phase 5 |
+| [modules/metric-band-basics.md](modules/metric-band-basics.md) | band + `page_basics.py` | Variant-2 metric band, click-through top-10 drill-downs, Basics page — Phase 4.5 |
 | [modules/sysfs-data.md](modules/sysfs-data.md) | `sysfs.py` | hwmon temperatures, cpufreq, AMD GPU chip |
 
 Module boundaries are load-bearing: only `procfs.py` and `sysfs.py` read

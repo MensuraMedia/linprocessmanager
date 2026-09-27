@@ -26,6 +26,7 @@ debt/prevention) and the phase where it naturally fits.
 | I5 | **Snapshot export** — one-click JSON/CSV of the current table (incident reporting) | INNOV | 6 | sanctioned export path exists |
 | I6 | **Watch mode** — pin a process; strip sparkline follows it even when scrolled away; notify-on-exit (GLib.Notification, offline) | INNOV | 6 | operator gate for the notification part |
 | I7 | **Zombie reaper assistant** — lists zombie orphan sets, names the parent that must reap, offers parent SIGCHLD ping | INNOV | 6 | niche but loved |
+| I9 | **Per-process network attribution research** — fd→socket-inode matching design (process-preview §4) needs a feasibility spike before ANY per-process net drill is promised (r059 review: no /proc source exists; not a schema batch) | INNOV | pre-7 | spike task, offline-safe |
 | I8 | **Compact single-window mode** — hide sidebar, icons-only nav (netbook/tiling users) | INNOV | 8 | pure layout |
 
 ## Debt / prevention
