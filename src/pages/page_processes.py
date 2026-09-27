@@ -24,6 +24,9 @@ from config.app_settings import AppSettings, COLUMN_KEYS
 from ui import process_model as pm
 from modules import manager_actions as ma
 from modules import manager_rank as mr
+from log import get_logger, log_exception
+
+log = get_logger("processes")
 
 # The six band gauges in Variant-2 order (Load replaces the plain Processes
 # tile). Labels shown; ranking/reading keyed by the metric.
@@ -137,6 +140,7 @@ class ProcessesPage(BasePage):
         self._app = None
         self._drain_source_id = None
         self._width_save_id = None
+        self._confirm_on_yes = None
         self._paused = False
         self._built = False
         self._action_msg_until = 0.0
@@ -176,6 +180,7 @@ class ProcessesPage(BasePage):
         self._build_toolbar()
         if self._compact_strip:
             self._build_statusbar()   # r055 fallback: strip below the filter
+        self._build_confirm_bar() # r065: inline confirm (no floating modal)
         self._build_notice()
         self._build_table()
         self._build_row_actions()
@@ -275,6 +280,43 @@ class ProcessesPage(BasePage):
         self.pause_button.set_label("Resume" if self._paused else "Pause")
 
     # -- notice bar (row budget) -----------------------------------------
+
+    # -- inline confirm bar (r065 hang fix) --------------------------------
+
+    def _build_confirm_bar(self):
+        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        self.confirm_bar = bar
+        css.add_css_class(bar, "confirm-bar")
+        self.confirm_label = Gtk.Label()
+        self.confirm_label.set_xalign(0)
+        self.confirm_label.set_hexpand(True)
+        self.confirm_label.set_ellipsize(Pango.EllipsizeMode.END)
+        layout.box_add(bar, self.confirm_label, True, True, 0)
+
+        self.confirm_yes = Gtk.Button(label="Confirm")
+        self.confirm_yes.connect("clicked", self._on_confirm_yes)
+        layout.box_add(bar, self.confirm_yes, False, False, 0)
+
+        self.confirm_no = Gtk.Button(label="Cancel")
+        self.confirm_no.connect("clicked", self._on_confirm_no)
+        layout.box_add(bar, self.confirm_no, False, False, 0)
+
+        bar.set_no_show_all(True)
+        bar.set_visible(False)
+        layout.box_add(self, bar, False, False, 0)
+
+    def _on_confirm_yes(self, _btn):
+        was_visible = self.confirm_bar.get_visible()
+        self.confirm_bar.set_visible(False)
+        if was_visible and self._confirm_on_yes is not None:
+            log.info("confirm accepted")
+            callback, self._confirm_on_yes = self._confirm_on_yes, None
+            callback()
+
+    def _on_confirm_no(self, _btn):
+        log.info("confirm cancelled")
+        self.confirm_bar.set_visible(False)
+        self._confirm_on_yes = None
 
     def _build_notice(self):
         self.notice_label = Gtk.Label()
@@ -1121,6 +1163,13 @@ class ProcessesPage(BasePage):
         return [ma.probe(key) for key in self._selected_keys()]
 
     def _do_signal(self, action, signum=None):
+        try:
+            self._do_signal_inner(action, signum)
+        except Exception as e:
+            get_logger("actions").error(
+                "%s", log_exception("action %s" % action, e))
+
+    def _do_signal_inner(self, action, signum=None):
         targets = self._selected_targets()
         if not targets:
             return
@@ -1203,11 +1252,18 @@ class ProcessesPage(BasePage):
             clipboard.set_text(text, -1)
 
     def _confirm(self, message, on_confirm, confirm_label="Confirm"):
-        window = dialogs.confirm_window(
-            self._toplevel_window(), "Confirm action", message, on_confirm,
-            confirm_label=confirm_label)
-        self._dialog = window  # keep a reference alive until it closes
-        window.present()
+        """Inline confirmation bar (r065 hang fix).
+
+        The floating modal window mapped behind the active window on this
+        desktop while holding a modal grab — the app looked hung. An in-page
+        bar cannot be hidden by window stacking and cannot block input.
+        The text strip below the table renders the same message as backup."""
+        log.info("confirm requested: %s", message)
+        self._confirm_on_yes = on_confirm
+        self.confirm_label.set_markup(
+            self._span(_escape(message), "#e8c268"))
+        self.confirm_bar.set_visible(True)
+        self.confirm_yes.set_label(confirm_label)
 
     def _toplevel_window(self):
         try:

@@ -12,8 +12,11 @@ elsewhere) — and even here the rule is ``close()`` only, so dismissal never
 tears the widget down out from under a signal handler.
 """
 
-from .gtk_env import Gtk, GTK_MAJOR
+from .gtk_env import Gtk, Gdk, GTK_MAJOR
 from . import layout
+
+from log import get_logger
+log = get_logger("dialogs")
 
 
 def confirm_window(parent, title, message, on_confirm,
@@ -29,6 +32,13 @@ def confirm_window(parent, title, message, on_confirm,
     window.set_modal(True)
     if parent is not None:
         window.set_transient_for(parent)
+    # r065 hang fix: a modal window that maps BEHIND the active window still
+    # holds a grab — the app looks hung (nothing is clickable) while the
+    # dialog is invisible. DIALOG type-hint + center-on-parent makes the WM
+    # map it on top and focused (GTK3 spelling; GTK4 WMs center transients).
+    if GTK_MAJOR == 3:
+        window.set_type_hint(Gdk.WindowTypeHint.DIALOG)
+        window.set_position(Gtk.WindowPosition.CENTER_ON_PARENT)
 
     header = Gtk.HeaderBar()
     # HeaderBar title spelling differs; the portable subset is set_title_widget
@@ -59,6 +69,8 @@ def confirm_window(parent, title, message, on_confirm,
         close(window)
 
     confirm.connect("clicked", _on_confirm)
+    window.connect("map", lambda _w: log.info("confirm dialog mapped: %s", title))
+    window.connect("unmap", lambda _w: log.info("confirm dialog closed: %s", title))
     layout.box_add(actions, confirm, expand=False, fill=False, padding=0)
 
     layout.box_add(content, actions, expand=False, fill=False, padding=0)

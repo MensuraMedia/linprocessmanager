@@ -745,3 +745,10 @@ scale slider:hover {
     font-size: 12px;
     color: #cccccc;
 }
+
+/* r065 — inline confirmation bar (replaces the floating modal) */
+.confirm-bar {
+    background-color: #3a3226;
+    border: 1px solid #8a7a40;
+    padding: 8px 12px;
+}

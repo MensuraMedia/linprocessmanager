@@ -1,2 +1,5 @@
 - 2026-09-26 23:04 | verification | ValueError: synthetic failure for logging proof
 - 2026-09-26 23:04 | note | r064 logging bootstrap verification entry
+- 2026-09-26 23:27 | action kill | NameError: name 'log' is not defined
+- 2026-09-26 23:29 | action kill | NameError: name 'log' is not defined
+- 2026-09-26 23:11 | RESOLVED (r065) | Operator: right-click → Kill hung the app. Root cause: floating modal confirm window mapped BEHIND the active window (GNOME focus-stealing prevention) while holding a modal grab — app input-blocked, looked hung. Fix: inline confirmation bar inside the page (no second window, cannot be stacked away); floating dialogs keep DIALOG type-hint + center-on-parent for other uses. Verified: real SIGKILL via inline confirm on a live process (bar → accept → PID gone).
