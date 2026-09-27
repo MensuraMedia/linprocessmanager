@@ -55,7 +55,8 @@ def status_rec(pid, uid=1000, rss=2048, vsize=4096, shared=64):
 
 def make_readers(*, pids=(), stat=None, status=None, io=None, cmdline=None,
                  cgroup=None, rollup=None, system_stat=None, meminfo=None,
-                 net=None, diskstats=None, pressure=None, iter_error=None):
+                 net=None, diskstats=None, pressure=None, loadavg=None,
+                 iter_error=None):
     stat = stat or {}
     status = status or {}
     io = io or {}
@@ -81,6 +82,7 @@ def make_readers(*, pids=(), stat=None, status=None, io=None, cmdline=None,
         system_net_dev=lambda: net or {},
         system_diskstats=lambda: diskstats or {},
         system_pressure=lambda: pressure,
+        system_loadavg=lambda: loadavg,
     )
 
 
@@ -266,7 +268,7 @@ def test_truncated_and_exited_pids_are_skipped():
         parse_smaps_rollup=lambda pid: None,
         system_stat=lambda: None, system_meminfo=lambda: None,
         system_net_dev=lambda: {}, system_diskstats=lambda: {},
-        system_pressure=lambda: None)
+        system_pressure=lambda: None, system_loadavg=lambda: None)
     snap = manager_sampler.build_snapshot(None, 1.0, make_clock(), readers)
     assert snap.procs == {}
 
@@ -311,6 +313,23 @@ def test_system_cpu_and_net_rates():
     assert snap2.system["cpu"]["per_core"][0] == pytest.approx(50.0)
     assert snap2.system["net"]["eth0"]["rx_rate"] == pytest.approx(1000.0)  # 2000/2
     assert snap2.system["net"]["eth0"]["tx_rate"] == pytest.approx(0.0)
+
+
+def test_system_load_is_instantaneous_passthrough():
+    # loadavg has no delta carry (r061): the reader's dict rides straight onto
+    # system.load on every sample, first one included.
+    load = {"load1": 0.5, "load5": 0.4, "load15": 0.3, "runnable": 1, "total": 700}
+    r = make_readers(pids=[], system_stat=None, loadavg=load)
+    snap = manager_sampler.build_snapshot(None, 1000.0, make_clock(), r)
+    assert snap.system["load"] == load
+
+
+def test_system_load_absent_reader_degrades_to_none():
+    # A missing loadavg reader result (reader returned None) is carried as None,
+    # never a fabricated value and never a crash.
+    r = make_readers(pids=[], system_stat=None, loadavg=None)
+    snap = manager_sampler.build_snapshot(None, 1000.0, make_clock(), r)
+    assert snap.system["load"] is None
 
 
 # ===========================================================================

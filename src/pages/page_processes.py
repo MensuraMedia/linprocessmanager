@@ -45,9 +45,10 @@ _TROUGH_RGB = (0x3a / 255.0, 0x3a / 255.0, 0x3a / 255.0)
 # ~5 min of net-rate history for the auto-scale ceiling (2x trailing max).
 _NET_HISTORY_MAX = 600
 
-# The honest, permanent per-process-network empty-state (spec §2, verbatim).
+# The honest, permanent per-process-network empty-state (spec §2). The cross-ref
+# repoints at the Network hub card (Graphs) now that Resources is retired (r061).
 _NET_EMPTY = ("per-process network not available from /proc — "
-              "interface totals on Resources")
+              "interface totals on the Network graph")
 
 # Custom-signal picker presets (name shown; number is the action target).
 _SIGNAL_PICKER = [

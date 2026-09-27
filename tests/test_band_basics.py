@@ -58,7 +58,10 @@ def test_band_has_four_variant2_gauges_in_order():
 def test_network_empty_state_is_honest_and_shared():
     assert pp._NET_EMPTY == pb._NET_EMPTY
     assert "per-process network not available from /proc" in pp._NET_EMPTY
-    assert "interface totals on Resources" in pp._NET_EMPTY
+    # r061: the cross-ref repoints off the retired Resources page at the
+    # Network hub card (Graphs).
+    assert "Resources" not in pp._NET_EMPTY
+    assert "Network graph" in pp._NET_EMPTY
 
 
 def test_zone_rgb_covers_every_zone():

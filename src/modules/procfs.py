@@ -59,6 +59,13 @@ def _to_int(token):
         return None
 
 
+def _to_float(token):
+    try:
+        return float(token)
+    except (TypeError, ValueError):
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Per-PID readers.
 # ---------------------------------------------------------------------------
@@ -584,3 +591,44 @@ def system_pressure(proc_root=PROC):
         except (FileNotFoundError, PermissionError):
             result[resource] = None
     return result
+
+
+_LOADAVG_KEYS = ("load1", "load5", "load15", "runnable", "total")
+
+
+def decode_loadavg(raw):
+    """Parse ``/proc/loadavg`` bytes -> the three load averages + run-queue.
+
+    Format: ``load1 load5 load15 runnable/total lastpid`` (five whitespace
+    tokens, the fourth a ``runnable/total`` pair). Per the r061 sign-off this
+    decoder is total and **never raises**: a short line (``len < 5``) or a
+    fourth token with no ``/`` yields the full key set with every value
+    ``None`` (honest absence, never a fabricated 0). Individual unparseable
+    numbers degrade to ``None`` field-by-field.
+    """
+    none_fields = {key: None for key in _LOADAVG_KEYS}
+    parts = raw.decode("utf-8", "replace").split()
+    if len(parts) < 5 or "/" not in parts[3]:
+        return none_fields
+    runnable_s, _, total_s = parts[3].partition("/")
+    return {
+        "load1": _to_float(parts[0]),
+        "load5": _to_float(parts[1]),
+        "load15": _to_float(parts[2]),
+        "runnable": _to_int(runnable_s),
+        "total": _to_int(total_s),
+    }
+
+
+def system_loadavg(proc_root=PROC):
+    """Read+parse ``/proc/loadavg`` (instantaneous — no delta carry).
+
+    Read/decode split with never-raise guards (r061 sign-off): an absent or
+    restricted file degrades to the all-``None`` field set rather than raising,
+    so the sampler can add ``system.load`` unconditionally.
+    """
+    try:
+        raw = _read_bytes(os.path.join(proc_root, "loadavg"))
+    except (FileNotFoundError, PermissionError):
+        return decode_loadavg(b"")
+    return decode_loadavg(raw)

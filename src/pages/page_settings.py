@@ -54,7 +54,7 @@ class SettingsPage(BasePage):
             "• Sidebar Width: 150px\n"
             "• Logo Area: 150x150px (square)\n"
             "• Navigation Button Height: 28px\n"
-            "• Navigation Pages: 6 (Processes, Resources, Disks, Logs, About, Settings)\n"
+            "• Navigation Pages: 7 (Processes, Graphs, Disks, Logs, Basics, About, Settings)\n"
             "• Themes: 7 popular dark themes available\n"
             "• License: Free for personal and educational use"
         )
@@ -89,7 +89,8 @@ class SettingsPage(BasePage):
             "│   ├── pages/               # Page modules\n"
             "│   │   ├── page_base.py     # Base page class\n"
             "│   │   ├── page_processes.py\n"
-            "│   │   ├── page_resources.py\n"
+            "│   │   ├── page_graphs.py   # Graphs hub (live mini-charts)\n"
+            "│   │   ├── graph_details.py # Graphs ▸ X detail pages\n"
             "│   │   ├── page_disks.py\n"
             "│   │   ├── page_logs.py\n"
             "│   │   ├── page_about.py\n"

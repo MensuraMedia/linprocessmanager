@@ -25,7 +25,7 @@ the queue is installed by the table layer, not here; r046 ruling):
 - `build_snapshot(prev, now, clock, readers)` — a **pure step function**
   with injected clock and injected readers: the mandated testability seam.
 - `Snapshot` schema: `{"ts": float, "from_backoff": bool, "procs":
-  {(pid, starttime): record}, "system": {cpu, mem, net, disks, psi}}`
+  {(pid, starttime): record}, "system": {cpu, mem, net, disks, psi, load}}`
   (sensors joins at Phase 5 when sysfs readers wire in). Records are
   plain dicts with precomputed `cpu_pct` and io rates; **no-data is `None`
   or an absent key — pure Python** (the `-1` + `has_data` sentinel

@@ -665,3 +665,76 @@ scale slider:hover {
 .basics-contrib-row:hover {
     background-color: #303030;
 }
+
+/* ============================================
+   Graphs hub + detail pages (r061, mockup L)
+   ============================================ */
+
+/* Hub mini-chart cards — clickable buttons in a responsive grid. */
+.graph-card {
+    background-color: #262626;
+    background-image: none;
+    border: 1px solid #1a1a1a;
+    border-radius: 3px;
+    padding: 10px 12px;
+    box-shadow: none;
+}
+
+.graph-card:hover {
+    background-color: #2c2c2c;
+    border-color: #333333;
+}
+
+.graph-card-k {
+    font-size: 10pt;
+    color: #b0b0b0;
+}
+
+.graph-card-v {
+    font-size: 12pt;
+    font-weight: bold;
+    font-feature-settings: "tnum";
+    color: #eeeeee;
+}
+
+.graph-card-spark {
+    background-color: #202020;
+}
+
+/* Detail page — back button, large chart, caption, stat strip, sections. */
+.graph-back {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    box-shadow: none;
+    padding: 2px 6px;
+    color: #9fc8e8;
+}
+
+.graph-back:hover {
+    background-color: #303030;
+    color: #ffffff;
+}
+
+.graph-detail-chart {
+    background-color: #202020;
+    border: 1px solid #1a1a1a;
+}
+
+.graph-caption {
+    font-size: 9pt;
+    color: #888888;
+}
+
+.graph-stats {
+    font-size: 10pt;
+    font-feature-settings: "tnum";
+    color: #d0d0d0;
+}
+
+.graph-section {
+    font-size: 10pt;
+    font-weight: bold;
+    color: #b0b0b0;
+    margin-top: 6px;
+}

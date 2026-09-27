@@ -13,9 +13,9 @@ through ``ui.compat.charts`` and every toolkit call through a compat seam.
 
 Ring law (r059): the sparklines hold ``(ts, value)`` tuples, exclude
 ``from_backoff`` samples, and render time gaps as gaps — a hidden window must
-never masquerade as continuous history. The interim per-metric deque here
-implements that same contract (a flat value list would not); it is swapped for
-the shared ``manager_history`` rings when Phase 5 lands.
+never masquerade as continuous history. As of Phase 5 the sparklines read the
+shared :mod:`modules.manager_history` rings (the interim per-metric deque is
+gone); the same ``(ts, value)`` contract, now shared with the Graphs surfaces.
 """
 
 from collections import deque
@@ -53,7 +53,7 @@ _ZONE_RGB = {
 _TROUGH_RGB = (0x3a / 255.0, 0x3a / 255.0, 0x3a / 255.0)
 
 _NET_EMPTY = ("per-process network not available from /proc — "
-              "interface totals on Resources")
+              "interface totals on the Network graph")
 
 
 def _fmt_bytes(value):
@@ -83,9 +83,9 @@ class BasicsPage(BasePage):
         self._show_sparklines = bool(
             self.settings.get("basics.show_sparklines", True))
         self._jump = None
+        self._history = None   # shared manager_history rings (injected)
         self._last_procs = {}
         self._last_system = {}
-        self._rings = {metric: deque(maxlen=_RING_MAX) for metric, _ in _GAUGES}
         self._net_history = deque(maxlen=_RING_MAX)
         self._prev = {}       # metric -> previous scalar (delta arrows)
         self._state = {}      # metric -> {"fraction", "zone"}
@@ -108,6 +108,12 @@ class BasicsPage(BasePage):
         ((pid, starttime)) selected. Wired by the content area, which owns the
         navigation manager and the Processes page reference."""
         self._jump = callback
+
+    def set_history(self, history):
+        """Inject the shared :mod:`modules.manager_history` ring store — the
+        sparklines slice it directly (the content area owns the single writer,
+        fed on the Processes-page drain thread)."""
+        self._history = history
 
     # -- gauge construction ----------------------------------------------
 
@@ -187,22 +193,14 @@ class BasicsPage(BasePage):
             self._state[metric] = {"fraction": frac, "zone": zone}
             refs["bar"].queue_draw()
 
-            # Ring law: exclude backoff (a gap), append (ts, value) otherwise.
-            if not snapshot.from_backoff:
-                self._push_ring(metric, snapshot.ts, scalar)
+            # Ring inserts happen in the shared manager_history writer (content
+            # area, single drain thread) — here we only ask the spark to redraw
+            # from that ring.
             if refs["spark"] is not None:
                 refs["spark"].queue_draw()
 
             self._prev[metric] = scalar
             self._rebuild_contrib(metric)
-
-    def _push_ring(self, metric, ts, value):
-        ring = self._rings[metric]
-        ring.append((ts, value))
-        # Age-trim so the window stays ~5 min regardless of interval.
-        cutoff = ts - _RING_AGE_S
-        while ring and ring[0][0] < cutoff:
-            ring.popleft()
 
     # -- readings + formatting -------------------------------------------
 
@@ -361,7 +359,12 @@ class BasicsPage(BasePage):
         cr.fill()
 
     def _draw_spark(self, cr, width, height, metric):
-        pts = list(self._rings.get(metric) or [])
+        # Load has no Basics reading (the gauge shows "—"), so its spark stays
+        # empty here even though the shared ring now carries real load data —
+        # the Load chart lives on the Graphs page.
+        if metric == "load" or self._history is None:
+            return
+        pts = self._history.slice(metric, _RING_AGE_S)
         if len(pts) < 2:
             return
         if metric == "network":

@@ -10,6 +10,19 @@ import os
 from config.config_layout import Layout
 
 
+# Top-level navigation entries (label, page_id, is_top). Module-level so the
+# retirement of Resources / arrival of Graphs (r061) is assertable headlessly.
+# Graphs sits between Processes and Disks and supersedes the old Resources page.
+NAV_ITEMS = [
+    ("Processes", "processes", True),   # first item gets top border
+    ("Graphs", "graphs", False),        # hub of live charts (retires Resources)
+    ("Disks", "disks", False),
+    ("Logs", "logs", False),
+    ("Basics", "basics", False),        # read-only system summary
+    ("About", "about", False),
+]
+
+
 class Sidebar(Gtk.Box):
     """Fixed sidebar with logo and navigation buttons"""
     
@@ -86,18 +99,9 @@ class Sidebar(Gtk.Box):
         # Top navigation container
         nav_box_top = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         
-        # Main navigation items (linprocman nav shell)
-        nav_items = [
-            ("Processes", "processes", True),   # first item gets top border
-            ("Resources", "resources", False),
-            ("Disks", "disks", False),
-            ("Logs", "logs", False),
-            ("Basics", "basics", False),        # read-only system summary
-            ("About", "about", False)
-        ]
-        
+        # Main navigation items (linprocman nav shell) — see module NAV_ITEMS.
         self.nav_buttons = {}
-        for label, page_id, is_top in nav_items:
+        for label, page_id, is_top in NAV_ITEMS:
             button = self.create_nav_button(label, page_id, is_top=is_top)
             layout.box_add(nav_box_top, button, False, False, 0)
             self.nav_buttons[page_id] = button

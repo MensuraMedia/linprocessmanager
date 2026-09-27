@@ -96,6 +96,7 @@ class Readers:
     system_net_dev: object
     system_diskstats: object
     system_pressure: object
+    system_loadavg: object
 
 
 @dataclass(frozen=True)
@@ -395,6 +396,9 @@ def _build_system(prev_raw, dwall, readers):
     net = _read_system(readers.system_net_dev)
     disks = _read_system(readers.system_diskstats)
     psi = _read_system(readers.system_pressure)
+    # loadavg is instantaneous — no _RawState/delta carry (r061 sign-off). The
+    # reader is already total (never raises), so this is a straight pass-through.
+    load = _read_system(readers.system_loadavg)
 
     cpu_total_raw = stat.get("total") if stat else None
     cpu_cores_raw = (stat.get("cpus") if stat else None) or {}
@@ -453,6 +457,7 @@ def _build_system(prev_raw, dwall, readers):
         "net": net_out,
         "disks": disks_out,
         "psi": psi,
+        "load": load,
     }
     sys_raw = {
         "cpu_total": cpu_total_raw,
@@ -483,6 +488,7 @@ def default_readers(proc_root=procfs.PROC):
         system_net_dev=bind(procfs.system_net_dev, proc_root=proc_root),
         system_diskstats=bind(procfs.system_diskstats, proc_root=proc_root),
         system_pressure=bind(procfs.system_pressure, proc_root=proc_root),
+        system_loadavg=bind(procfs.system_loadavg, proc_root=proc_root),
     )
 
 

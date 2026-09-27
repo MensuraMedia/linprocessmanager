@@ -320,3 +320,46 @@ def test_system_pressure_missing_is_none():
     assert d["cpu"] is None
     assert d["memory"] is None
     assert d["io"] is None
+
+
+# ---------------------------------------------------------------------------
+# loadavg (r061 — signed decode/read split, never raises)
+# ---------------------------------------------------------------------------
+
+def test_decode_loadavg_normal():
+    d = procfs.decode_loadavg(b"0.52 0.58 0.59 2/1234 56789\n")
+    assert d["load1"] == pytest.approx(0.52)
+    assert d["load5"] == pytest.approx(0.58)
+    assert d["load15"] == pytest.approx(0.59)
+    assert d["runnable"] == 2
+    assert d["total"] == 1234
+
+
+def test_decode_loadavg_short_line_is_all_none():
+    # Fewer than five tokens -> every field None (honest absence, no crash).
+    d = procfs.decode_loadavg(b"0.52 0.58 0.59\n")
+    assert set(d) == {"load1", "load5", "load15", "runnable", "total"}
+    assert all(v is None for v in d.values())
+
+
+def test_decode_loadavg_missing_slash_is_all_none():
+    # Fourth token without a '/' -> the run-queue pair is malformed -> all None.
+    d = procfs.decode_loadavg(b"0.52 0.58 0.59 2-1234 56789\n")
+    assert all(v is None for v in d.values())
+
+
+def test_decode_loadavg_empty_is_all_none():
+    d = procfs.decode_loadavg(b"")
+    assert all(v is None for v in d.values())
+
+
+def test_system_loadavg_from_fixture():
+    d = procfs.system_loadavg(proc_root=PROC)
+    assert d["load1"] == pytest.approx(0.52)
+    assert d["total"] == 1234
+
+
+def test_system_loadavg_missing_file_never_raises():
+    # Absent file -> the all-None field set, not an exception (r061 sign-off).
+    d = procfs.system_loadavg(proc_root=os.path.join(PROC, "does-not-exist"))
+    assert all(v is None for v in d.values())
