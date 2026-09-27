@@ -19,6 +19,7 @@ from ui.dashboard_window import DashboardWindow
 from modules.manager_navigation import NavigationManager
 from modules.manager_theme_applicator import ThemeApplicator
 from modules.manager_sampler import Sampler
+from modules import manager_baseline
 from config.config_themes import get_theme
 
 
@@ -53,12 +54,31 @@ class LinprocmanApplication(Gtk.Application):
                 self.navigation_manager, sampler=self.sampler, application=self
             )
             self.window.show_all()
+        self._ensure_baseline()
         self.window.present()
         # r058 close-review P2-7: honor the page's pause state across
         # re-activation — never silently restart a paused sampler.
         page = self.navigation_manager.get_page_widget("processes")
         if page is None or not getattr(page, "_paused", False):
             self.sampler.start()
+
+    def _ensure_baseline(self):
+        """First-run: derive performance thresholds from this machine
+        (r071). Runs before the sampler starts; the ~6 s idle sampling
+        happens before the window is shown, so the UI never waits."""
+        page = self.navigation_manager.get_page_widget("processes")
+        if page is not None and getattr(page, "settings", None) is not None:
+            if page.settings.get("baseline") is None:
+                try:
+                    specs, thresholds = manager_baseline.capture()
+                    page.settings.set("baseline", {
+                        "specs": specs, "thresholds": thresholds,
+                        "schema": manager_baseline.SCHEMA})
+                    page.settings.save()
+                    page.set_thresholds(manager_baseline.Thresholds(thresholds))
+                except Exception as e:
+                    from log import get_logger
+                    get_logger("baseline").error("%s", log_exception("baseline capture", e))
 
     def _on_shutdown(self, _app):
         """Stop the sampler thread cleanly on application shutdown."""

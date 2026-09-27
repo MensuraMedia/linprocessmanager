@@ -5,6 +5,7 @@ Updated: Accurate tree structure after cleanup
 """
 
 from ui.compat import layout
+from ui.compat import GLib
 
 from pages.page_base import BasePage
 from config.config_themes import get_all_themes, get_theme
@@ -44,6 +45,13 @@ class SettingsPage(BasePage):
         )
         layout.box_add(self, theme_selector, False, False, 10)
         
+        # Baseline recalibration (r071)
+        self.add_subtitle("Performance baseline")
+        self.baseline_button = Gtk.Button(label="Recalibrate baseline (~6 s)")
+        css.add_css_class(self.baseline_button, "settings-baseline")
+        self.baseline_button.connect("clicked", self._on_recalibrate)
+        layout.box_add(self, self.baseline_button, False, False, 10)
+
         # Technical specs section
         self.add_subtitle("Technical Specifications")
         
@@ -113,6 +121,36 @@ class SettingsPage(BasePage):
             selectable=True
         )
     
+    def _on_recalibrate(self, _btn):
+        """Re-run the first-run baseline capture in a background thread."""
+        import threading
+        from log import get_logger
+        from modules import manager_baseline
+
+        self.baseline_button.set_sensitive(False)
+        self.add_paragraph.__self__ if False else None
+
+        def work():
+            specs, thresholds = manager_baseline.capture()
+            settings = self.settings if getattr(self, "settings", None) else None
+
+            def apply():
+                try:
+                    if settings is not None:
+                        settings.set("baseline", {
+                            "specs": specs, "thresholds": thresholds,
+                            "schema": manager_baseline.SCHEMA})
+                        settings.save()
+                    from pages.page_processes import ProcessesPage
+                    ProcessesPage.set_thresholds(
+                        manager_baseline.Thresholds(thresholds))
+                    log.info("baseline recalibrated: %s", thresholds)
+                finally:
+                    self.baseline_button.set_sensitive(True)
+            GLib.idle_add(apply)
+
+        threading.Thread(target=work, daemon=True).start()
+
     def on_theme_changed(self, theme_id):
         """
         Handle theme change

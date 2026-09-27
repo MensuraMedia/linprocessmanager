@@ -94,6 +94,23 @@ Modularity and universality are **product mandates**, not preferences:
 - Read-only use of `/proc`; the app sends signals only on explicit operator
   action.
 
+## 5b. UI bounding-box policy (r071)
+
+Recurred twice (r060 band gauges, r071 Basics cards): dynamic text inside a
+card grows the card's natural size, so the whole card visibly expands and
+contracts as values change. Policy, binding for all UI work:
+
+1. **The bounding box is fixed; only the visual inside it moves.** A card,
+   panel, or gauge declares its dimensions (width via pinned text or
+   size_request; height via the bar/row height) and never resizes in
+   response to its content.
+2. **Any label bound to dynamic data** (values, captions, statuses) pins
+   `set_width_chars(...)` + `set_ellipsize(END)`. The ellipsis is the
+   honest signal of truncation.
+3. **Progress bars/bars may change fill fraction only** — never the box.
+4. **Reviewers (adversarial pass) must check for unpinned dynamic labels**
+   on every UI diff; the recurrence itself is a process defect.
+
 ## 6. Compliance checklist (per change)
 
 - [ ] New assets? Sourced from `/home/user/projects/assets/icons` and copied

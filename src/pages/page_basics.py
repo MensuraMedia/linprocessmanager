@@ -163,6 +163,10 @@ class BasicsPage(BasePage):
         value.set_hexpand(True)
         value.set_halign(Gtk.Align.END)
         css.add_css_class(value, "basics-gauge-v")
+        # r071 bounding-box policy: dynamic text is pinned + ellipsized so the
+        # card's natural width can never grow with the displayed value.
+        value.set_width_chars(12)
+        value.set_ellipsize(Pango.EllipsizeMode.END)
         value.set_markup("<span foreground='#888888'>—</span>")
         layout.box_add(head, name, False, False, 0)
         layout.box_add(head, value, True, True, 0)
@@ -176,6 +180,8 @@ class BasicsPage(BasePage):
 
         caption = Gtk.Label()
         caption.set_xalign(0)
+        caption.set_width_chars(34)
+        caption.set_ellipsize(Pango.EllipsizeMode.END)
         css.add_css_class(caption, "basics-gauge-sub")
         layout.box_add(left, caption, False, False, 0)
         layout.box_add(card, left, False, True, 0)

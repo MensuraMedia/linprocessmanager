@@ -55,10 +55,11 @@ DEFAULTS = {
     "scope_chip": "all",
     "show_kernel_threads": False,
     "cpu_normalized": "per_core",
+    "baseline": None,   # r071: first-run perf baseline {specs, thresholds, schema}
 }
 
 # Top-level keys the validator owns; anything else is preserved verbatim.
-_OWNED_KEYS = frozenset(DEFAULTS)
+_OWNED_KEYS = frozenset(DEFAULTS) | {"baseline"}
 
 
 def _clamp_interval(value):
@@ -183,6 +184,8 @@ class AppSettings:
             "cpu_normalized": _enum(
                 raw.get("cpu_normalized"), CPU_NORMALIZED, "per_core"),
         }
+        data["baseline"] = raw["baseline"] if isinstance(
+            raw.get("baseline"), dict) else None
         # Forward compatibility: keep every key we do not own untouched.
         for key, value in raw.items():
             if key not in _OWNED_KEYS:

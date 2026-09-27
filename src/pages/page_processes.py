@@ -445,12 +445,22 @@ class ProcessesPage(BasePage):
     def _span(text, color):
         return "<span foreground='%s'>%s</span>" % (color, text)
 
-    @staticmethod
-    def _cap_zone(pct):
+    _thresholds = None  # set via set_thresholds (r071); None = fixed defaults
+
+    @classmethod
+    def set_thresholds(cls, thresholds):
+        cls._thresholds = thresholds
+
+    @classmethod
+    def _cap_zone(cls, pct, metric="cpu"):
         """Capacity threshold zones (r057, all stats): <60 nominal green,
         60-84 medium amber, >=85 near-capacity red."""
         if pct is None:
             return None
+        if cls._thresholds is not None:
+            zone = cls._thresholds.zone(metric, pct)
+            return {"nominal": "#7fd0a0", "amber": "#e8c268",
+                    "critical": "#e04c4c"}.get(zone, "#d0d0d0")
         if pct >= 85:
             return "#e04c4c"
         if pct >= 60:
