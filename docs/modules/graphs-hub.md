@@ -61,7 +61,31 @@ Load chart/page until that reader passes the sign-off gate — the band's
 here now; the Processes band carries only CPU / Memory / Disk I/O /
 Network, and Basics keeps its six-gauge summary role.
 
-## 3. Architecture
+## 2b. Chart rendering upgrade (r068, mockup M)
+
+The shipped renderer draws one polyline per chart — no legend, no
+multi-series. The upgrade, spec'd from mockup
+[mockup-m-visuals.html](../mockups/mockup-m-visuals.html) and owned by a
+shared `render_series` helper in the charts seam:
+
+1. **Legends mandatory** on every chart: color chip + label + live value
+   per series; per-core entries click-to-isolate.
+2. **Multi-series**: Network = rx + tx lines (green/amber); CPU = total
+   bold + per-core thin lines (shade-stepped palette); Disk = read + write
+   lines; Memory = used area + swap line (already spec'd).
+3. **Area fills** under primary series (12–16% opacity), gridlines, and a
+   **hover crosshair** with exact time/value readout.
+4. Hub mini-charts get the same legends and multi-series (compact).
+
+## 3. Basics split cards (r068)
+
+Each Basics card splits: **fixed gauge block LEFT** (title + big bar +
+zone caption, r057 thresholds), **top contributing processes RIGHT**
+(rank, name, mini-bar proportional to the leader, value) — click a
+contributor to select it on Processes. 3–4 rows per card. Supersedes the
+gauges-plus-lists layout.
+
+## 4. Architecture
 
 - New `page_graphs.py` (hub) + one detail page module per metric sharing a
   `GraphDetailPage` base (window selector + stat strip + contributors +
@@ -80,14 +104,14 @@ Network, and Basics keeps its six-gauge summary role.
   memory-pressure banner move to the hub as their owning surfaces — the
   hub ships with those or Resources stays until they do.
 
-## 4. Tests
+## 5. Tests
 
 Hub grid renders all seven charts with current values; click-through
 navigates to the right detail page; window-selector changes ring slice;
 stat strip math (min/avg/max over slice); zone tinting bounds; breakdown
 rows match snapshot counts; Network empty-state; Load "—" until schema.
 
-## 5. Phasing
+## 6. Phasing
 
 Ships as **Phase 5 body** (with manager_history rings + sysfs sensors):
 this document replaces resource-graphs.md's rendering section; the
