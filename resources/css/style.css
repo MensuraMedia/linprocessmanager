@@ -738,3 +738,10 @@ scale slider:hover {
     color: #b0b0b0;
     margin-top: 6px;
 }
+
+/* r062 — Graphs submenu: indented child buttons (Basics) */
+.nav-button.nav-sub {
+    padding-left: 34px;
+    font-size: 12px;
+    color: #cccccc;
+}

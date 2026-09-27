@@ -15,12 +15,19 @@ from config.config_layout import Layout
 # Graphs sits between Processes and Disks and supersedes the old Resources page.
 NAV_ITEMS = [
     ("Processes", "processes", True),   # first item gets top border
-    ("Graphs", "graphs", False),        # hub of live charts (retires Resources)
+    ("Graphs", "graphs", False),        # group: navigates to the hub
     ("Disks", "disks", False),
     ("Logs", "logs", False),
-    ("Basics", "basics", False),        # read-only system summary
     ("About", "about", False),
 ]
+
+# r062: Graphs carries a submenu (indented children, one level deep).
+# Basics moved here per operator instruction — the standalone button is gone.
+SUBMENUS = {
+    "graphs": [
+        ("Basics", "basics"),
+    ],
+}
 
 
 class Sidebar(Gtk.Box):
@@ -103,8 +110,20 @@ class Sidebar(Gtk.Box):
         self.nav_buttons = {}
         for label, page_id, is_top in NAV_ITEMS:
             button = self.create_nav_button(label, page_id, is_top=is_top)
-            layout.box_add(nav_box_top, button, False, False, 0)
-            self.nav_buttons[page_id] = button
+            children = SUBMENUS.get(page_id)
+            if children:
+                # group row: caret + navigate-to-hub on click
+                css.add_css_class(button, "nav-group")
+                layout.box_add(nav_box_top, button, False, False, 0)
+                self.nav_buttons[page_id] = button
+                for child_label, child_id in children:
+                    child = self.create_nav_button(
+                        child_label, child_id, is_top=False, indent=True)
+                    layout.box_add(nav_box_top, child, False, False, 0)
+                    self.nav_buttons[child_id] = child
+            else:
+                layout.box_add(nav_box_top, button, False, False, 0)
+                self.nav_buttons[page_id] = button
 
         # Add top navigation
         layout.box_add(self, nav_box_top, False, False, 0)
@@ -124,21 +143,25 @@ class Sidebar(Gtk.Box):
         # Add bottom navigation
         layout.box_add(self, nav_box_bottom, False, False, 0)
     
-    def create_nav_button(self, label, page_id, is_top=False, is_bottom=False):
+    def create_nav_button(self, label, page_id, is_top=False, is_bottom=False,
+                          indent=False):
         """
         Create navigation button
-        
+
         Args:
             label: Button label text
             page_id: Page identifier for navigation
             is_top: If True, applies top button styling (Home)
             is_bottom: If True, applies bottom button styling (Settings)
-        
+            indent: If True, submenu child styling (r062)
+
         Returns:
             Gtk.Button: Configured navigation button
         """
         button = Gtk.Button(label=label)
         css.add_css_class(button, 'nav-button')
+        if indent:
+            css.add_css_class(button, 'nav-sub')
 
         # Add special class for top button (Home)
         if is_top:
