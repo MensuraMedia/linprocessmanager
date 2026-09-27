@@ -4,6 +4,8 @@ Fixed: Home button has both top AND bottom borders
 """
 
 from ui.compat import Gtk, css
+from log import get_logger
+log = get_logger("theme")
 
 
 class ThemeApplicator:
@@ -38,7 +40,7 @@ class ThemeApplicator:
                 static_css = f.read()
         except OSError as e:
             static_css = ""
-            print(f"✗ static css missing: {e}")
+            log.error("static css missing: %s", e)
         # one load: CssProvider.load_from_data REPLACES prior data, so the
         # dynamic block must be appended, not loaded separately (r054 fix).
         self.css_provider.load_from_data((static_css + "\n" + css_content).encode())
@@ -47,7 +49,7 @@ class ThemeApplicator:
         # picks per-screen (GTK3) vs per-display (GTK4) registration.
         css.add_provider(self.css_provider)
 
-        print(f"✓ Applied theme: {theme_def.name}")
+        log.info("applied theme: %s", theme_def.name)
         return True
     
     def generate_css(self, theme_def):

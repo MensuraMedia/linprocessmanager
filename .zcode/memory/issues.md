@@ -1,0 +1,2 @@
+- 2026-09-26 23:04 | verification | ValueError: synthetic failure for logging proof
+- 2026-09-26 23:04 | note | r064 logging bootstrap verification entry

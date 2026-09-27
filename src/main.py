@@ -8,6 +8,11 @@ seam, never from gi.repository directly.
 
 import sys
 
+from log import setup_logging, log_exception
+
+setup_logging()  # r064: native logging first, so everything after this
+                 # lands in ~/.local/state/linprocman/
+
 from ui.compat import Gtk
 
 from ui.dashboard_window import DashboardWindow
@@ -33,6 +38,14 @@ class LinprocmanApplication(Gtk.Application):
 
     def do_activate(self):
         """Build (once) and present the main window; run the sampler."""
+        try:
+            self._do_activate()
+        except Exception as e:
+            from log import get_logger
+            get_logger("app").error("%s", log_exception("do_activate", e))
+            raise
+
+    def _do_activate(self):
         if self.window is None:
             # Apply default theme now that a display is available.
             self.theme_applicator.apply_theme(get_theme('default'))

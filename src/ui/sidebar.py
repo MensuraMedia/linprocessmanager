@@ -8,6 +8,8 @@ from .compat import Gtk, GdkPixbuf, GObject, css, icons, layout
 import os
 
 from config.config_layout import Layout
+from log import get_logger
+log = get_logger("sidebar")
 
 
 # Top-level navigation entries (label, page_id, is_top). Module-level so the
@@ -79,7 +81,7 @@ class Sidebar(Gtk.Box):
                 logo_image = icons.image_from_pixbuf(pixbuf)
                 break
             except Exception as e:
-                print(f"logo candidate failed ({logo_path}): {e}")
+                log.exception(f"logo candidate failed ({logo_path}): {e}")
         if logo_image is not None:
             layout.box_add(logo_box, logo_image, True, True, 0)
         else:

@@ -21,7 +21,7 @@ DARK_THEMES = {
         name='Default Blue',
         accent_color='#0078D7',      # Windows blue
         sidebar_bg='#353535',
-        window_bg='#2d2d2d',
+        window_bg='#262626',  # r063: one step darker than mockups — the GTK base blends through lighter
         hover_color='#404040'
     ),
     'adapta': ThemeDefinition(

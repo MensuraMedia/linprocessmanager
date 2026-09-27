@@ -10,6 +10,8 @@ from pages.page_base import BasePage
 from config.config_themes import get_all_themes, get_theme
 from ui.components.component_theme_selector import ThemeSelectorWidget
 from modules.manager_theme_applicator import ThemeApplicator
+from log import get_logger
+log = get_logger("settings")
 
 
 class SettingsPage(BasePage):
@@ -124,4 +126,4 @@ class SettingsPage(BasePage):
         # Apply theme
         self.theme_applicator.apply_theme(theme_def)
         
-        print(f"Theme changed to: {theme_def.name}")
+        log.info("theme changed: %s", theme_def.name)
