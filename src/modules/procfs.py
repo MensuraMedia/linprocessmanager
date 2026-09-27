@@ -310,6 +310,26 @@ def decode_cmdline(raw):
     return [p.decode("utf-8", "replace") for p in parts if p]
 
 
+def snapshot_procs(proc_root=PROC):
+    """Live process table: {(pid, starttime): {pid, ppid, starttime, comm}}.
+
+    The fresh-collection source for group actions — collect the tree at
+    click time, never from a cached snapshot (r074).
+    """
+    out = {}
+    for pid in iter_pids(proc_root):
+        try:
+            st = parse_stat(pid, proc_root)
+        except (FileNotFoundError, PermissionError, OSError):
+            continue
+        out[(pid, st["starttime"])] = {
+            "pid": pid, "starttime": st["starttime"],
+            "ppid": st["ppid"], "comm": st["comm"],
+            "state": st["state"],
+        }
+    return out
+
+
 def read_cmdline(pid, proc_root=PROC):
     """Read+parse ``/proc/<pid>/cmdline``. PermissionError -> ``None``."""
     try:

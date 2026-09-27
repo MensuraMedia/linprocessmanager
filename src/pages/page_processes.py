@@ -1026,6 +1026,8 @@ class ProcessesPage(BasePage):
             ("end", lambda a, p: self._do_signal("end")),
             ("kill", lambda a, p: self._do_signal("kill")),
             ("hangup", lambda a, p: self._do_signal("hangup")),
+            ("end-group", lambda a, p: self._do_group("end")),
+            ("kill-group", lambda a, p: self._do_group("kill")),
             ("copy-pid", lambda a, p: self._act_copy_pid()),
             ("copy-cmdline", lambda a, p: self._act_copy_cmdline()),
         ):
@@ -1069,6 +1071,11 @@ class ProcessesPage(BasePage):
         signals.append("End (SIGTERM)", "proc.end")
         signals.append("Kill (SIGKILL)", "proc.kill")
         signals.append("Hang up (SIGHUP)", "proc.hangup")
+
+        groups = Gio.Menu()
+        groups.append("End group — children too", "proc.end-group")
+        groups.append("Kill group — children too", "proc.kill-group")
+        model.append_section(None, groups)
         picker = Gio.Menu()
         for label, num in _SIGNAL_PICKER:
             picker.append("%s (%d)" % (label, int(num)),
@@ -1134,13 +1141,15 @@ class ProcessesPage(BasePage):
 
         if not targets:
             for name in ("stop", "continue", "end", "kill", "hangup", "signal",
+                         "end-group", "kill-group",
                          "renice", "affinity", "copy-pid", "copy-cmdline"):
                 enable(name, False)
             return
         # Signal feasibility is uniform across the signal items (a zombie or a
         # departed PID disables them all); "end" stands in as a signal action.
         sig_ok, _ = ma.feasibility_many("end", targets)
-        for name in ("stop", "continue", "end", "kill", "hangup", "signal"):
+        for name in ("stop", "continue", "end", "kill", "hangup", "signal",
+                     "end-group", "kill-group"):
             enable(name, sig_ok)
         enable("renice", ma.feasibility_many("renice", targets)[0])
         enable("affinity", ma.feasibility_many("affinity", targets)[0])
@@ -1274,6 +1283,62 @@ class ProcessesPage(BasePage):
         icon = self._span("⚠", "#e8c268") + " " if failed else ""
         self.status_label.set_markup(icon + self._span(_escape(message), color))
         self._action_msg_until = time.monotonic() + 6.0
+
+    # -- group termination (r074) -----------------------------------------
+
+    def _do_group(self, action):
+        """End/Kill the selected process plus its whole descendant tree.
+
+        Runs in a background thread: collection from the newest snapshot,
+        TERM -> liveness verify (grace polls) -> SIGKILL escalation ->
+        final verify. The UI thread only renders the result (r074)."""
+        try:
+            targets = self._selected_targets()
+            if not targets:
+                return
+            root = targets[0]
+            root_key = (root.pid, root.key_starttime)
+            # fresh collection behind the actions API — never a cached
+            # snapshot, never procfs in the page (boundary law)
+            count, names = ma.group_overview(root_key)
+            message = ("%s the selected process tree — %d processes incl. "
+                       "children of %s? Processes that ignore SIGTERM are "
+                       "escalated to SIGKILL after the grace period."
+                       % ("End" if action == "end" else "Kill",
+                          count, root.name))
+            self._confirm(message, lambda: self._run_group(action, root_key,
+                                                           root.name),
+                          confirm_label="End tree" if action == "end"
+                          else "Kill tree")
+        except Exception as e:
+            from log import get_logger
+            get_logger("actions").error(
+                "%s", log_exception("group %s" % action, e))
+
+    def _run_group(self, action, root_key, root_name):
+        """Background-thread worker: verify-and-escalate loop."""
+        import threading as _threading
+
+        def work():
+            summary = ma.group_terminate(
+                "end-group" if action == "end" else "kill-group",
+                root_key, root_name, None, signum=15 if action == "end" else 9,
+                grace_attempts=6,
+                poll=lambda: time.sleep(0.5),
+                probe_func=lambda key: ma.probe(key),
+                kill_func=os.kill)
+            GLib.idle_add(self._render_group_result, summary)
+
+        _threading.Thread(target=work, daemon=True).start()
+
+    def _render_group_result(self, summary):
+        text = ma.group_summary_text(summary)
+        failed = bool(summary["survivors"])
+        color = "#e8c268" if failed else "#7fd0a0"
+        self.status_label.set_markup(
+            self._span(_escape(text), color))
+        self._action_msg_until = time.monotonic() + 8.0
+        return False
 
     # -- keyboard actions -------------------------------------------------
 

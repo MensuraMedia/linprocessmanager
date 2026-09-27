@@ -474,3 +474,150 @@ def affinity_message(target, cpus):
     if enabled:
         return head + "\n\nThe process will run only on the selected CPUs."
     return head + "\n\n" + (reason or "") + "\n\nThe attempt will fail."
+
+
+# ---------------------------------------------------------------------------
+# Group (subtree) termination — r074. The tree is collected from the newest
+# snapshot BEFORE any signal flies (once the parent dies, children reparent
+# and ppid edges go stale), leaves-first; every member is guard-checked at
+# send time, liveness-verified afterwards, and survivors past the grace
+# window are escalated SIGTERM -> SIGKILL. "Ensure killed accordingly" is
+# the verification loop, not the signal itself.
+# ---------------------------------------------------------------------------
+
+def probe_many(keys, probe_func=None):
+    """Fresh guarded probe for each selection key."""
+    probe_func = probe_func or probe
+    return [probe_func(key) for key in keys]
+
+
+def descendant_keys(root_key, procs):
+    """Descendant keys of ``root_key`` in the snapshot ``procs`` mapping,
+    children-first (leaves before parents), root NOT included. Pure BFS
+    over ppid edges; guards against cycles via seen-pid set."""
+    by_ppid = {}
+    for key, rec in procs.items():
+        ppid = rec.get("ppid")
+        if ppid is not None:
+            by_ppid.setdefault(ppid, []).append(key)
+    out, queue, seen = [], [root_key[0]], {root_key[0]}
+    while queue:
+        pid = queue.pop(0)
+        for key in sorted(by_ppid.get(pid, [])):
+            if key[0] in seen:
+                continue
+            seen.add(key[0])
+            out.append(key)
+            queue.append(key[0])
+    return out
+
+
+def _alive(target, stat_reader):
+    """True when the SAME process (pid + starttime) still exists."""
+    try:
+        st = stat_reader(target.pid)
+    except FileNotFoundError:
+        return False
+    except PermissionError:
+        return True  # exists, but we cannot compare — treat as alive
+    if st is None:
+        return False
+    return st.get("starttime") == target.key_starttime
+
+
+def verify_gone(targets, stat_reader, poll, attempts=6):
+    """Poll until every target is gone. Returns (gone, survivors)."""
+    gone, survivors = [], list(targets)
+    for _ in range(max(1, attempts)):
+        poll()
+        still = []
+        gone = []
+        for t in survivors:
+            if _alive(t, stat_reader):
+                still.append(t)
+            else:
+                gone.append(t)
+        survivors = still
+        if not survivors:
+            break
+    return gone, survivors
+
+
+def escalate(targets, kill_func=None):
+    """SIGKILL survivors (r074 escalation step). Returns Result list."""
+    kill_func = kill_func or os.kill
+    results = []
+    for t in targets:
+        try:
+            kill_func(t.pid, 9)
+            results.append(Result(t.pid, t.name, "sent",
+                                  detail="escalated to SIGKILL"))
+        except OSError as exc:
+            results.append(Result(t.pid, t.name, "failed", err=exc.errno))
+    return results
+
+
+def group_overview(root_key):
+    """Fresh tree census for the confirm dialog: (count, names)."""
+    procs = procfs.snapshot_procs()
+    keys = [root_key] + descendant_keys(root_key, procs)
+    names = sorted({procs[k].get("comm", "?") for k in keys})
+    return len(keys), names
+
+
+def group_terminate(action, root_key, root_name, procs, *, signum,
+                    grace_attempts=6, poll=None, probe_func=None,
+                    kill_func=None, stat_reader=None, live_reader=None):
+    """Collect the subtree of ``root_key`` and terminate it.
+
+    1. Collect descendants (children-first) + root from the snapshot.
+    2. Probe each member fresh (recycle guard).
+    3. Signal all probeable members with ``signum``.
+    4. Verify liveness; escalate survivors to SIGKILL.
+    5. Verify again.
+
+    ``poll`` (called between verification attempts) is injected so tests run
+    without sleeping. Returns a dict summary for the status line.
+    """
+    poll = poll or (lambda: None)
+    reader = probe_func or probe  # fresh guarded read per member
+    live_reader = live_reader or procfs.parse_stat
+    if procs is None:
+        # fresh collection at action time — a cached snapshot can predate the
+        # tree's newest members (r074 lesson: children born after the last
+        # tick would be missed)
+        procs = procfs.snapshot_procs()
+    keys = [root_key] + descendant_keys(root_key, procs)
+    targets = [reader(key) for key in keys]  # plain positional call: test
+    # fakes and procfs-style readers both work (kwargs are probe-specific)
+    results = signal_results(action, targets, signum=signum,
+                             kill_func=kill_func)
+    sent = [t for t, r in zip(targets, results) if r.kind == "sent"]
+    gone, survivors = verify_gone(sent, live_reader, poll, grace_attempts)
+    escalated = []
+    if survivors:
+        escalated = escalate(survivors, kill_func=kill_func)
+        gone2, survivors = verify_gone(survivors, live_reader, poll,
+                                       grace_attempts)
+        gone += gone2
+    return {
+        "action": action,
+        "root": root_name,
+        "total": len(keys),
+        "results": results + escalated,
+        "terminated": len(gone),
+        "escalated": len(escalated),
+        "survivors": survivors,
+    }
+
+
+def group_summary_text(summary):
+    """Status-line contract for group actions."""
+    verb = "SIGKILL" if summary["action"] in ("kill", "kill-group") else "SIGTERM"
+    base = ("Tree of %s: %d/%d terminated (%s)"
+            % (summary["root"], summary["terminated"], summary["total"], verb))
+    if summary["escalated"]:
+        base += " · %d escalated to SIGKILL" % summary["escalated"]
+    if summary["survivors"]:
+        base += " · %d SURVIVED (restricted)" % len(summary["survivors"])
+    return base
