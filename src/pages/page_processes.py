@@ -14,14 +14,42 @@ tree view, and actions are later phases (Enter just selects here).
 import os
 import signal
 import time
+from collections import deque
 
 from ui.compat import (Gtk, Gdk, GdkPixbuf, GLib, Gio, GTK_MAJOR,
-                       icons, css, events, layout, menu, dialogs)
+                       icons, css, events, layout, menu, dialogs, charts)
 
 from pages.page_base import BasePage
 from config.app_settings import AppSettings, COLUMN_KEYS
 from ui import process_model as pm
 from modules import manager_actions as ma
+from modules import manager_rank as mr
+
+# The six band gauges in Variant-2 order (Load replaces the plain Processes
+# tile). Labels shown; ranking/reading keyed by the metric.
+_BAND_GAUGES = [
+    ("cpu", "CPU"),
+    ("memory", "Memory"),
+    ("swap", "Swap"),
+    ("disk", "Disk I/O"),
+    ("network", "Network"),
+    ("load", "Load"),
+]
+
+# Cairo fill colors per capacity zone (mirror the page's _cap_zone hexes).
+_ZONE_RGB = {
+    mr.ZONE_NOMINAL: (0x7f / 255.0, 0xd0 / 255.0, 0xa0 / 255.0),
+    mr.ZONE_MEDIUM: (0xe8 / 255.0, 0xc2 / 255.0, 0x68 / 255.0),
+    mr.ZONE_NEAR: (0xe0 / 255.0, 0x4c / 255.0, 0x4c / 255.0),
+}
+_TROUGH_RGB = (0x3a / 255.0, 0x3a / 255.0, 0x3a / 255.0)
+
+# ~5 min of net-rate history for the auto-scale ceiling (2x trailing max).
+_NET_HISTORY_MAX = 600
+
+# The honest, permanent per-process-network empty-state (spec §2, verbatim).
+_NET_EMPTY = ("per-process network not available from /proc — "
+              "interface totals on Resources")
 
 # Custom-signal picker presets (name shown; number is the action target).
 _SIGNAL_PICKER = [
@@ -117,6 +145,23 @@ class ProcessesPage(BasePage):
         self._dialog = None
         self._menu_gesture = None
 
+        # Metric band state (Variant 2). The band replaces the text strip; the
+        # strip survives as a compact fallback behind basics.compact_strip.
+        self._compact_strip = bool(self.settings.get("basics.compact_strip", False))
+        self._band_popover = None
+        self._band_anchor = None
+        self._drill_metric = None
+        self._drill_mode = "by_process"
+        self._gauges = {}          # metric -> widget refs
+        self._gauge_state = {}     # metric -> {"fraction", "zone"}
+        self._gauge_prev = {}      # metric -> previous scalar (delta arrows)
+        self._net_history = deque(maxlen=_NET_HISTORY_MAX)
+        self._last_procs = {}      # last snapshot procs (drives the popovers)
+        self._last_system = {}
+        # Observers fed each snapshot via the ONE drain source (r046) — the
+        # Basics page subscribes here rather than draining the sampler itself.
+        self._snapshot_observers = []
+
         self._sort_key = self.settings.get("sort", {}).get("column", "cpu")
         self._sort_desc = self.settings.get("sort", {}).get("direction") != "asc"
 
@@ -127,12 +172,27 @@ class ProcessesPage(BasePage):
             self.settings.get("show_kernel_threads", False))
 
         self.add_title("Processes")
+        if not self._compact_strip:
+            self._build_band()    # sits between title and filter row (mockup K v2)
         self._build_toolbar()
-        self._build_statusbar()   # r055: info strip sits below the filter, above the header row
+        if self._compact_strip:
+            self._build_statusbar()   # r055 fallback: strip below the filter
         self._build_notice()
         self._build_table()
         self._build_row_actions()
+        if not self._compact_strip:
+            self._build_band_actions()
         self._built = True
+
+    # -- snapshot observers (single-drain law, r046) ----------------------
+
+    def add_snapshot_observer(self, callback):
+        """Register ``callback(snapshot)``, invoked on every applied snapshot.
+
+        The Processes page owns the single GLib drain source; other pages
+        (Basics) receive snapshots through here instead of draining the sampler
+        a second time — no new sampling, no extra threads."""
+        self._snapshot_observers.append(callback)
 
     # -- toolbar ----------------------------------------------------------
 
@@ -380,6 +440,324 @@ class ProcessesPage(BasePage):
         self.status_label.set_text("Starting sampler…")
         layout.box_add(self, self.status_label, False, False, 0)
 
+    # -- metric band (r058/r059, Variant 2) -------------------------------
+
+    def _build_band(self):
+        """Six continuous-bar gauges below the title, each a cairo ChartArea fed
+        by the snapshot stream. Clicking a gauge opens its top-10 popover."""
+        band = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        css.add_css_class(band, "metric-band")
+
+        gauges_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        gauges_row.set_homogeneous(True)   # equal-width gauges
+        for metric, label in _BAND_GAUGES:
+            gauges_row_child = self._build_gauge(metric, label)
+            layout.box_add(gauges_row, gauges_row_child, True, True, 0)
+        layout.box_add(band, gauges_row, False, True, 0)
+
+        # Process counts + freshness (the strip's r058 visible_count semantics
+        # now live here, below the gauges).
+        self.band_meta = Gtk.Label()
+        self.band_meta.set_xalign(0)
+        css.add_css_class(self.band_meta, "band-meta")
+        layout.box_add(band, self.band_meta, False, False, 0)
+
+        # A thin line for transient action results (SIGTERM sent, etc.) — the
+        # gauges keep updating independently of this message.
+        self.status_label = Gtk.Label()
+        self.status_label.set_xalign(0)
+        css.add_css_class(self.status_label, "status-strip")
+        layout.box_add(band, self.status_label, False, False, 0)
+
+        layout.box_add(self, band, False, False, 0)
+
+    def _build_gauge(self, metric, label):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+        css.add_css_class(box, "band-gauge")
+
+        head = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        name = Gtk.Label(label=label)
+        name.set_xalign(0)
+        css.add_css_class(name, "gauge-k")
+        value = Gtk.Label()
+        value.set_xalign(1)
+        value.set_hexpand(True)
+        value.set_halign(Gtk.Align.END)
+        css.add_css_class(value, "gauge-v")
+        value.set_markup(self._span("—", "#888888"))
+        layout.box_add(head, name, False, False, 0)
+        layout.box_add(head, value, True, True, 0)
+        layout.box_add(box, head, False, False, 0)
+
+        area = charts.ChartArea(
+            draw_func=lambda a, cr, w, h, m=metric: self._draw_gauge(cr, w, h, m))
+        area.set_size_request(-1, 10)
+        area.set_hexpand(True)
+        area.set_tooltip_text(
+            _NET_EMPTY if metric == "network" else "Click for the top 10")
+        layout.box_add(box, area, False, True, 0)
+
+        caption = Gtk.Label()
+        caption.set_xalign(0)
+        css.add_css_class(caption, "gauge-sub")
+        layout.box_add(box, caption, False, False, 0)
+
+        gesture = events.click_gesture(
+            area, lambda g, n, x, y, m=metric: self._on_gauge_pressed(m), button=1)
+
+        self._gauge_state[metric] = {"fraction": None, "zone": None}
+        self._gauges[metric] = {
+            "value": value, "caption": caption, "area": area, "gesture": gesture,
+        }
+        return box
+
+    def _draw_gauge(self, cr, width, height, metric):
+        cr.set_source_rgb(*_TROUGH_RGB)
+        cr.rectangle(0, 0, width, height)
+        cr.fill()
+        cr.set_source_rgba(1, 1, 1, 0.14)   # threshold ticks at 60/85 (Variant 2)
+        for tick in (0.60, 0.85):
+            cr.rectangle(tick * width, 0, 1, height)
+            cr.fill()
+        state = self._gauge_state.get(metric) or {}
+        frac = state.get("fraction")
+        if frac is None:
+            return
+        rgb = _ZONE_RGB.get(state.get("zone"), _ZONE_RGB[mr.ZONE_NOMINAL])
+        cr.set_source_rgb(*rgb)
+        cr.rectangle(0, 0, max(0.0, min(1.0, frac)) * width, height)
+        cr.fill()
+
+    def _update_band(self, snapshot):
+        system = snapshot.system or {}
+        self._last_procs = snapshot.procs or {}
+        self._last_system = system
+
+        net = mr.net_reading(system)
+        if not snapshot.from_backoff and net["total"] is not None:
+            self._net_history.append(net["total"])
+        ceiling = mr.network_ceiling(
+            max(self._net_history) if self._net_history else None)
+
+        for metric, _label in _BAND_GAUGES:
+            frac, zone, value_markup, caption, scalar = self._read_gauge(
+                metric, system, ceiling, net)
+            refs = self._gauges[metric]
+            refs["value"].set_markup(value_markup)
+            refs["caption"].set_text(caption)
+            self._gauge_state[metric] = {"fraction": frac, "zone": zone}
+            refs["area"].queue_draw()
+            self._gauge_prev[metric] = scalar
+
+        self._update_band_meta(snapshot)
+
+    def _update_band_meta(self, snapshot):
+        model = self.model
+        visible = model.visible_count()
+        if model.last_total > model.last_shown:
+            head = "%d of %d processes" % (model.last_shown, model.last_total)
+        elif visible < model.last_total:
+            head = "%d of %d processes shown" % (visible, model.last_total)
+        else:
+            head = "%d processes" % model.last_total
+        parts = [head]
+        if model.last_kthreads_hidden:
+            parts.append("%d kernel threads hidden" % model.last_kthreads_hidden)
+        if snapshot.from_backoff:
+            parts.append("backoff")
+        parts.append("updated " + time.strftime("%H:%M:%S"))
+        self.band_meta.set_markup(
+            self._span("  ·  ".join(_escape(p) for p in parts), "#888888"))
+
+    # -- band gauge readings + formatting ---------------------------------
+
+    def _zone_hex(self, zone):
+        rgb = _ZONE_RGB.get(zone)
+        if rgb is None:
+            return "#d0d0d0"
+        return "#%02x%02x%02x" % tuple(int(c * 255) for c in rgb)
+
+    def _band_arrow(self, metric, cur, threshold):
+        """Delta arrow (r056: increase red ▲, decrease green ▼, flat gray ·)."""
+        prev = self._gauge_prev.get(metric)
+        if cur is None or prev is None or abs(cur - prev) < threshold:
+            return self._span(self._FLAT, "#d0d0d0")
+        if cur > prev:
+            return self._span(self._UP, "#e04c4c")
+        return self._span(self._DOWN, "#3fbf6f")
+
+    def _pct_gauge(self, metric, pct, fmt, caption, threshold):
+        frac = None if pct is None else max(0.0, min(1.0, pct / 100.0))
+        zone = self._cap_zone(pct)
+        arrow = self._band_arrow(metric, pct, threshold)
+        if pct is None:
+            value = self._span("—", "#888888")
+        else:
+            value = self._span(fmt % pct, self._zone_hex(zone))
+        return frac, zone, value + " " + arrow, caption, pct
+
+    def _read_gauge(self, metric, system, ceiling, net):
+        """Return ``(fraction, zone, value_markup, caption, scalar)`` for a
+        gauge from the frozen ``system`` schema."""
+        if metric == "cpu":
+            pct = mr.cpu_reading(system)["pct"]
+            return self._pct_gauge("cpu", pct, "%d%%", "0 · 60 · 85 · 100", 1.0)
+        if metric == "memory":
+            r = mr.mem_reading(system)
+            cap = "%s used / %s" % (_fmt_bytes(r["used"]), _fmt_bytes(r["total"]))
+            return self._pct_gauge("memory", r["pct"], "%d%%", cap, 0.5)
+        if metric == "swap":
+            r = mr.swap_reading(system)
+            cap = "%s used / %s" % (_fmt_bytes(r["used"]), _fmt_bytes(r["total"]))
+            return self._pct_gauge("swap", r["pct"], "%.1f%%", cap, 0.5)
+        if metric == "disk":
+            r = mr.disk_reading(system)
+            cap = "util · busiest: %s" % (r["busiest"] or "—")
+            return self._pct_gauge("disk", r["pct"], "%.1f%%", cap, 1.0)
+        if metric == "network":
+            total = net["total"]
+            frac = mr.fraction(total, ceiling)
+            zone = (mr.capacity_zone((frac or 0.0) * 100.0)
+                    if total is not None else None)
+            arrow = self._band_arrow("network", total, 1024.0)
+            markup = self._span(_fmt_rate(total), self._zone_hex(zone)) + " " + arrow
+            cap = "↓%s ↑%s · ceiling %s" % (
+                _fmt_rate(net["rx"]), _fmt_rate(net["tx"]), _fmt_rate(ceiling))
+            return frac, zone, markup, cap, total
+        # load — probe-first "—" until /proc/loadavg joins the readers.
+        ncpu = mr.load_reading(system)["ncpu"] or 0
+        return None, None, self._span("—", "#888888"), "1 min · cores: %d" % ncpu, None
+
+    # -- band click-through: top-10 popover + drill-downs -----------------
+
+    def _build_band_actions(self):
+        """The ``band`` action group backs the popover rows: select a process,
+        or re-rank into a drill mode. Inserted on the page so the popover (a
+        descendant) resolves ``band.*`` via the widget hierarchy."""
+        group = Gio.SimpleActionGroup()
+        str_t = GLib.VariantType.new("s")
+        group.add_action(events.make_action(
+            "select", lambda a, p: self._band_select(p.get_string()), str_t))
+        group.add_action(events.make_action(
+            "drill", lambda a, p: self._band_drill(p.get_string()), str_t))
+        self.insert_action_group("band", group)
+        self._band_action_group = group
+
+    def _on_gauge_pressed(self, metric):
+        anchor = self._gauges[metric]["area"]
+        self._open_rank_popover(metric, "by_process", anchor=anchor)
+
+    def _open_rank_popover(self, metric, mode, anchor=None):
+        if anchor is not None:
+            self._band_anchor = anchor
+        self._drill_metric = metric
+        self._drill_mode = mode
+        model = self._build_rank_menu(metric, mode)
+        popover = menu.model_popover(model, relative_to=self._band_anchor)
+        self._band_popover = popover  # keep a reference alive
+        popover.popup()
+
+    def _build_rank_menu(self, metric, mode):
+        model = Gio.Menu()
+
+        if metric == "network":
+            # Honest permanent empty-state — an item with no action renders
+            # disabled (spec §2: not a deferred promise; no reader backs it).
+            section = Gio.Menu()
+            section.append(_NET_EMPTY, None)
+            model.append_section("Network", section)
+            return model
+
+        procs = self._last_procs or {}
+        rows = mr.rank(procs, metric, mode=mode)
+        rows_menu = Gio.Menu()
+        if not rows:
+            rows_menu.append("No contributors (—)", None)
+        else:
+            for rank, row in enumerate(rows, 1):
+                rows_menu.append(
+                    self._rank_row_label(rank, row, metric),
+                    "band.select::%d,%d" % (
+                        row["key"][0], row["key"][1] if row["key"][1] is not None else 0))
+        model.append_section(self._breadcrumb(metric, mode), rows_menu)
+
+        drill = Gio.Menu()
+        if mode != "by_process":
+            drill.append("◂ Back to by process", "band.drill::%s:by_process" % metric)
+        if mode != "by_tree":
+            drill.append("Group by parent tree", "band.drill::%s:by_tree" % metric)
+        if mode != "by_unit":
+            drill.append("Group by unit", "band.drill::%s:by_unit" % metric)
+        model.append_section(None, drill)
+        return model
+
+    _METRIC_TITLE = {"cpu": "CPU", "memory": "Memory", "swap": "Swap",
+                     "disk": "Disk I/O", "load": "Load"}
+    _MODE_TITLE = {"by_process": "by process", "by_tree": "by parent tree",
+                   "by_unit": "by unit"}
+
+    def _breadcrumb(self, metric, mode):
+        crumb = "%s ▸ %s" % (self._METRIC_TITLE.get(metric, metric),
+                             self._MODE_TITLE.get(mode, mode))
+        if metric == "disk":
+            crumb += " — throughput (bytes/s), not device %"
+        elif metric == "load":
+            crumb += " — ranked by CPU"
+        return crumb
+
+    def _rank_row_label(self, rank, row, metric):
+        unit = " [%s]" % row["unit"] if row["unit"] else ""
+        extra = " ×%d" % row["count"] if row.get("count", 1) > 1 else ""
+        return "%d. %s%s (%s)%s — %s" % (
+            rank, row["name"], unit, row["user"], extra,
+            self._rank_value_text(metric, row["value"]))
+
+    @staticmethod
+    def _rank_value_text(metric, value):
+        if metric in ("cpu", "load"):
+            return "%.1f%%" % value
+        if metric == "disk":
+            return _fmt_rate(value)
+        return _fmt_bytes(value)
+
+    def _band_select(self, target):
+        pid_s, _, start_s = target.partition(",")
+        try:
+            key = (int(pid_s), int(start_s))
+        except ValueError:
+            return
+        if self._band_popover is not None:
+            self._band_popover.popdown()
+        self._select_and_scroll(key)
+
+    def _band_drill(self, target):
+        metric, _, mode = target.partition(":")
+        if self._band_popover is not None:
+            self._band_popover.popdown()
+        self._open_rank_popover(metric, mode)
+
+    def select_process(self, key):
+        """Public entry (Basics jump): select ``key`` ((pid, starttime)) in the
+        table and scroll it into view."""
+        self._select_and_scroll(key)
+
+    def _select_and_scroll(self, key):
+        store_key = (key[0], key[1] if key[1] is not None else 0)
+        child = self.model.child_path_for_key(store_key)
+        if child is None:
+            self._render_action("That process is no longer running", True)
+            return
+        path = self.model.filter.convert_child_path_to_path(child)
+        if path is None:
+            self._render_action(
+                "That process is filtered out of the current view", True)
+            return
+        selection = self.treeview.get_selection()
+        selection.unselect_all()
+        selection.select_path(path)
+        self.treeview.scroll_to_cell(path, None, True, 0.5, 0.0)
+        self.treeview.grab_focus()
+
     # -- sampler wiring (called by DashboardWindow after construction) ----
 
     def attach_sampler(self, sampler, app=None):
@@ -417,8 +795,17 @@ class ProcessesPage(BasePage):
         selected = self._capture_selection()
         self.model.apply_snapshot(snapshot.procs)
         self._restore_selection(selected)
-        self._update_status(snapshot)
+        if self._compact_strip:
+            self._update_status(snapshot)
+        else:
+            self._update_band(snapshot)
         self._update_notice()
+        # Fan the snapshot out to observers (Basics) through the single drain.
+        for observer in self._snapshot_observers:
+            try:
+                observer(snapshot)
+            except Exception:  # noqa: BLE001 - one page must not break another
+                pass
         return True  # keep the source alive
 
     # -- selection identity ----------------------------------------------

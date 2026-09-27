@@ -577,3 +577,91 @@ scale slider:hover {
 .status-strip {
     padding: 4px 0 6px 0;
 }
+
+/* ============================================
+   Metric band (r059, Variant 2) + Basics page
+   ============================================ */
+
+/* The band sits between the page title and the filter row (mockup K v2). */
+.metric-band {
+    margin-bottom: 6px;
+}
+
+.band-gauge {
+    background-color: #262626;
+    border: 1px solid #1a1a1a;
+    padding: 8px 10px;
+}
+
+/* Gauge label (uppercased key), value, and scale caption. */
+.gauge-k {
+    font-size: 9pt;
+    color: #888888;
+}
+
+.gauge-v {
+    font-size: 11pt;
+    font-feature-settings: "tnum";
+    color: #eeeeee;
+}
+
+.gauge-sub {
+    font-size: 8pt;
+    color: #777777;
+}
+
+.band-meta {
+    font-size: 9pt;
+    color: #888888;
+    padding: 2px 0 0 0;
+}
+
+/* Basics page — the same gauges rendered large, stacked. */
+.basics-card {
+    background-color: #262626;
+    border: 1px solid #1a1a1a;
+    border-radius: 3px;
+    padding: 12px 14px;
+}
+
+.basics-gauge-k {
+    font-size: 13pt;
+    font-weight: bold;
+    color: #ffffff;
+}
+
+.basics-gauge-v {
+    font-size: 13pt;
+    font-feature-settings: "tnum";
+    color: #eeeeee;
+}
+
+.basics-gauge-sub {
+    font-size: 9pt;
+    color: #888888;
+}
+
+.basics-spark {
+    background-color: #202020;
+}
+
+.basics-contrib-title {
+    font-size: 9pt;
+    color: #909090;
+    margin-top: 6px;
+}
+
+/* Contributor rows are flat, left-aligned buttons that jump to Processes. */
+.basics-contrib-row {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 2px 4px;
+    min-height: 0;
+}
+
+.basics-contrib-row:hover {
+    background-color: #303030;
+}

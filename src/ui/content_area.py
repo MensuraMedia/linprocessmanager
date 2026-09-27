@@ -10,6 +10,7 @@ from pages.page_processes import ProcessesPage
 from pages.page_resources import ResourcesPage
 from pages.page_disks import DisksPage
 from pages.page_logs import LogsPage
+from pages.page_basics import BasicsPage
 from pages.page_about import AboutPage
 from pages.page_settings import SettingsPage
 
@@ -61,6 +62,7 @@ class ContentArea(Gtk.Box):
         resources_page = ResourcesPage()
         disks_page = DisksPage()
         logs_page = LogsPage()
+        basics_page = BasicsPage()
         about_page = AboutPage()
         settings_page = SettingsPage()
 
@@ -69,6 +71,7 @@ class ContentArea(Gtk.Box):
         resources_scrolled = self.wrap_page_in_scrolled_window(resources_page)
         disks_scrolled = self.wrap_page_in_scrolled_window(disks_page)
         logs_scrolled = self.wrap_page_in_scrolled_window(logs_page)
+        basics_scrolled = self.wrap_page_in_scrolled_window(basics_page)
         about_scrolled = self.wrap_page_in_scrolled_window(about_page)
         settings_scrolled = self.wrap_page_in_scrolled_window(settings_page)
 
@@ -77,6 +80,7 @@ class ContentArea(Gtk.Box):
         self.stack.add_named(resources_scrolled, "resources")
         self.stack.add_named(disks_scrolled, "disks")
         self.stack.add_named(logs_scrolled, "logs")
+        self.stack.add_named(basics_scrolled, "basics")
         self.stack.add_named(about_scrolled, "about")
         self.stack.add_named(settings_scrolled, "settings")
 
@@ -85,8 +89,22 @@ class ContentArea(Gtk.Box):
         self.nav_manager.register_page("resources", resources_page)
         self.nav_manager.register_page("disks", disks_page)
         self.nav_manager.register_page("logs", logs_page)
+        self.nav_manager.register_page("basics", basics_page)
         self.nav_manager.register_page("about", about_page)
         self.nav_manager.register_page("settings", settings_page)
+
+        # Wire the Basics page to the Processes page WITHOUT a second sampler
+        # drain (r046 single-drain law): Processes forwards each snapshot to
+        # Basics, and a Basics contributor click jumps back to Processes with
+        # that process selected.
+        if hasattr(processes_page, "add_snapshot_observer"):
+            processes_page.add_snapshot_observer(basics_page.on_snapshot)
+
+        def _jump_to_process(key):
+            self.nav_manager.navigate_to("processes")
+            processes_page.select_process(key)
+
+        basics_page.set_jump_callback(_jump_to_process)
 
     def show_page(self, page_id):
         """Show a specific page"""

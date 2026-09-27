@@ -92,6 +92,7 @@ class Sidebar(Gtk.Box):
             ("Resources", "resources", False),
             ("Disks", "disks", False),
             ("Logs", "logs", False),
+            ("Basics", "basics", False),        # read-only system summary
             ("About", "about", False)
         ]
         
