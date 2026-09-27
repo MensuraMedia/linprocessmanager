@@ -46,6 +46,8 @@ COL_NICE = 16
 COL_NICE_HAS = 17
 COL_IS_KTHREAD = 18
 COL_IS_DEFUNCT = 19
+COL_NAME_SORT = 20   # r067: clean casefolded name — stable sort key for the
+                     # Process column (markup changes must not reorder rows)
 N_COLUMNS = 20
 
 STORE_TYPES = [
@@ -63,6 +65,7 @@ STORE_TYPES = [
     int, bool,              # NICE
     bool,                   # IS_KTHREAD
     bool,                   # IS_DEFUNCT
+    str,                    # NAME_SORT (hidden stable key)
 ]
 
 # Logical (persisted) sort-key -> the (value_col, has_col) it maps to. Columns
@@ -136,6 +139,7 @@ def record_to_row(rec):
         int(nice) if nice_has else -1, nice_has,
         bool(rec.get("is_kthread")),
         bool(rec.get("is_defunct")),
+        (rec.get("name") or "?").casefold(),
     ]
 
 
@@ -181,6 +185,10 @@ class ProcessTableModel:
         ):
             self.store.set_sort_func(
                 value_col, self._num_sort, (value_col, has_col))
+        # r067: the visible Process cell holds Pango MARKUP (badges, state
+        # styling) that changes every tick — sorting on it reshuffled rows
+        # whose names never changed. Sort on the clean stable key instead.
+        self.store.set_sort_func(COL_NAME_SORT, self._name_sort, None)
 
     def _num_sort(self, model, a, b, data):
         value_col, has_col = data
@@ -208,21 +216,34 @@ class ProcessTableModel:
             return (r if r >= 0 else 0) + (w if w >= 0 else 0)
         return model.get_value(it, value_col)
 
+    def _name_sort(self, model, a, b, _data):
+        va = model.get_value(a, COL_NAME_SORT)
+        vb = model.get_value(b, COL_NAME_SORT)
+        return (va > vb) - (va < vb)
+
     def set_sort(self, key, descending):
         """Adopt a logical sort key + direction (persisted by the page)."""
-        if key not in SORT_COLUMNS:
+        if key == "process":
+            key = "name"  # r067: the Process header sorts on the stable name
+        if key not in SORT_COLUMNS and key != "name":
             key = "cpu"
         self._sort_key = key
         self._sort_desc = bool(descending)
         self.apply_sort()
 
     def apply_sort(self):
+        if self._sort_key in ("name", "process"):
+            order = Gtk.SortType.DESCENDING if self._sort_desc else Gtk.SortType.ASCENDING
+            self.store.set_sort_column_id(COL_NAME_SORT, order)
+            return
         value_col, _has = SORT_COLUMNS[self._sort_key]
         order = Gtk.SortType.DESCENDING if self._sort_desc else Gtk.SortType.ASCENDING
         self.store.set_sort_column_id(value_col, order)
 
     def sort_key_for_column(self, value_col):
         """Reverse-map a store value column to its logical sort key (or None)."""
+        if value_col == COL_NAME_SORT:
+            return "name"
         for key, (col, _has) in SORT_COLUMNS.items():
             if col == value_col:
                 return key

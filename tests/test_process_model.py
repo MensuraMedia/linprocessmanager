@@ -192,3 +192,30 @@ def test_row_budget_trims_to_top_n_under_sort():
     assert len(store_rows(model)) == 3
     kept = sorted(r[pm.COL_PID] for r in store_rows(model))
     assert kept == [3, 4, 5]  # top-3 by cpu
+
+
+def test_name_sort_stable_across_value_churn():
+    """r067 operator bug: clicking the Process header silently sorted by CPU
+    (unknown-key fallback), so rows reshuffled every tick. Sorting by name
+    must use the stable clean-name key and hold order while values churn."""
+    model = pm.ProcessTableModel()
+    model.set_sort("process", descending=False)   # header key is "process"
+    # alphabetical insert: alpha, beta, gamma
+    model.apply_snapshot(procs(
+        rec(1, name="beta", cpu=30.0, state="S"),
+        rec(2, name="alpha", cpu=10.0, state="R"),
+        rec(3, name="gamma", cpu=20.0, state="S"),
+    ))
+    names = [r[pm.COL_NAME] for r in store_rows(model)]
+    assert names == ["alpha", "beta", "gamma"]
+
+    # next tick: CPU values churn hard, states/unit badges change, one gains
+    # swap — names unchanged, so the ALPHA-BETICAL ORDER MUST NOT MOVE
+    # (pre-fix, the header fell back to a live CPU sort and reshuffled).
+    model.apply_snapshot(procs(
+        rec(1, name="beta", cpu=90.0, state="R"),
+        rec(2, name="alpha", cpu=1.0, state="S"),
+        rec(3, name="gamma", cpu=55.0, state="D"),
+    ))
+    names = [r[pm.COL_NAME] for r in store_rows(model)]
+    assert names == ["alpha", "beta", "gamma"]
