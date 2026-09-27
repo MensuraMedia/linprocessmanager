@@ -36,7 +36,8 @@ self-reliant — no web-based resources at build or runtime, ever.
 | [modules/sampling-pipeline.md](modules/sampling-pipeline.md) | `manager_sampler.py` | cadence, snapshot schema, rate math, backoff |
 | [modules/process-table.md](modules/process-table.md) | `page_processes.py` | flat/tree models, diff-in-place, filter, details pane |
 | [modules/actions-permissions.md](modules/actions-permissions.md) | `manager_actions.py` | signals, renice, (pid,starttime) guard, error contract |
-| [modules/resource-graphs.md](modules/resource-graphs.md) | `page_resources.py` + `manager_history.py` | ring buffers, cairo charts, PSI chips |
+| [modules/resource-graphs.md](modules/resource-graphs.md) | `manager_history.py` | ring law + sensors chips (rendering moved to graphs-hub) |
+| [modules/graphs-hub.md](modules/graphs-hub.md) | `page_graphs.py` + detail pages | Graphs sidebar feature: hub grid of 7 clickable mini-charts + per-metric pages (r060) |
 | [modules/persistence-config.md](modules/persistence-config.md) | `config_processes.py` | settings.json schema, XDG rules |
 | [modules/disks-filesystems.md](modules/disks-filesystems.md) | `page_disks.py` | per-device I/O rates, per-mount usage |
 | [modules/logs-journal.md](modules/logs-journal.md) | `manager_logs.py` + `page_logs.py` | journal engine, sidebar submenu, search, row context menu, saved views |
@@ -179,9 +180,11 @@ its module doc's tests green.
   contract ("signal sent", not "ended").
 - **Phase 4 — Tree & details.** TreeStore tree with kthread grouping,
   orphan relocation; details pane incl. PSS/IO/cmdline/swap.
-- **Phase 5 — Resources + sensors.** Timestamped ring buffers, per-core
-  stacked charts, memory/network, PSI chips, temperature/frequency/GPU chips
-  (sysfs).
+- **Phase 5 — Graphs (supersedes Resources).** manager_history rings
+  (timestamped, backoff-excluded), the Graphs hub + per-metric detail
+  pages (graphs-hub.md), PSI chips, temperature/frequency/GPU chips
+  (sysfs), loadavg reader via sign-off gate. Resources sidebar entry
+  retires when the hub ships (checklist in graphs-hub.md §3).
 - **Phase 6 — Disks.** diskstats rates + mount usage page.
 - **Phase 7 — Logs (large — size like phases 1–2).** journalctl engine under
   the argv contract, four presets, follow/tail, search + time-jump,

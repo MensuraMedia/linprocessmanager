@@ -38,7 +38,8 @@ file-manager windows whose path contains "linprocman" — always use the ID).
 
 The pixel rig is the operator's live X session (`:0`, `who` to confirm) —
 no Xvfb needed on this machine. Settings keys for task 004 come from
-[modules/persistence-config.md](modules/persistence-config.md).
+[modules/persistence-config.md](modules/persistence-config.md),
+[modules/graphs-hub.md](modules/graphs-hub.md) (Graphs feature).
 
 Hardened-kernel degradation (hidepid, Yama ptrace_scope, dmesg_restrict)
 shows as `lock` rows / "—" cells with no error — fixture-tested in

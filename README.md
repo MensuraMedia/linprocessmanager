@@ -60,6 +60,7 @@ Workflow, gates, task contracts, and the ZCode⇄Claude collaboration:
 | Logs: context menu + Frequency analytics | [G](docs/mockups/mockup-g-frequency.png) |
 | Sidebar width study (170 px adopted) | [H](docs/mockups/mockup-h-sidebar.png) |
 | Extended columns (22-metric chooser, I/O + net) | [I](docs/mockups/mockup-i-extended-columns.png) |
+| Graphs hub + per-metric detail pages | [L](docs/mockups/mockup-l-graphs.png) |
 | Process preview pane + context menu | [J](docs/mockups/mockup-j-preview-context.png) |
 
 Feature-to-spec mapping lives in the module docs
@@ -77,6 +78,7 @@ Feature-to-spec mapping lives in the module docs
 | [docs/gtk4-port.md](docs/gtk4-port.md) | GTK3→GTK4 port strategy |
 | [docs/upgrade-architecture.md](docs/upgrade-architecture.md) | compat layer + upgrade runbooks |
 | [docs/debian-compatibility.md](docs/debian-compatibility.md) | distro matrix, floors, packaging |
+| [docs/modules/graphs-hub.md](docs/modules/graphs-hub.md) | Graphs sidebar feature: hub + per-metric chart pages |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | day-to-day development guide |
 | [.zcode/tasks/QUEUE.md](.zcode/tasks/QUEUE.md) | orchestration queue + task states |
 
