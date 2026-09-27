@@ -58,13 +58,10 @@ _TROUGH_RGB = (0x3a / 255.0, 0x3a / 255.0, 0x3a / 255.0)
 # Contributor mini-bar colour per metric (mockup M): cpu/disk/load ride the
 # theme accent, the memory family a lighter blue. Network has no per-process
 # contributors (honest empty-state), so no bar.
-_CONTRIB_BAR_RGB = {
-    "cpu": (0x00 / 255.0, 0x78 / 255.0, 0xD7 / 255.0),
-    "disk": (0x00 / 255.0, 0x78 / 255.0, 0xD7 / 255.0),
-    "load": (0x00 / 255.0, 0x78 / 255.0, 0xD7 / 255.0),
-    "memory": (0x2e / 255.0, 0xa6 / 255.0, 0xff / 255.0),
-    "swap": (0x2e / 255.0, 0xa6 / 255.0, 0xff / 255.0),
-}
+# r088: ONE color for every contributor mini-bar — the theme accent. The
+# old per-metric table drew Memory/Swap in a lighter blue (#2ea6ff) than
+# CPU/Disk/Load (#0078d7); the operator called the mix inconsistent.
+_CONTRIB_BAR_RGB = (0x00 / 255.0, 0x78 / 255.0, 0xD7 / 255.0)
 _CONTRIB_BAR_TROUGH = (0x1b / 255.0, 0x1b / 255.0, 0x1b / 255.0)
 
 _NET_EMPTY = ("per-process network not available from /proc — "
@@ -402,8 +399,7 @@ class BasicsPage(BasePage):
         cr.fill()
         if frac <= 0:
             return
-        rgb = _CONTRIB_BAR_RGB.get(metric, _CONTRIB_BAR_RGB["cpu"])
-        cr.set_source_rgb(*rgb)
+        cr.set_source_rgb(*_CONTRIB_BAR_RGB)
         cr.rectangle(0, 0, max(0.0, min(1.0, frac)) * width, height)
         cr.fill()
 

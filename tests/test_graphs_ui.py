@@ -214,9 +214,14 @@ def test_basics_contrib_fractions_proportional_to_leader():
     assert pb.contrib_fractions([None, 40.0]) == [0.0, 1.0]
 
 
-def test_basics_contrib_bar_colour_defined_per_drillable_metric():
-    for metric in ("cpu", "memory", "swap", "disk", "load"):
-        assert metric in pb._CONTRIB_BAR_RGB
+def test_basics_contrib_bar_colour_one_consistent_accent():
+    """r088 (operator): every contributor mini-bar draws the SAME color —
+    the theme accent — regardless of metric. The old per-metric table drew
+    Memory/Swap in a lighter blue than CPU/Disk/Load."""
+    assert pb._CONTRIB_BAR_RGB == (0x00 / 255.0, 0x78 / 255.0, 0xD7 / 255.0)
+    src = open("src/pages/page_basics.py").read()
+    assert ".get(metric" not in src.split("_draw_contrib_bar")[1].split("def ")[0], \
+        "contrib bar colour must not vary per metric again"
 
 
 def test_cpu_contributor_key_resolves_in_process_model():
