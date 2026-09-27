@@ -12,13 +12,33 @@ tree view, and actions are later phases (Enter just selects here).
 """
 
 import os
+import signal
 import time
 
-from ui.compat import Gtk, GdkPixbuf, GLib, icons, css, events, layout
+from ui.compat import (Gtk, Gdk, GdkPixbuf, GLib, Gio, GTK_MAJOR,
+                       icons, css, events, layout, menu, dialogs)
 
 from pages.page_base import BasePage
 from config.app_settings import AppSettings, COLUMN_KEYS
 from ui import process_model as pm
+from modules import manager_actions as ma
+
+# Custom-signal picker presets (name shown; number is the action target).
+_SIGNAL_PICKER = [
+    ("SIGHUP", signal.SIGHUP), ("SIGINT", signal.SIGINT),
+    ("SIGQUIT", signal.SIGQUIT), ("SIGUSR1", signal.SIGUSR1),
+    ("SIGUSR2", signal.SIGUSR2), ("SIGTERM", signal.SIGTERM),
+    ("SIGKILL", signal.SIGKILL),
+]
+
+# Renice presets — absolute niceness targets (unprivileged users may only
+# increase niceness; the dialog states the rule before attempting).
+_RENICE_PRESETS = [
+    (1, "Niceness 1 (slightly lower priority)"),
+    (5, "Niceness 5 (background)"),
+    (10, "Niceness 10 (low priority)"),
+    (19, "Niceness 19 (lowest priority)"),
+]
 
 # Phosphor subset (resources/icons/manifest.txt); loaded via the compat helper.
 _ICON_DIR = os.path.join(
@@ -92,6 +112,10 @@ class ProcessesPage(BasePage):
         self._width_save_id = None
         self._paused = False
         self._built = False
+        self._action_msg_until = 0.0
+        self._row_popover = None
+        self._dialog = None
+        self._menu_gesture = None
 
         self._sort_key = self.settings.get("sort", {}).get("column", "cpu")
         self._sort_desc = self.settings.get("sort", {}).get("direction") != "asc"
@@ -107,6 +131,7 @@ class ProcessesPage(BasePage):
         self._build_statusbar()   # r055: info strip sits below the filter, above the header row
         self._build_notice()
         self._build_table()
+        self._build_row_actions()
         self._built = True
 
     # -- toolbar ----------------------------------------------------------
@@ -422,6 +447,11 @@ class ProcessesPage(BasePage):
     # -- status + notice --------------------------------------------------
 
     def _update_status(self, snapshot):
+        # Hold a just-rendered action result on the strip for a few seconds so
+        # it is not immediately overwritten by the next snapshot (r039 wording
+        # must be readable — and screenshot-able during live verification).
+        if time.monotonic() < self._action_msg_until:
+            return
         model = self.model
         visible = model.visible_count()  # r058 P2-6: reflect scope+filter
         parts = [self._span("%d of %d processes shown" % (visible, model.last_total)
@@ -550,6 +580,258 @@ class ProcessesPage(BasePage):
         # Details pane is Phase 4; Enter just selects (the activation already
         # moved/kept selection here).
         pass
+
+    # -- context menu + action surface (Phase 3) --------------------------
+
+    def _build_row_actions(self):
+        """Stand up the row action group, the Gio.Menu model, and the
+        right-click gesture. Every action acts on the current (multi-)selection
+        via ``(pid, starttime)`` keys; destructive ones confirm per
+        actions-permissions.md. All wiring is model + adapter (compat seams)."""
+        group = Gio.SimpleActionGroup()
+        self._proc_actions = group
+
+        # Plain signal actions.
+        for name, handler in (
+            ("stop", lambda a, p: self._do_signal("stop")),
+            ("continue", lambda a, p: self._do_signal("continue")),
+            ("end", lambda a, p: self._do_signal("end")),
+            ("kill", lambda a, p: self._do_signal("kill")),
+            ("hangup", lambda a, p: self._do_signal("hangup")),
+            ("copy-pid", lambda a, p: self._act_copy_pid()),
+            ("copy-cmdline", lambda a, p: self._act_copy_cmdline()),
+        ):
+            group.add_action(events.make_action(name, handler))
+
+        # Parameterised actions (menu items carry the target value).
+        int_t = GLib.VariantType.new("i")
+        str_t = GLib.VariantType.new("s")
+        group.add_action(events.make_action(
+            "signal", lambda a, p: self._do_signal("signal", signum=p.get_int32()),
+            int_t))
+        group.add_action(events.make_action(
+            "renice", lambda a, p: self._act_renice(p.get_int32()), int_t))
+        group.add_action(events.make_action(
+            "affinity", lambda a, p: self._act_affinity(p.get_string()), str_t))
+
+        # Phase-4 placeholders: present but always disabled (grayed) so the
+        # menu shows the full surface without pretending to wire it yet.
+        for name in ("tree", "frequency", "journal", "open-location"):
+            action = events.make_action(name, lambda a, p: None)
+            action.set_enabled(False)
+            group.add_action(action)
+
+        self.treeview.insert_action_group("proc", group)
+        self._row_menu_model = self._build_row_menu_model()
+        self._menu_gesture = events.click_gesture(
+            self.treeview, self._on_row_menu, button=3)
+
+    def _build_row_menu_model(self):
+        model = Gio.Menu()
+
+        nav = Gio.Menu()
+        nav.append("Show in tree (Phase 4)", "proc.tree")
+        nav.append("Copy PID", "proc.copy-pid")
+        nav.append("Copy command line", "proc.copy-cmdline")
+        model.append_section(None, nav)
+
+        signals = Gio.Menu()
+        signals.append("Stop (SIGSTOP)", "proc.stop")
+        signals.append("Continue (SIGCONT)", "proc.continue")
+        signals.append("End (SIGTERM)", "proc.end")
+        signals.append("Kill (SIGKILL)", "proc.kill")
+        signals.append("Hang up (SIGHUP)", "proc.hangup")
+        picker = Gio.Menu()
+        for label, num in _SIGNAL_PICKER:
+            picker.append("%s (%d)" % (label, int(num)),
+                          "proc.signal(%d)" % int(num))
+        signals.append_submenu("Send signal…", picker)
+        model.append_section(None, signals)
+
+        tuning = Gio.Menu()
+        renice = Gio.Menu()
+        for value, label in _RENICE_PRESETS:
+            renice.append(label, "proc.renice(%d)" % value)
+        tuning.append_submenu("Change priority (renice)…", renice)
+        affinity = Gio.Menu()
+        affinity.append("All CPUs", "proc.affinity('all')")
+        affinity.append("First CPU only", "proc.affinity('first')")
+        tuning.append_submenu("Set CPU affinity…", affinity)
+        model.append_section(None, tuning)
+
+        later = Gio.Menu()
+        later.append("Frequency… (Phase 4)", "proc.frequency")
+        later.append("View journal for unit… (Phase 4)", "proc.journal")
+        later.append("Open executable location… (Phase 4)", "proc.open-location")
+        model.append_section(None, later)
+        return model
+
+    def _on_row_menu(self, _gesture, _n_press, x, y):
+        # Right-click selects the row under the pointer unless it is already
+        # part of a multi-selection (then the menu acts on the whole set).
+        path = self._path_at(x, y)
+        selection = self.treeview.get_selection()
+        if path is not None and not selection.path_is_selected(path):
+            selection.unselect_all()
+            selection.select_path(path)
+        targets = self._selected_targets()
+        self._update_menu_sensitivity(targets)
+        self._popup_menu(x, y)
+
+    def _path_at(self, x, y):
+        try:
+            if GTK_MAJOR >= 4:
+                res = self.treeview.get_path_at_pos(int(x), int(y))
+            else:
+                bx, by = self.treeview.convert_widget_to_bin_window_coords(
+                    int(x), int(y))
+                res = self.treeview.get_path_at_pos(bx, by)
+        except Exception:  # noqa: BLE001 - a miss just means no row was hit
+            return None
+        return res[0] if res else None
+
+    def _popup_menu(self, x, y):
+        popover = menu.model_popover(self._row_menu_model, relative_to=self.treeview)
+        rect = Gdk.Rectangle()
+        rect.x, rect.y, rect.width, rect.height = int(x), int(y), 1, 1
+        popover.set_pointing_to(rect)
+        self._row_popover = popover  # keep a reference alive
+        popover.popup()
+
+    def _update_menu_sensitivity(self, targets):
+        def enable(name, on):
+            action = self._proc_actions.lookup_action(name)
+            if action is not None:
+                action.set_enabled(on)
+
+        if not targets:
+            for name in ("stop", "continue", "end", "kill", "hangup", "signal",
+                         "renice", "affinity", "copy-pid", "copy-cmdline"):
+                enable(name, False)
+            return
+        # Signal feasibility is uniform across the signal items (a zombie or a
+        # departed PID disables them all); "end" stands in as a signal action.
+        sig_ok, _ = ma.feasibility_many("end", targets)
+        for name in ("stop", "continue", "end", "kill", "hangup", "signal"):
+            enable(name, sig_ok)
+        enable("renice", ma.feasibility_many("renice", targets)[0])
+        enable("affinity", ma.feasibility_many("affinity", targets)[0])
+        enable("copy-pid", True)
+        enable("copy-cmdline", True)
+
+    # -- action execution -------------------------------------------------
+
+    def _selected_keys(self):
+        return self._capture_selection()
+
+    def _selected_targets(self):
+        # Fresh /proc/<pid>/stat read per key at click time (the recycle guard).
+        return [ma.probe(key) for key in self._selected_keys()]
+
+    def _do_signal(self, action, signum=None):
+        targets = self._selected_targets()
+        if not targets:
+            return
+
+        def run():
+            results = ma.signal_results(action, targets, signum=signum)
+            self._render_action(
+                ma.render_signal(action, results, signum),
+                ma.has_failure(results))
+
+        need = ma.needs_confirm(action, targets, self.settings)
+        message = ma.confirm_message(action, targets)
+        label = action.capitalize()
+        if action == "signal":
+            # The picker can send SIGKILL/SIGTERM — confirm those like the
+            # dedicated Kill/End actions do.
+            label = "Send"
+            message = "Send %s to the selected process(es)?" % ma.signame(signum)
+            if signum in (signal.SIGKILL, signal.SIGTERM):
+                need = True
+        if need:
+            self._confirm(message, run, confirm_label=label)
+        else:
+            run()
+
+    def _act_renice(self, value):
+        targets = self._selected_targets()
+        if not targets:
+            return
+        target = targets[0]  # renice is single-target (spec: renice(key, value))
+
+        def run():
+            result = ma.renice(target, value)
+            self._render_action(
+                ma.render_renice(result, value), ma.has_failure(result))
+
+        # Always dialog first — it states the permission rule before attempting.
+        self._confirm(ma.renice_message(target, value), run, confirm_label="Set")
+
+    def _act_affinity(self, which):
+        targets = self._selected_targets()
+        if not targets:
+            return
+        target = targets[0]
+        ncpu = os.cpu_count() or 1
+        cpus = list(range(ncpu)) if which == "all" else [0]
+
+        def run():
+            result = ma.set_affinity(target, cpus)
+            self._render_action(
+                ma.render_affinity(result, cpus), ma.has_failure(result))
+
+        self._confirm(ma.affinity_message(target, cpus), run, confirm_label="Pin")
+
+    def _act_copy_pid(self):
+        keys = self._selected_keys()
+        if not keys:
+            return
+        self._copy_text(" ".join(str(key[0]) for key in keys))
+        self._render_action(
+            "Copied PID%s to clipboard" % ("s" if len(keys) > 1 else ""), False)
+
+    def _act_copy_cmdline(self):
+        keys = self._selected_keys()
+        if not keys:
+            return
+        text = ma.command_line(keys[0])  # kernel read stays in the actions layer
+        if not text:
+            self._render_action("No command line (kernel thread or restricted)",
+                                True)
+            return
+        self._copy_text(text)
+        self._render_action("Copied command line to clipboard", False)
+
+    def _copy_text(self, text):
+        if GTK_MAJOR >= 4:
+            self.treeview.get_clipboard().set(text)
+        else:
+            clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+            clipboard.set_text(text, -1)
+
+    def _confirm(self, message, on_confirm, confirm_label="Confirm"):
+        window = dialogs.confirm_window(
+            self._toplevel_window(), "Confirm action", message, on_confirm,
+            confirm_label=confirm_label)
+        self._dialog = window  # keep a reference alive until it closes
+        window.present()
+
+    def _toplevel_window(self):
+        try:
+            if GTK_MAJOR >= 4:
+                root = self.get_root()
+            else:
+                root = self.get_toplevel()
+        except Exception:  # noqa: BLE001 - fall back to an untethered window
+            return None
+        return root if isinstance(root, Gtk.Window) else None
+
+    def _render_action(self, message, failed):
+        color = "#e8c268" if failed else "#7fd0a0"
+        icon = self._span("⚠", "#e8c268") + " " if failed else ""
+        self.status_label.set_markup(icon + self._span(_escape(message), color))
+        self._action_msg_until = time.monotonic() + 6.0
 
     # -- keyboard actions -------------------------------------------------
 

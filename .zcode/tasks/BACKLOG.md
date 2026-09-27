@@ -37,3 +37,4 @@ debt/prevention) and the phase where it naturally fits.
 | D3 | GUI walk: add per-page pixel-hash diff assertion (catches accidental blank pages) | DEBT | uses r051 harness |
 | D4 | settings.json version key + migration stub | DEBT | forward compat |
 | D5 | Strip/`status-strip` CSS: move magic colors into config_themes accent derivation | DEBT | 7-theme correctness |
+| D6 | `compat/dialogs` entry/spin seam (`entry_window`): renice + affinity + custom-signal ship as presets in Phase 3 because `confirm_window` has no input field; a free numeric renice value and an arbitrary CPU-mask picker need a portable entry dialog added to the dialogs seam | DEBT | task 006 deferral; dialogs.py was out of task-006 scope |
