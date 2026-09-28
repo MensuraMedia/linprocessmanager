@@ -13,6 +13,7 @@ from pages import graph_details as gd
 from pages.page_disks import DisksPage
 from pages.page_logs import LogsPage
 from pages.page_basics import BasicsPage
+from pages.page_peripherals import PeripheralsPage
 from pages.page_about import AboutPage
 from pages.page_settings import SettingsPage
 
@@ -72,8 +73,12 @@ class ContentArea(Gtk.Box):
         detail_pages = [(spec.page_id, gd.GraphDetailPage(spec))
                         for spec in gd.DETAIL_SPECS]
         disks_page = DisksPage()
+        peripherals_page = PeripheralsPage()
         logs_page = LogsPage()
         basics_page = BasicsPage()
+        # r092 (operator): Basics is no longer its own page — the cards live
+        # at the top of the Graphs hub (submenu retired).
+        graphs_page.add_basics_section(basics_page)
         about_page = AboutPage()
         settings_page = SettingsPage()
 
@@ -83,8 +88,8 @@ class ContentArea(Gtk.Box):
             ("processes", processes_page),
             ("graphs", graphs_page),
             ("disks", disks_page),
+            ("peripherals", peripherals_page),
             ("logs", logs_page),
-            ("basics", basics_page),
             ("about", about_page),
             ("settings", settings_page),
         ]

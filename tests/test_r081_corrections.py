@@ -70,23 +70,10 @@ def test_header_right_click_opens_column_chooser_not_process_menu():
     win.destroy()
 
 
-def test_caret_toggles_basics_submenu_without_navigating():
-    win = _build_window()
-    sidebar = win.sidebar
-    nav = win.nav_manager
-    assert not _graphs_box(sidebar).get_visible(), 'starts collapsed'
-    caret_changed = []
-    before = nav.get_current_page()
-    sidebar._on_caret_toggle('graphs')
-    assert _graphs_box(sidebar).get_visible(), 'caret expands downward'
-    sidebar._on_caret_toggle('graphs')
-    assert not _graphs_box(sidebar).get_visible(), 'caret contracts upward'
-    assert nav.get_current_page() == before, 'caret toggle must not navigate'
-    assert caret_changed == []
-    win.destroy()
-
-
-def test_band_chart_click_lands_on_basics_and_expands_group():
+def test_band_chart_double_click_lands_on_graphs_hub():
+    """r092: the Basics cards live at the TOP of the Graphs hub, so the
+    band double-click lands on 'graphs' (the standalone Basics page and
+    the sidebar submenu are retired)."""
     win = _build_window()
     nav = win.nav_manager
     page = nav.get_page_widget('processes')
@@ -95,55 +82,9 @@ def test_band_chart_click_lands_on_basics_and_expands_group():
         navigation_manager = nav
     page._app = _App()
 
-    assert not _graphs_box(win.sidebar).get_visible()
     page._on_gauge_pressed('cpu')
-    _pump(0.3)
-    assert nav.get_current_page() == 'basics', \
-        'band-chart click must open the Basics page'
-    assert _graphs_box(win.sidebar).get_visible(), \
-        'Basics destination must arrive with the Graphs group expanded'
-    win.destroy()
-
-
-def test_caret_click_delivered_as_real_event_does_not_navigate():
-    """CROSS-REVIEW P2-1 (Claude, r081): the direct-call test cannot prove
-    that a REAL pointer press on the caret EventBox is swallowed — if the
-    group button also saw it, the caret would toggle AND navigate. This
-    drives a genuine button-press/release pair through the event pipeline
-    at the caret's on-screen position (r034 synthesized-event pattern)."""
-    win = _build_window()
-    sidebar = win.sidebar
-    nav = win.nav_manager
-    from ui.compat import Gdk, Gtk
-
-    toggle_box = None
-    for page_id, info in sidebar.submenus.items():
-        if page_id == 'graphs':
-            caret = info['caret']
-            toggle_box = caret.get_parent()      # the EventBox
-    assert toggle_box is not None
-
-    _pump(0.3)
-    assert not sidebar.submenu_boxes['graphs'].get_visible()
-    page_before = nav.get_current_page()
-
-    wx = toggle_box.get_allocation()
-    ex, ey = wx.x + wx.width // 2, wx.y + wx.height // 2
-    win_win = toggle_box.get_window()
-    assert win_win is not None, 'caret EventBox must be mapped'
-    for etype in (Gdk.EventType.BUTTON_PRESS, Gdk.EventType.BUTTON_RELEASE):
-        ev = Gdk.Event.new(etype)
-        ev.button.window = win_win
-        ev.button.button = 1
-        ev.button.x, ev.button.y = float(ex), float(ey)
-        ev.button.time = Gtk.get_current_event_time()
-        seat = Gdk.Display.get_default().get_default_seat()
-        ev.button.device = seat.get_pointer()
-        Gtk.main_do_event(ev)
-    _pump(0.5)
-
-    assert sidebar.submenu_boxes['graphs'].get_visible(), \
-        'the real press must toggle the submenu open'
-    assert nav.get_current_page() == page_before, \
-        'the group button must NOT receive the caret click (no navigation)'
+    assert nav.get_current_page() == 'graphs', \
+        'band double-click must open the Graphs hub (Basics at its top)'
+    assert nav.get_page_widget('basics') is None, \
+        'the standalone Basics page must be unregistered'
     win.destroy()

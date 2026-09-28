@@ -681,14 +681,11 @@ class ProcessesPage(BasePage):
     # -- band click-through (r081) ----------------------------------------
 
     def _on_gauge_pressed(self, metric):
-        # r081 (operator): a band-chart click opens the BASICS page, which
-        # hosts the large gauges and top-contributor cards; the sidebar
-        # auto-expands the Graphs group for it (on_navigate hook in
-        # dashboard_window). The r059 top-10 drill popover was superseded
-        # by this navigation and DELETED (r081, adversarial P2: ~110 lines
-        # unreachable after the supersession — git history preserves it).
+        # r081/r092 (operator): a band-chart DOUBLE-click opens the Graphs
+        # hub, whose TOP section now hosts the Basics cards (the standalone
+        # Basics page and the sidebar submenu were retired in r092).
         if self._app is not None:
-            self._app.navigation_manager.navigate_to("basics")
+            self._app.navigation_manager.navigate_to("graphs")
 
     def select_process(self, key):
         """Public entry (Basics jump): select ``key`` ((pid, starttime)) in the

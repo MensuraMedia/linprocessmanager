@@ -73,7 +73,12 @@ Drill state is a breadcrumb in the popover header
 are computed in the model layer from the CURRENT snapshot (pure function,
 fixture-tested); nothing new is sampled.
 
-## 3. The Basics page (sidebar, above About)
+## 3. The Basics cards (now the TOP of the Graphs hub)
+
+r092 (operator): the standalone Basics page and the sidebar submenu are
+RETIRED — this section's cards render at the top of the Graphs hub page
+(`GraphsHubPage.add_basics_section`), above the chart grid. The spec below
+still governs the cards themselves.
 
 A calm, glanceable summary page for the "am I OK?" question — the drill
 destination when a popover is too small:

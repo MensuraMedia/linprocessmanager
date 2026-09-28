@@ -98,6 +98,15 @@ class GraphsHubPage(BasePage):
 
     # -- external wiring --------------------------------------------------
 
+    def add_basics_section(self, widget):
+        """r092 (operator): the Basics cards live at the TOP of the hub —
+        above the chart grid — and the standalone Basics page/sidebar entry
+        is gone (the submenu experiment is retired). ``widget`` is the
+        BasicsPage instance; it keeps receiving snapshots via the normal
+        observer list."""
+        layout.box_add(self, widget, False, False, 0)
+        self.reorder_child(widget, 0)
+
     def set_history(self, history):
         self._history = history
 

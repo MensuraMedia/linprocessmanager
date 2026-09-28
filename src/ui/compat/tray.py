@@ -26,6 +26,16 @@ ICON_NAME = "linprocman"
 
 def _try_xapp(on_activate, on_quit, icon_path=None):
     XApp = load_repository("XApp", "1.0")
+    # r092: probe the capability BEFORE construction. This XApp binding
+    # lacks StatusIcon.set_title; the old path constructed the icon (which
+    # registers DBus object-manager callbacks inside libxapp), aborted on
+    # the AttributeError, and the in-flight callback later hit freed memory
+    # — a SEGV in g_dbus_object_manager_server_set_connection ~1s after
+    # launch (journal 22:07). Fail fast with NO object created.
+    if not hasattr(XApp.StatusIcon, "set_title"):
+        raise AttributeError(
+            "XApp.StatusIcon lacks set_title — failing fast before "
+            "DBus registration")
     icon = XApp.StatusIcon()
     icon.set_icon_name(ICON_NAME)
     icon.set_title("linprocman")

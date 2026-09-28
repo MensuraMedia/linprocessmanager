@@ -160,3 +160,58 @@ def read_gpu_busy(sys_root=SYS):
         if value is not None:
             return value
     return None
+
+
+def _to_float(text):
+    try:
+        return float(text)
+    except (TypeError, ValueError):
+        return None
+
+
+def usb_devices(sys_root=SYS):
+    """Enumerate connected USB devices from <sys_root>/bus/usb/devices.
+
+    Returns a list of dicts, one per DEVICE (entries whose name contains
+    ':' are interfaces and are skipped). Dict shape:
+      'name':        str -- product string, or 'USB device' when absent
+      'vendor_id':   str|None -- idVendor, 4 hex chars
+      'product_id':  str|None -- idProduct, 4 hex chars
+      'manufacturer':str|None
+      'product':     str|None
+      'serial':      str|None
+      'bus':         int|None -- busnum
+      'port':        int|None -- devnum
+      'speed_mbps':  float|None -- speed file (e.g. '480', '5000')
+      'removable':   str -- 'removable' | 'fixed' | 'unknown' (file value;
+                     missing file -> 'unknown')
+    Order: sorted by (bus, port) with None-safe keys.
+    """
+    base = os.path.join(sys_root, "bus", "usb", "devices")
+    result = []
+    for entry in _listdir(base):
+        if ":" in entry:
+            continue  # interface node (e.g. "1-0:1.0"), not a device
+        devdir = os.path.join(base, entry)
+        product = _read_text(os.path.join(devdir, "product"))
+        result.append({
+            "name": product or "USB device",
+            "vendor_id": _read_text(os.path.join(devdir, "idVendor")),
+            "product_id": _read_text(os.path.join(devdir, "idProduct")),
+            "manufacturer": _read_text(os.path.join(devdir, "manufacturer")),
+            "product": product,
+            "serial": _read_text(os.path.join(devdir, "serial")),
+            "bus": _to_int(_read_text(os.path.join(devdir, "busnum"))),
+            "port": _to_int(_read_text(os.path.join(devdir, "devnum"))),
+            "speed_mbps": _to_float(_read_text(os.path.join(devdir, "speed"))),
+            "removable": _read_text(
+                os.path.join(devdir, "removable")
+            ) or "unknown",
+        })
+
+    def _key(dev):
+        bus, port = dev["bus"], dev["port"]
+        return (bus is None, bus or 0, port is None, port or 0)
+
+    result.sort(key=_key)
+    return result
