@@ -310,3 +310,62 @@ def _draw_crosshair(cr, w, h, vmax, crosshair):
         cr.set_source_rgb(0.9, 0.9, 0.9)
         cr.move_to(6, 13)
         cr.show_text(label)
+
+
+# ---------------------------------------------------------------------------
+# Tx←→Rx packet-tick bar (mockup R — CONFIRMED r129) — the shared network
+# representation. Any network feature draws ITS activity bar through this
+# function so every surface in the app reads the same visual language:
+# Tx ticks packed from the LEFT edge growing toward the center, Rx ticks
+# from the RIGHT edge growing toward the center, center line = zero.
+# ---------------------------------------------------------------------------
+
+TX_TICK_RGB = (0xfa / 255.0, 0xcc / 255.0, 0x15 / 255.0)   # yellow: sent
+RX_TICK_RGB = (0x21 / 255.0, 0x96 / 255.0, 0xf3 / 255.0)   # blue: received
+TXRX_TROUGH_RGB = (0x1b / 255.0, 0x1b / 255.0, 0x1b / 255.0)
+TXRX_MIDLINE_RGB = (0x3a / 255.0, 0x3a / 255.0, 0x3a / 255.0)
+
+
+def txrx_ticks(width, tx_share, rx_share, *, tick=3.0, gap=2.0):
+    """Packet-tick counts for a Tx←→Rx bar of ``width`` px.
+
+    ``tx_share``/``rx_share`` are per-side fractions of their own half
+    (0.0–1.0). Returns ``(tx_ticks, rx_ticks)`` where each tick is one
+    packet burst (tick+gap period). Zero-share sides get zero ticks.
+    """
+    per_half = max(1, int(width // 2 // (tick + gap)))
+    return (int(round(tx_share * per_half)), int(round(rx_share * per_half)))
+
+
+def draw_txrx_bar(cr, width, height, tx_ticks, rx_ticks, *, tick=3.0):
+    """Draw the bidirectional packet-tick bar onto an existing cairo context.
+
+    Tx ticks grow from the LEFT edge toward the center; Rx ticks grow from
+    the RIGHT edge toward the center; the center line is zero. Unknown
+    traffic (either count None) renders the trough + center line alone.
+    """
+    cr.set_source_rgb(*TXRX_TROUGH_RGB)
+    cr.rectangle(0, 0, width, height)
+    cr.fill()
+    half = width / 2.0
+    cr.set_source_rgb(*TXRX_MIDLINE_RGB)
+    cr.rectangle(half - 0.5, 0, 1, height)
+    cr.fill()
+    if tx_ticks:
+        cr.set_source_rgb(*TX_TICK_RGB)
+        for i in range(tx_ticks):
+            cr.rectangle(i * tick, 0, tick - 1.0, height)
+    if rx_ticks:
+        cr.set_source_rgb(*RX_TICK_RGB)
+        for i in range(rx_ticks):
+            cr.rectangle(width - (i + 1) * tick, 0, tick - 1.0, height)
+
+
+def txrx_bar_surface(width, height, tx_ticks, rx_ticks, *, tick=3.0):
+    """``draw_txrx_bar`` onto a fresh ARGB32 surface (pixbuf/preview use)."""
+    import cairo
+    surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, int(width), int(height))
+    draw_txrx_bar(cairo.Context(surf), int(width), int(height),
+                  tx_ticks, rx_ticks, tick=tick)
+    surf.flush()
+    return surf

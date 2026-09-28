@@ -258,6 +258,9 @@ activity as the mockup R design — confirmed by the operator:
   itself sortable — Total/s is its number. Implemented as a cached pixbuf
   per (tx_ticks, rx_ticks) — 17×17 possible bars, generated once
   (`_bar_pixbuf`), stored in `_COL_BAR` (store column 6).
+- Full component spec: [txrx-bar.md](txrx-bar.md) — the reusable renderer
+  lives in the charts seam (`charts.txrx_bar_surface` / `draw_txrx_bar`);
+  every network feature draws ITS bar through that one function.
 
 ## 10. v2 — designed, not built (needs approval + a sign-off gate)
 

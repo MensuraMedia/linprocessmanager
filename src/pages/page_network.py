@@ -11,8 +11,6 @@ Boundary law: consumes snapshot records + the sampler's public
 ``open_sockets()`` summary; never reads /proc directly.
 """
 
-import cairo
-
 from ui.compat import Gtk, GLib, GdkPixbuf, Pango, css, layout, charts
 
 from pages.page_base import BasePage
@@ -59,49 +57,23 @@ def _span(text, color):
     return "<span foreground='%s'>%s</span>" % (color, text)
 
 
-_TX_TICK_RGB = (0xfa / 255.0, 0xcc / 255.0, 0x15 / 255.0)   # yellow: sent
-_RX_TICK_RGB = (0x21 / 255.0, 0x96 / 255.0, 0xf3 / 255.0)   # blue: received
-_TROUGH_RGB = (0x1b / 255.0, 0x1b / 255.0, 0x1b / 255.0)
-_MIDLINE_RGB = (0x3a / 255.0, 0x3a / 255.0, 0x3a / 255.0)
-
 _bar_cache = {}
 
 
 def _bar_pixbuf(tx_ticks, rx_ticks):
     """The Tx←→Rx packet-tick bar as a 160×12 pixbuf (mockup R, confirmed).
 
-    Tx ticks grow from the LEFT edge toward the center; Rx ticks grow from
-    the RIGHT edge toward the center; the center line = zero. Cached by
-    tick counts — there are only 17×17 possible bars.
+    Rendering lives in the charts seam (`charts.txrx_bar_surface`) — the ONE
+    implementation every network feature shares. Cached by tick counts:
+    only 17×17 possible bars exist.
     """
     key = (tx_ticks, rx_ticks)
-    if key in _bar_cache:
-        return _bar_cache[key]
-    surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, _BAR_W, _BAR_H)
-    cr = cairo.Context(surf)
-    cr.set_source_rgb(*_TROUGH_RGB)
-    cr.rectangle(0, 0, _BAR_W, _BAR_H)
-    cr.fill()
-    half = _BAR_W / 2.0
-    tick_w, tick_gap = 3.0, 2.0
-
-    # Tx: ticks packed from the left edge, growing toward the center.
-    cr.set_source_rgb(*_TX_TICK_RGB)
-    for i in range(tx_ticks):
-        cr.rectangle(i * _TICK, 0, tick_w, _BAR_H)
-    # Rx: ticks packed from the right edge, growing toward the center.
-    cr.set_source_rgb(*_RX_TICK_RGB)
-    for i in range(rx_ticks):
-        cr.rectangle(_BAR_W - (i + 1) * _TICK, 0, tick_w, _BAR_H)
-    # center line = zero
-    cr.set_source_rgb(*_MIDLINE_RGB)
-    cr.rectangle(half - 0.5, 0, 1, _BAR_H)
-    surf.flush()
-    pb = GdkPixbuf.Pixbuf.new_from_data(
-        bytes(surf.get_data()), GdkPixbuf.Colorspace.RGB, True, 8,
-        _BAR_W, _BAR_H, surf.get_stride())
-    _bar_cache[key] = pb
-    return pb
+    if key not in _bar_cache:
+        surf = charts.txrx_bar_surface(_BAR_W, _BAR_H, tx_ticks, rx_ticks)
+        _bar_cache[key] = GdkPixbuf.Pixbuf.new_from_data(
+            bytes(surf.get_data()), GdkPixbuf.Colorspace.RGB, True, 8,
+            _BAR_W, _BAR_H, surf.get_stride())
+    return _bar_cache[key]
 
 
 class NetworkPage(BasePage):
