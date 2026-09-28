@@ -212,6 +212,10 @@ class PeripheralsPage(BasePage):
                 "No sensors found on this machine — that is normal on VMs.")
             chips.insert(note, -1)
             made.append(note)
+        # r096: pack the chips grid into the page — the r092 rewrite built
+        # the FlowBox but never packed it, so the sensors section rendered
+        # empty on the real page (caught by the r096 audit follow-up test).
+        layout.box_add(self._sensors_box, chips, True, True, 0)
         self._sensors_children.append(chips)
 
     def _sensor_chip(self, label, value_text, fill):

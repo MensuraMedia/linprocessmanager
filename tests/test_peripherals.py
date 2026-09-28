@@ -53,3 +53,36 @@ def test_peripherals_page_lists_devices_and_refresh_rebuilds():
     assert len(page._devices_children) == before_dev, \
         'refresh must rebuild, not accumulate, the tracked sections'
     win.destroy()
+
+
+def test_sensor_chip_draw_callback_arity(r093_followup=None):
+    """Audit follow-up (r096): the r094 P1 was a draw lambda with 3 leading
+    params while ChartArea invokes cb(area, cr, width, height) — wrong arity
+    raised AttributeError on every draw. Pin the arity: invoke every
+    registered sensor-bar callback with the real 4-arg shape against a live
+    cairo surface."""
+    import cairo
+    from ui.compat import Gtk
+    win = _build_window()
+    page = win.nav_manager.get_page_widget('peripherals')
+    page.refresh()
+    _pump()
+
+    areas = []
+
+    def walk(w):
+        if type(w).__name__ == 'ChartArea':
+            areas.append(w)
+        if hasattr(w, 'forall'):
+            w.forall(walk)
+    walk(page)
+    assert areas, 'sensor chips must contain ChartArea bars'
+
+    surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, 120, 8)
+    cr = cairo.Context(surf)
+    for area in areas:
+        cb = area.get_draw_callback() if hasattr(
+            area, 'get_draw_callback') else area._draw_func
+        assert cb is not None
+        cb(area, cr, 120, 8)          # wrong arity raises TypeError here
+    win.destroy()
