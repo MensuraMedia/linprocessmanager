@@ -21,9 +21,9 @@
      to the busiest process on its side. */
   .txrx { width: 160px; height: 12px; background: #1b1b1b; border-radius: 2px;
           position: relative; overflow: hidden; }
-  .txrx .tx { position: absolute; right: 50%; top: 0; height: 12px;
+  .txrx .tx { position: absolute; left: 0; top: 0; height: 12px;
               background: #facc15; }
-  .txrx .rx { position: absolute; left: 50%; top: 0; height: 12px;
+  .txrx .rx { position: absolute; right: 0; top: 0; height: 12px;
               background: #2196f3; }
   .txrx .mid { position: absolute; left: calc(50% - 0.5px); top: 0;
                width: 1px; height: 12px; background: #3a3a3a; }
@@ -36,9 +36,9 @@
   .zoombox .cap { font-size: 8pt; color: #9a9a9a; margin-bottom: 6px; }
   .zoombar { width: 480px; height: 36px; background: #1b1b1b; border-radius: 3px;
              position: relative; overflow: hidden; }
-  .zoombar .tx { position: absolute; right: 50%; top: 0; height: 36px;
+  .zoombar .tx { position: absolute; left: 0; top: 0; height: 36px;
                  background: #facc15; }
-  .zoombar .rx { position: absolute; left: 50%; top: 0; height: 36px;
+  .zoombar .rx { position: absolute; right: 0; top: 0; height: 36px;
                  background: #2196f3; }
   .zoombar .mid { position: absolute; left: calc(50% - 1px); top: 0;
                   width: 2px; height: 36px; background: #3a3a3a; }
@@ -47,19 +47,20 @@
 </style>
 </head>
 <body>
-  <h2>Process network bar — Tx grows left, Rx grows right, from the center</h2>
+  <h2>Process network bar — Tx from the left edge, Rx from the right edge, both growing toward the center</h2>
   <div class="lead">The new Network-page column. Same box as the Disks usage
     bars (160 × 12 px, trough #1b1b1b, §5b — fixed, only the fill moves).
-    Scale: each side is normalized to the busiest process on ITS side, so a
-    download-heavy app fills only the right (Rx) half and an upload-heavy app
-    only the left (Tx) half. Restricted processes (Yama) draw the center line
-    alone with "—" rates.</div>
+    Scale: each side is normalized to the busiest process on ITS side.
+    Tx occupies its half from the LEFT edge inward; Rx occupies its half from
+    the RIGHT edge inward — uneven traffic opens a trough gap around the
+    center line. Restricted processes (Yama) draw the center line alone with
+    "—" rates.</div>
 
   <div class="legend">
-    <span class="dot" style="background:#facc15"></span><b>Tx — transmitted
-    (grows left ←)</b>
-    <span class="dot" style="background:#2196f3"></span><b>Rx — received
-    (grows right →)</b>
+    <span class="dot" style="background:#facc15"></span><b>Tx — transmitted:
+    starts at the LEFT edge, grows toward the center →</b>
+    <span class="dot" style="background:#2196f3"></span><b>Rx — received:
+    starts at the RIGHT edge, grows toward the center ←</b>
     <span style="color:#666">· center line = zero · classic network-illustration
     color code (blue in / yellow-out, as in mockup Q's legend)</span>
   </div>
@@ -72,15 +73,15 @@
         <td>user</td><td class="num">14</td>
         <td class="num">1.1 MB/s</td><td class="num">88.2 KB/s</td>
         <td><div class="txrx">
-          <div class="tx" style="width:12%"></div>
-          <div class="rx" style="width:100%"></div>
+          <div class="tx" style="width:6%"></div>
+          <div class="rx" style="width:50%"></div>
           <div class="mid"></div></div></td></tr>
     <tr><td>steam <span style="color:#8a8a8a">session-c2</span></td>
         <td>user</td><td class="num">9</td>
         <td class="num">84.0 KB/s</td><td class="num">640.0 KB/s</td>
         <td><div class="txrx">
-          <div class="tx" style="width:88%"></div>
-          <div class="rx" style="width:18%"></div>
+          <div class="tx" style="width:44%"></div>
+          <div class="rx" style="width:9%"></div>
           <div class="mid"></div></div></td></tr>
     <tr><td>syncthing <span style="color:#8a8a8a">syncthing</span></td>
         <td>user</td><td class="num">6</td>
@@ -103,9 +104,10 @@
         <div class="mid"></div>
         <div class="rx" style="width:24%"></div>
       </div>
-      <div class="callout"><b>← Tx half:</b> grows right-to-left from the
-        center · <b>Rx half →:</b> grows left-to-right from the center ·
-        <b>center line</b> = zero traffic · empty half = no traffic that side</div>
+      <div class="callout"><b>Tx →:</b> starts at the LEFT edge, grows toward
+        the center · <b>← Rx:</b> starts at the RIGHT edge, grows toward the
+        center · <b>center line</b> = zero · uneven traffic opens the trough
+        gap around the middle</div>
     </div>
     <div class="zoombox">
       <div class="cap">BALANCED — equal in and out (e.g. syncthing)</div>
