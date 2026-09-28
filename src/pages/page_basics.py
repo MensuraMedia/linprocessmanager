@@ -147,15 +147,15 @@ class BasicsPage(BasePage):
     def _build_gauge(self, metric, label):
         # Split card (mockup M / spec §3): fixed gauge block on the LEFT (title +
         # big bar + zone caption), top contributing processes on the RIGHT.
-        card = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        # r108 (operator): the card is a Gtk.Paned with the divider FORCED
+        # to the midline on every size allocation — the left/right split is
+        # exactly 50/50 at any width, immune to content requisition. (The
+        # previous Box-based halves negotiated from unequal label naturals
+        # and drifted per card.) Height stays pinned at BASICS_CARD_HEIGHT.
+        card = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
         css.add_css_class(card, "basics-card")
-        # r090 bounding-box hardening (operator): cards are FIXED size —
-        # uniform width (hexpand; every card spans the page) and a pinned
-        # height (four contributor rows). Nothing inside may grow the card:
-        # the §5b "box is fixed; only the visual inside moves" rule now
-        # holds at the card level, not just the label level.
-        card.set_hexpand(True)
         card.set_size_request(-1, BASICS_CARD_HEIGHT)
+        card.connect("size-allocate", self._on_card_allocate)
 
         left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         css.add_css_class(left, "basics-left")
@@ -203,13 +203,13 @@ class BasicsPage(BasePage):
         caption.set_ellipsize(Pango.EllipsizeMode.END)
         css.add_css_class(caption, "basics-gauge-sub")
         layout.box_add(left, caption, False, False, 0)
-        layout.box_add(card, left, False, True, 0)
+        card.pack1(left, True, True)
 
         # Right: the processes driving this metric, mini-bar proportional to the
         # leader. Populated by _rebuild_contrib on every snapshot.
         contrib = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         css.add_css_class(contrib, "basics-right")
-        layout.box_add(card, contrib, True, True, 0)
+        card.pack2(contrib, True, True)
 
         layout.box_add(self, card, False, False, 0)
         self._state[metric] = {"fraction": None, "zone": None}
@@ -335,6 +335,11 @@ class BasicsPage(BasePage):
         layout.box_add(refs["contrib"], label, False, False, 0)
         label.show()
         refs["rows"].append(label)
+
+    def _on_card_allocate(self, paned, allocation):
+        """r108: the divider sits at the exact midline, always."""
+        if allocation.width > 60:
+            paned.set_position(allocation.width / 2.0)
 
     def _add_row(self, refs, rank, row, metric, frac, extra):
         button = Gtk.Button()
