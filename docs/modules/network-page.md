@@ -237,6 +237,28 @@ per-process rates, busiest = wineserver).
 
 ---
 
+## The Tx←→Rx packet-tick bar (r129, mockup R — CONFIRMED)
+
+Each row carries a **160×12 bar (the Disks geometry)** rendering network
+activity as the mockup R design — confirmed by the operator:
+
+- **Tx ticks (yellow #facc15)** are packed from the **LEFT edge**, growing
+  toward the center; **Rx ticks (blue #2196f3)** are packed from the
+  **RIGHT edge**, growing toward the center. The **center line = zero**.
+- Each side is normalized to the busiest process on ITS side
+  (max_rx / max_tx across the current rows); ticks = round(share × 16),
+  minimum 1 tick when the rate is nonzero. Uneven traffic opens a trough
+  gap around the middle; balanced traffic reads as equal halves meeting at
+  the center ("uploading as much as it downloads" at a glance).
+- Ticks render as **little vertical rectangles** (3px tick + 2px gap —
+  packet bursts), per the operator: "little vertical rectangles to
+  simulate … packets visually".
+- Restricted rows (rates None) draw the trough + center line alone.
+- The bar sits **in front of the Total/s column** (operator) and is not
+  itself sortable — Total/s is its number. Implemented as a cached pixbuf
+  per (tx_ticks, rx_ticks) — 17×17 possible bars, generated once
+  (`_bar_pixbuf`), stored in `_COL_BAR` (store column 6).
+
 ## 10. v2 — designed, not built (needs approval + a sign-off gate)
 
 Per-app click-through monitor (mockup Q2) and a history pane (Q3):
