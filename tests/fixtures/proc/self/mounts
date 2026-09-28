@@ -1,0 +1,11 @@
+sysfs /sys sysfs rw,nosuid,nodev,noexec,relatime 0 0
+proc /proc proc rw,nosuid,nodev,noexec,relatime 0 0
+udev /dev devtmpfs rw,nosuid,relatime,size=8123456k,nr_inodes=2030864,mode=755 0 0
+tmpfs /run tmpfs rw,nosuid,nodev,noexec,relatime,size=1636980k,mode=755 0 0
+/dev/nvme0n1p2 / ext4 rw,relatime,errors=remount-ro 0 0
+/dev/nvme0n1p3 /home ext4 rw,relatime 0 0
+/dev/nvme1n1 /mnt/data btrfs rw,relatime,space_cache=v2 0 0
+/dev/nvme1n1 /mnt/data\040backup btrfs rw,relatime,space_cache=v2 0 0
+/dev/loop0 /snap/core/1234 squashfs ro,nodev,relatime 0 0
+/dev/loop1 /snap/gnome/5678 squashfs ro,nodev,relatime 0 0
+cgroup2 /sys/fs/cgroup cgroup2 rw,nosuid,nodev,noexec,relatime 0 0

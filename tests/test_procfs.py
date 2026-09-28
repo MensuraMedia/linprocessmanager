@@ -303,6 +303,34 @@ def test_system_diskstats():
 
 
 # ---------------------------------------------------------------------------
+# mounts
+# ---------------------------------------------------------------------------
+
+def test_system_mounts_parses_fields():
+    m = procfs.system_mounts(proc_root=PROC)
+    by_mount = {e["mount"]: e for e in m}
+    assert by_mount["/"]["device"] == "/dev/nvme0n1p2"
+    assert by_mount["/"]["fstype"] == "ext4"
+    assert by_mount["/home"]["device"] == "/dev/nvme0n1p3"
+    assert by_mount["/snap/core/1234"]["fstype"] == "squashfs"
+
+
+def test_system_mounts_octal_unescape():
+    m = procfs.system_mounts(proc_root=PROC)
+    mounts = {e["mount"] for e in m}
+    # "\040" in the fixture must decode to a real space, not stay literal.
+    assert "/mnt/data backup" in mounts
+    assert "/mnt/data\\040backup" not in mounts
+
+
+def test_decode_mounts_skips_short_lines():
+    raw = b"/dev/sda1 / ext4 rw 0 0\ngarbage line\n/dev/sdb\n"
+    out = procfs.decode_mounts(raw)
+    assert len(out) == 1
+    assert out[0]["mount"] == "/"
+
+
+# ---------------------------------------------------------------------------
 # pressure
 # ---------------------------------------------------------------------------
 

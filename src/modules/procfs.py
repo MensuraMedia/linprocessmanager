@@ -726,6 +726,48 @@ def system_diskstats(proc_root=PROC):
     return decode_diskstats(_read_bytes(os.path.join(proc_root, "diskstats")))
 
 
+# The kernel escapes four characters in the space-separated mounts table so a
+# path token never splits: space, tab, newline, backslash (proc(5) / fstab(5)).
+_MOUNT_ESCAPE = re.compile(r"\\([0-7]{3})")
+
+
+def _unescape_mount(token):
+    """Decode the octal escapes the kernel writes into a mounts field."""
+    return _MOUNT_ESCAPE.sub(lambda m: chr(int(m.group(1), 8)), token)
+
+
+def decode_mounts(raw):
+    """Parse ``/proc/self/mounts`` bytes -> a list of mount dicts.
+
+    Each line is ``device mountpoint fstype options dump pass`` (space
+    separated, path fields octal-escaped). Only the first four fields are
+    surfaced (the dump/pass integers are unused here). A short line is skipped
+    rather than raising — mount enumeration must never crash the page.
+    """
+    out = []
+    for line in raw.decode("utf-8", "replace").splitlines():
+        parts = line.split()
+        if len(parts) < 4:
+            continue
+        out.append({
+            "device": _unescape_mount(parts[0]),
+            "mount": _unescape_mount(parts[1]),
+            "fstype": parts[2],
+            "options": parts[3],
+        })
+    return out
+
+
+def system_mounts(proc_root=PROC):
+    """Read+parse the current mount table (``/proc/self/mounts``).
+
+    The linfilesearch mount model: one entry per mount, in kernel order. The
+    Disks page classifies pseudo/loop entries and runs ``statvfs`` itself; this
+    reader only turns the bytes into dicts.
+    """
+    return decode_mounts(_read_bytes(os.path.join(proc_root, "self", "mounts")))
+
+
 _PSI_PAIR = re.compile(r"(\w+)=([0-9.]+)")
 
 
