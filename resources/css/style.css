@@ -809,3 +809,25 @@ scale slider:hover {
     border: 1px solid #8a7a40;
     padding: 8px 12px;
 }
+
+/* Disks page cells (r118): uniform 4px margin on ALL sides of every
+   header and data cell — margins (not padding), so the visual gap between
+   two adjacent cells is exactly 8px with text 4px off each cell edge.
+   These classes previously had NO rules; the header buttons ran on theme
+   defaults. */
+.disks-table {
+    margin-top: 6px;
+}
+
+.disks-th,
+.disks-td {
+    margin: 4px;
+}
+
+.disks-th {
+    font-weight: bold;
+}
+
+.disks-count {
+    margin: 4px;
+}

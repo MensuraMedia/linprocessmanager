@@ -399,8 +399,10 @@ class DisksPage(BasePage):
 
     def _build_table(self):
         grid = Gtk.Grid()
-        grid.set_column_spacing(1)
-        grid.set_row_spacing(1)
+        # r118: cell spacing moved into CSS margins (4px per side per cell) —
+        # the grid itself no longer adds its own 1px.
+        grid.set_column_spacing(0)
+        grid.set_row_spacing(0)
         css.add_css_class(grid, "disks-table")
         for col, (key, title) in enumerate(_COLUMNS):
             grid.attach(self._header_cell(key, title), col, 0, 1, 1)
