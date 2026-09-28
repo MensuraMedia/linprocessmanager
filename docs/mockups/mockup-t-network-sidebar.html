@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>mockup T — Network page properties sidebar (as shipped r133)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box;
+      font-family: Ubuntu, Cantarell, sans-serif; }
+  body { background: #262626; color: #eee; width: 1200px; }
+  .shell { display: flex; }
+  .sidebar { width: 150px; background: #353535; border-right: 1px solid #1a1a1a;
+             padding: 12px 0; min-height: 640px; }
+  .sidebar div { padding: 9px 18px; font-size: 9pt; color: #ddd; }
+  .sidebar div.active { background: #0078D7; color: #fff; }
+  .content { flex: 1; padding: 10px 16px; }
+  h2 { font-size: 15pt; font-weight: 600; margin-bottom: 6px; }
+  .lead { font-size: 8.5pt; color: #9a9a9a; margin-bottom: 10px; }
+  .band { display: flex; gap: 8px; margin-bottom: 10px; }
+  .card { background: #2b2b2b; border: 1px solid #1a1a1a; border-radius: 3px;
+          padding: 8px 10px; flex: 1; }
+  .k { font-size: 8pt; color: #9a9a9a; }
+  .v { font-size: 12pt; margin-top: 2px; }
+  .split { display: flex; gap: 10px; }
+  .tbl { flex: 1; }
+  table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+  th { background: #2e2e2e; color: #b5b5b5; text-align: left; font-weight: 400;
+       padding: 6px 8px; border: 1px solid #1a1a1a; }
+  td { padding: 6px 8px; background: #2b2b2b; border: 1px solid #1a1a1a; }
+  td.sel { background: #1f4f7a; }
+  td.num { text-align: right; }
+  td.dim { color: #8a8a8a; }
+  .bar { height: 6px; background: #1b1b1b; border-radius: 2px; width: 90px;
+         position: relative; }
+  .bar i { position: absolute; right: 0; top: 0; height: 6px;
+           background: #facc15; }
+  .bar b { position: absolute; left: 0; top: 0; height: 6px;
+           background: #2196f3; width: 40%; }
+  .pane { width: 300px; background: #2b2b2b; border: 1px solid #1a1a1a;
+          border-radius: 3px; padding: 10px 12px; }
+  .pane h3 { font-size: 11pt; margin-bottom: 4px; }
+  .kv { display: flex; justify-content: space-between; font-size: 8.5pt;
+        padding: 3px 0; border-bottom: 1px solid #222; }
+  .kv span:first-child { color: #9a9a9a; }
+  .badge-high { color: #e06c6c; }
+  .ptitle { font-size: 8pt; color: #9a9a9a; margin: 10px 0 4px; }
+  .freq { display: flex; gap: 3px; align-items: flex-end; height: 40px;
+          margin-top: 4px; }
+  .freq i { flex: 1; background: #2196f3; border-radius: 1px; }
+  .verdict { font-size: 8.5pt; color: #c9c9c9; margin-top: 8px;
+             background: #222; border: 1px solid #1a1a1a; border-radius: 2px;
+             padding: 6px 8px; }
+  .honest { font-size: 7.5pt; color: #7a7a7a; margin-top: 8px; }
+  .menu { position: absolute; margin-left: 430px; margin-top: 218px;
+          background: #333; border: 1px solid #1a1a1a; border-radius: 2px;
+          padding: 4px 0; width: 220px; box-shadow: 0 4px 12px #0009;
+          font-size: 8.5pt; z-index: 5; }
+  .menu .mi { padding: 5px 12px; color: #ddd; }
+  .menu .mi:hover { background: #0078D7; color: #fff; }
+  .menu .sep { border-top: 1px solid #1a1a1a; margin: 4px 0; }
+  .menu .head { padding: 4px 12px 2px; color: #8a8a8a; font-size: 7.5pt; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="sidebar">
+    <div>Processes</div><div>Graphs</div><div>Disks</div>
+    <div class="active">Network</div><div>Peripherals</div><div>Logs</div><div>About</div>
+  </div>
+  <div class="content">
+    <h2>Network</h2>
+    <div class="lead">Processes actively sending or receiving. Right-click a
+      row to mark importance or track its activity — the properties sidebar
+      opens on selection.</div>
+    <div class="band">
+      <div class="card"><div class="k">↓ Total received</div><div class="v">482 B/s</div></div>
+      <div class="card"><div class="k">↑ Total sent</div><div class="v">1.1 KB/s</div></div>
+      <div class="card"><div class="k">Active apps</div><div class="v">3</div></div>
+      <div class="card"><div class="k">Busiest</div><div class="v">steam</div></div>
+    </div>
+    <div class="split">
+      <div class="tbl">
+        <table>
+          <tr><th>Process ▼</th><th>User</th><th>Conns</th>
+              <th class="num">↓ Rx/s</th><th class="num">↑ Tx/s</th>
+              <th style="width:170px">Tx ← → Rx</th></tr>
+          <tr><td class="sel"><span class="badge-high">●</span> steam
+                <span style="color:#8a8a8a">session-c2</span></td><td>user</td>
+              <td class="num">9</td><td class="num">115 B/s</td>
+              <td class="num">103 B/s</td>
+              <td><div class="bar"><i style="width:30%"></i><b style="left:60%"></b></div></td></tr>
+          <tr><td>python3 <span style="color:#8a8a8a">app-zcode-4408</span></td><td>user</td>
+              <td class="num">3</td><td class="num">27 B/s</td>
+              <td class="num">24 B/s</td>
+              <td><div class="bar"><i style="width:18%"></i><b style="left:22%"></b></div></td></tr>
+          <tr><td>librewolf <span style="color:#8a8a8a">app-flatpak…</span></td><td>user</td>
+              <td class="num">14</td><td class="num">340 B/s</td>
+              <td class="num">0 B/s</td>
+              <td><div class="bar"><i style="width:75%; right:0; left:auto"></i></div></td></tr>
+        </table>
+      </div>
+      <div class="pane">
+        <h3>steam <span class="badge-high">● HIGH</span></h3>
+        <div class="kv"><span>Importance</span><span>High</span></div>
+        <div class="kv"><span>Tracking</span><span>tracking (42 samples)</span></div>
+        <div class="kv"><span>Conns</span><span>9</span></div>
+        <div class="kv"><span>↓ Rx/s</span><span>115 B/s</span></div>
+        <div class="kv"><span>↑ Tx/s</span><span>103 B/s</span></div>
+        <div class="ptitle">CONNECTION FREQUENCY</div>
+        <div class="freq">
+          <i style="height:30%"></i><i style="height:55%"></i><i style="height:20%"></i>
+          <i style="height:80%"></i><i style="height:45%"></i><i style="height:65%"></i>
+          <i style="height:35%"></i><i style="height:90%"></i><i style="height:50%"></i>
+          <i style="height:25%"></i><i style="height:70%"></i><i style="height:40%"></i>
+        </div>
+        <div class="verdict"><b>regular-intervals</b> — active in 20 of 24
+          samples at a steady 4 s cadence</div>
+        <div class="honest">Heuristic pattern from the tracked window — not
+          proof. Attribution is proportional, not kernel accounting.
+          Right-click a row: mark importance · track · stop tracking.</div>
+      </div>
+    </div>
+    <div class="menu">
+      <div class="head">IMPORTANCE</div>
+      <div class="mi">Mark importance: High</div>
+      <div class="mi">Mark importance: Medium</div>
+      <div class="mi">Mark importance: Low</div>
+      <div class="mi">Clear importance mark</div>
+      <div class="sep"></div>
+      <div class="mi">Stop tracking</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

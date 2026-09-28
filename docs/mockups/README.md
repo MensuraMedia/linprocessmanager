@@ -31,6 +31,7 @@ indexed in `index.html`, and referenced from `docs/modules/*`.
 | [P — Peripherals](mockup-peripherals.html) | connected devices + sensors | **SHIPPED** r092 (page live; sidebar updated r092 to the flat structure) | [peripherals.md](../modules/peripherals.md) + [sysfs-data.md](../modules/sysfs-data.md) |
 | [Q — Network](mockup-q-network.html) | per-process traffic page: live table (shipped r113) + per-app monitor + history (v2) | **Q1 live table SHIPPED r113**; Q2/Q3 design directions for v2 | [network-page.md](../modules/network-page.md) |
 | [R — Tx←→Rx bar](mockup-r-txrx-bar.html) | the bidirectional process network bar (component mockup) | **CONFIRMED r128 — IMPLEMENTED r129** as the Network page representation (packet-tick fills, midline split, 160×12) | [network-page.md](../modules/network-page.md) |
+| [T — Network sidebar](mockup-t-network-sidebar.html) | marks · tracking · pattern sidebar on the Network page | **SHIPPED r133** (the as-built reference) | [network-page.md](../modules/network-page.md) |
 
 
 
