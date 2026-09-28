@@ -22,9 +22,11 @@
   .txrx { width: 160px; height: 12px; background: #1b1b1b; border-radius: 2px;
           position: relative; overflow: hidden; }
   .txrx .tx { position: absolute; left: 0; top: 0; height: 12px;
-              background: #facc15; }
+              background: repeating-linear-gradient(
+                90deg, #facc15 0 3px, #1b1b1b 3px 5px); }
   .txrx .rx { position: absolute; right: 0; top: 0; height: 12px;
-              background: #2196f3; }
+              background: repeating-linear-gradient(
+                90deg, #2196f3 0 3px, #1b1b1b 3px 5px); }
   .txrx .mid { position: absolute; left: calc(50% - 0.5px); top: 0;
                width: 1px; height: 12px; background: #3a3a3a; }
   .legend { margin: 10px 0 16px; font-size: 8.5pt; color: #9a9a9a; }
@@ -37,9 +39,11 @@
   .zoombar { width: 480px; height: 36px; background: #1b1b1b; border-radius: 3px;
              position: relative; overflow: hidden; }
   .zoombar .tx { position: absolute; left: 0; top: 0; height: 36px;
-                 background: #facc15; }
+                 background: repeating-linear-gradient(
+                   90deg, #facc15 0 5px, #1b1b1b 5px 9px); }
   .zoombar .rx { position: absolute; right: 0; top: 0; height: 36px;
-                 background: #2196f3; }
+                 background: repeating-linear-gradient(
+                   90deg, #2196f3 0 5px, #1b1b1b 5px 9px); }
   .zoombar .mid { position: absolute; left: calc(50% - 1px); top: 0;
                   width: 2px; height: 36px; background: #3a3a3a; }
   .callout { font-size: 8pt; color: #9a9a9a; margin-top: 6px; }
@@ -61,8 +65,9 @@
     starts at the LEFT edge, grows toward the center →</b>
     <span class="dot" style="background:#2196f3"></span><b>Rx — received:
     starts at the RIGHT edge, grows toward the center ←</b>
-    <span style="color:#666">· center line = zero · classic network-illustration
-    color code (blue in / yellow-out, as in mockup Q's legend)</span>
+    <span style="color:#666">· fills render as PACKET TICKS — each little
+    vertical rectangle is a packet burst; tick count scales with the traffic
+    share · center line = zero</span>
   </div>
 
   <table>
