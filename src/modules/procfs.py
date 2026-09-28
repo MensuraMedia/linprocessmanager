@@ -339,6 +339,81 @@ def read_cmdline(pid, proc_root=PROC):
     return decode_cmdline(raw)
 
 
+def cmdline_string(cmdline, cap=512):
+    """Render a ``read_cmdline`` argv list as one capped display string.
+
+    ``read_cmdline`` returns argv split on NUL (the kernel's separator). The
+    process-preview "Command line" field wants a single string; the raw NUL
+    separators are collapsed to single spaces so the value renders in a GTK
+    label (an embedded NUL would truncate the label at the first argument).
+    Empty argv (kernel thread / zombie) and unreadable (``None``) both yield
+    ``None`` — missing data is never a fabricated empty string (r039).
+    """
+    if not cmdline:
+        return None
+    return " ".join(cmdline)[:cap]
+
+
+def read_maps_basenames(pid, proc_root=PROC, cap=12):
+    """Deduped file-backed library basenames from ``/proc/<pid>/maps`` + count.
+
+    Returns ``(basenames[:cap], total_unique)``. Only file-backed mappings (the
+    pathname starts with ``/``) count — anonymous/heap/stack regions are
+    skipped. Restricted (EACCES) or absent (exited / kernel thread) -> ``([], 0)``
+    (the preview shows "—", never a fabricated dependency list).
+    """
+    try:
+        raw = _read_bytes(_pid_path(proc_root, pid, "maps"))
+    except (PermissionError, FileNotFoundError):
+        return [], 0
+    seen = []
+    seen_set = set()
+    for line in raw.decode("utf-8", "replace").splitlines():
+        parts = line.split(None, 5)
+        if len(parts) < 6:
+            continue
+        path = parts[5]
+        if not path.startswith("/"):
+            continue
+        base = path.rsplit("/", 1)[-1]
+        if base and base not in seen_set:
+            seen_set.add(base)
+            seen.append(base)
+    return seen[:cap], len(seen)
+
+
+def read_oom_score(pid, proc_root=PROC):
+    """Read ``/proc/<pid>/oom_score`` -> the current OOM badness (int) or None.
+
+    Unreadable (EACCES) or absent (exited / kernel without the file) degrades
+    to ``None`` like the other best-effort per-PID readers.
+    """
+    try:
+        raw = _read_bytes(_pid_path(proc_root, pid, "oom_score"))
+    except (PermissionError, FileNotFoundError):
+        return None
+    return _to_int(raw.decode("utf-8", "replace").strip())
+
+
+def read_affinity(pid, proc_root=PROC):
+    """CPU-affinity mask as a sorted ``tuple[int]``, or ``None`` if unreadable.
+
+    Uses the scheduler syscall (``os.sched_getaffinity``), not a ``/proc`` file,
+    so ``proc_root`` is accepted only for reader-bundle signature parity. The
+    kernel permits the query for the caller's own processes and (with
+    CAP_SYS_NICE / same-user) some others; anything else raises ``OSError``
+    (EPERM/ESRCH) -> ``None``. Platforms without the call (``AttributeError``)
+    also degrade to ``None`` (universality: never crash).
+    """
+    getaffinity = getattr(os, "sched_getaffinity", None)
+    if getaffinity is None:
+        return None
+    try:
+        return tuple(sorted(getaffinity(pid)))
+    except OSError:
+        return None
+
+
 def is_kernel_thread(cmdline, state):
     """Kernel-thread detector: empty cmdline AND state != Z.
 
@@ -401,6 +476,81 @@ def starttime_to_wall(starttime_jiffies, btime):
     if starttime_jiffies is None or btime is None:
         return None
     return btime + starttime_jiffies / CLK_TCK
+
+
+# ---------------------------------------------------------------------------
+# Socket-owner attribution readers (r053 per-process network design).
+# ---------------------------------------------------------------------------
+
+_SOCKET_RE = re.compile(r"socket:\[(\d+)\]")
+
+# The IPv4/IPv6 TCP+UDP tables that carry an inode column (proc(5): the socket
+# inode is field index 9, 0-based, after the header line).
+_NET_SOCKET_FILES = ("tcp", "tcp6", "udp", "udp6")
+
+
+def read_socket_inodes(pid, proc_root=PROC):
+    """Socket inodes held by ``<pid>`` (its ``/proc/<pid>/fd/*`` symlinks).
+
+    Returns a ``set[int]``. EACCES (Yama ptrace_scope=1, other users) raises
+    ``PermissionError`` so the caller can mark the pid *restricted* and emit
+    ``None`` rather than a fabricated 0; a mid-read exit (FileNotFound) yields an
+    empty set. Non-socket fds are ignored.
+    """
+    fd_dir = _pid_path(proc_root, pid, "fd")
+    try:
+        names = os.listdir(fd_dir)
+    except PermissionError:
+        raise
+    except (FileNotFoundError, NotADirectoryError):
+        return set()
+    inodes = set()
+    for name in names:
+        try:
+            target = os.readlink(os.path.join(fd_dir, name))
+        except OSError:
+            continue  # fd closed between listdir and readlink
+        match = _SOCKET_RE.match(target)
+        if match:
+            inodes.add(int(match.group(1)))
+    return inodes
+
+
+def fd_table_mtime(pid, proc_root=PROC):
+    """``st_mtime`` of ``/proc/<pid>/fd`` (for the incremental rescan cache).
+
+    Unreadable / absent -> ``None`` (the attributor then rescans).
+    """
+    try:
+        return os.stat(_pid_path(proc_root, pid, "fd")).st_mtime
+    except OSError:
+        return None
+
+
+def read_net_sockets(proc_root=PROC):
+    """Map ``inode -> family`` over ``/proc/net/{tcp,tcp6,udp,udp6}``.
+
+    Family is the source table name. The single header line of each file is
+    skipped; the inode is column 9 (0-based). Absent/restricted files degrade
+    silently (never an error past this reader). Inode 0 (no attached inode) is
+    dropped.
+    """
+    out = {}
+    for family in _NET_SOCKET_FILES:
+        path = os.path.join(proc_root, "net", family)
+        try:
+            raw = _read_bytes(path)
+        except (FileNotFoundError, PermissionError):
+            continue
+        lines = raw.decode("utf-8", "replace").splitlines()
+        for line in lines[1:]:  # skip the column header
+            cols = line.split()
+            if len(cols) <= 9:
+                continue
+            inode = _to_int(cols[9])
+            if inode:  # not None and not 0
+                out.setdefault(inode, family)
+    return out
 
 
 # ---------------------------------------------------------------------------

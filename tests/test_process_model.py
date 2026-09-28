@@ -248,3 +248,73 @@ def test_disk_read_write_split_sort_and_columns(r025_unused=None):
                                               "disk_write"]
     assert migrated["columns"]["widths"]["disk_read"] == 140
     assert migrated["sort"]["column"] == "disk_read"
+
+
+# --- r093 (task 010) extended columns ---------------------------------------
+
+def test_extended_columns_unknown_render_as_sentinels():
+    # A sparse record (only identity) -> every extended numeric is unknown and
+    # every extended string is blank ("" -> rendered "—" by the page).
+    row = pm.record_to_row({"pid": 1, "starttime": 2})
+    for has_col in (pm.COL_CPU_TIME_HAS, pm.COL_MEM_PCT_HAS, pm.COL_SHARED_HAS,
+                    pm.COL_PSS_HAS, pm.COL_DISK_R_TOT_HAS, pm.COL_DISK_W_TOT_HAS,
+                    pm.COL_NET_RX_HAS, pm.COL_NET_TX_HAS, pm.COL_OOM_HAS,
+                    pm.COL_STARTED_HAS, pm.COL_THREADS_HAS, pm.COL_PPID_HAS):
+        assert row[has_col] is False
+    assert row[pm.COL_CMDLINE] == ""
+    assert row[pm.COL_AFFINITY] == ""
+
+
+def test_extended_columns_present_values():
+    row = pm.record_to_row({
+        "pid": 5, "starttime": 9, "cpu_time": 12.5, "mem_pct": 3.5,
+        "mem_shared": 4096, "io_read_total": 1000, "io_write_total": 2000,
+        "net_rx_rate": 50.0, "net_tx_rate": 25.0, "oom_score": 42,
+        "started": 1700000000.0, "threads": 8, "ppid": 1,
+        "affinity": (0, 1, 2, 3), "cmdline": "/bin/x -y",
+        "rollup": {"pss_bytes": 8192}})
+    assert row[pm.COL_CPU_TIME] == 12.5 and row[pm.COL_CPU_TIME_HAS] is True
+    assert row[pm.COL_MEM_PCT] == 3.5
+    assert row[pm.COL_SHARED] == 4096
+    assert row[pm.COL_PSS] == 8192 and row[pm.COL_PSS_HAS] is True
+    assert row[pm.COL_DISK_R_TOT] == 1000 and row[pm.COL_DISK_W_TOT] == 2000
+    assert row[pm.COL_NET_RX] == 50.0 and row[pm.COL_NET_TX] == 25.0
+    assert row[pm.COL_OOM] == 42
+    assert row[pm.COL_STARTED] == pytest.approx(1700000000.0)  # double precision
+    assert row[pm.COL_THREADS] == 8 and row[pm.COL_PPID] == 1
+    assert row[pm.COL_AFFINITY] == "0-3"
+    assert row[pm.COL_CMDLINE] == "/bin/x -y"
+
+
+def test_pss_rides_only_the_rollup():
+    # PSS is populated only when a rollup dict is present (selected row).
+    assert pm.record_to_row({"pid": 1})[pm.COL_PSS_HAS] is False
+    row = pm.record_to_row({"pid": 1, "rollup": {"pss_bytes": 2048}})
+    assert row[pm.COL_PSS] == 2048 and row[pm.COL_PSS_HAS] is True
+
+
+def test_format_affinity_compacts_ranges():
+    assert pm.format_affinity((0, 1, 2, 3)) == "0-3"
+    assert pm.format_affinity((0, 2, 3)) == "0,2-3"
+    assert pm.format_affinity((5,)) == "5"
+    assert pm.format_affinity(None) == ""
+    assert pm.format_affinity(()) == ""
+
+
+def test_extended_sort_keys_registered():
+    for key in ("cpu_time", "mem_pct", "shared", "pss", "disk_read_total",
+                "disk_write_total", "net_rx", "net_tx", "oom_score", "started",
+                "threads", "ppid"):
+        assert key in pm.SORT_COLUMNS
+
+
+def test_new_numeric_column_sorts_with_unknowns_last():
+    model = pm.ProcessTableModel()
+    model.set_sort("oom_score", descending=True)
+    a = rec(1); a["oom_score"] = 10
+    b = rec(2); b["oom_score"] = 900
+    c = rec(3); c["oom_score"] = None
+    model.apply_snapshot(procs(a, b, c))
+    order = [r[pm.COL_PID] for r in store_rows(model)]
+    assert order[0] == 2      # highest oom first
+    assert order[-1] == 3     # unknown last

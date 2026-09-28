@@ -363,3 +363,104 @@ def test_system_loadavg_missing_file_never_raises():
     # Absent file -> the all-None field set, not an exception (r061 sign-off).
     d = procfs.system_loadavg(proc_root=os.path.join(PROC, "does-not-exist"))
     assert all(v is None for v in d.values())
+
+
+# ---------------------------------------------------------------------------
+# r093 (task 010) — oom_score / affinity / cmdline_string readers.
+# ---------------------------------------------------------------------------
+
+def test_read_oom_score_from_fixture():
+    assert procfs.read_oom_score(100, proc_root=PROC) == 667
+
+
+def test_read_oom_score_missing_is_none():
+    # pid 104 has no oom_score fixture -> None, never an error.
+    assert procfs.read_oom_score(104, proc_root=PROC) is None
+
+
+def test_read_oom_score_restricted_is_none(monkeypatch):
+    def boom(_path):
+        raise PermissionError("restricted")
+    monkeypatch.setattr(procfs, "_read_bytes", boom)
+    assert procfs.read_oom_score(100, proc_root=PROC) is None
+
+
+def test_read_affinity_returns_sorted_tuple(monkeypatch):
+    monkeypatch.setattr(procfs.os, "sched_getaffinity",
+                        lambda pid: {2, 0, 1}, raising=False)
+    assert procfs.read_affinity(1234) == (0, 1, 2)
+
+
+def test_read_affinity_oserror_is_none(monkeypatch):
+    def boom(pid):
+        raise OSError("EPERM/ESRCH")
+    monkeypatch.setattr(procfs.os, "sched_getaffinity", boom, raising=False)
+    assert procfs.read_affinity(1234) is None
+
+
+def test_cmdline_string_joins_caps_and_none():
+    assert procfs.cmdline_string(["/bin/app", "-x", "y"]) == "/bin/app -x y"
+    assert procfs.cmdline_string([]) is None          # kernel thread / zombie
+    assert procfs.cmdline_string(None) is None         # restricted
+    assert len(procfs.cmdline_string(["z" * 1000])) == 512
+
+
+# ---------------------------------------------------------------------------
+# r093 (task 010) — socket-owner attribution readers.
+# ---------------------------------------------------------------------------
+
+def test_read_net_sockets_maps_inode_to_family():
+    net = procfs.read_net_sockets(proc_root=PROC)
+    assert net[45678] == "tcp"
+    assert net[45679] == "tcp"
+
+
+def test_read_net_sockets_absent_files_degrade():
+    # A tree with no net/ dir -> empty map, never an error.
+    net = procfs.read_net_sockets(proc_root=PROC_OFFLINE)
+    assert net == {}
+
+
+def test_read_socket_inodes_parses_symlinks(monkeypatch):
+    links = {"0": "socket:[45678]", "1": "/dev/null",
+             "2": "socket:[45679]", "3": "pipe:[999]"}
+    monkeypatch.setattr(procfs.os, "listdir", lambda _p: list(links))
+    monkeypatch.setattr(procfs.os, "readlink",
+                        lambda p: links[os.path.basename(p)])
+    assert procfs.read_socket_inodes(1234, proc_root=PROC) == {45678, 45679}
+
+
+def test_read_socket_inodes_eacces_raises(monkeypatch):
+    def boom(_p):
+        raise PermissionError("Yama")
+    monkeypatch.setattr(procfs.os, "listdir", boom)
+    with pytest.raises(PermissionError):
+        procfs.read_socket_inodes(1234, proc_root=PROC)
+
+
+def test_read_socket_inodes_exit_is_empty(monkeypatch):
+    def boom(_p):
+        raise FileNotFoundError("exited")
+    monkeypatch.setattr(procfs.os, "listdir", boom)
+    assert procfs.read_socket_inodes(1234, proc_root=PROC) == set()
+
+
+def test_fd_table_mtime_missing_is_none():
+    assert procfs.fd_table_mtime(999999, proc_root=PROC) is None
+
+
+def test_read_maps_basenames_dedups_file_backed_only():
+    names, count = procfs.read_maps_basenames(100, proc_root=PROC)
+    # anonymous / [stack] regions are skipped; libc appears twice -> deduped.
+    assert names == ["bash", "libc.so.6", "libncursesw.so.6"]
+    assert count == 3
+
+
+def test_read_maps_basenames_caps_and_reports_total():
+    names, count = procfs.read_maps_basenames(100, proc_root=PROC, cap=2)
+    assert names == ["bash", "libc.so.6"]   # capped
+    assert count == 3                        # but the true total is reported
+
+
+def test_read_maps_basenames_absent_is_empty():
+    assert procfs.read_maps_basenames(999999, proc_root=PROC) == ([], 0)

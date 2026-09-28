@@ -40,8 +40,10 @@ from dataclasses import dataclass, field
 
 try:  # app layout: python3 src/main.py (src on sys.path)
     from modules import procfs
+    from modules import manager_netattr
 except ImportError:  # standalone/test layout (src/modules on sys.path)
     import procfs
+    import manager_netattr
 
 # Interval bounds (seconds) — docs/modules/sampling-pipeline.md cadence.
 MIN_INTERVAL = 0.5
@@ -68,6 +70,13 @@ RECORD_FIELDS = frozenset({
     "cpu_pct", "mem_rss", "mem_vsize", "mem_shared", "mem_swap",
     "io_read_rate", "io_write_rate", "nice", "threads", "unit",
     "is_kthread", "is_defunct", "from_backoff", "rollup",
+    # --- Schema freeze r093 (task 010): process preview + extended columns.
+    # 10 optional keys; every one defaults to None (r039: absent = unknown =
+    # "—"). io_prio was proposed but DEFERRED (needs ctypes, which collides
+    # with the core import allowlist) — it is deliberately NOT in this set.
+    "cpu_time", "mem_pct", "io_read_total", "io_write_total",
+    "net_rx_rate", "net_tx_rate", "oom_score", "affinity",
+    "cmdline", "started",
 })
 
 
@@ -91,6 +100,8 @@ class Readers:
     read_cmdline: object
     parse_cgroup: object
     parse_smaps_rollup: object
+    read_oom_score: object
+    read_affinity: object
     system_stat: object
     system_meminfo: object
     system_net_dev: object
@@ -208,6 +219,21 @@ def _util_pct(cur_ticks, prev_ticks, dwall):
     return delta / (dwall * 1000.0) * 100.0
 
 
+def _sum_net_rate(net, field):
+    """Sum a per-interface rate field across ``system.net``; ``None`` if none.
+
+    A single interface reporting no-data does not zero the total — its missing
+    contribution is simply excluded; the total is ``None`` only when every
+    interface is missing (honest absence for the attribution denominator).
+    """
+    total = None
+    for vals in (net or {}).values():
+        rate = vals.get(field)
+        if rate is not None:
+            total = rate if total is None else total + rate
+    return total
+
+
 def _read_opt(reader, pid):
     """Call a per-PID reader tolerating a mid-read exit.
 
@@ -265,8 +291,18 @@ def build_snapshot(prev, now, clock, readers):
 
             dwall = candidate
 
-    procs, procs_raw = _build_procs(prev_raw, dwall, clock, readers)
-    system, sys_raw = _build_system(prev_raw, dwall, readers)
+    # ONE read each of /proc/stat + /proc/meminfo per pass, shared by the
+    # per-process build (btime for ``started``; MemTotal for ``mem_pct``) and
+    # the system section — the r093 freeze sanctioned a single btime read, not
+    # a second /proc/stat pass.
+    sys_stat = _read_system(readers.system_stat)
+    mem = _read_system(readers.system_meminfo)
+    btime = sys_stat.get("btime") if sys_stat else None
+    mem_total = mem.get("total") if mem else None
+
+    procs, procs_raw = _build_procs(
+        prev_raw, dwall, clock, readers, btime, mem_total)
+    system, sys_raw = _build_system(prev_raw, dwall, readers, sys_stat, mem)
 
     raw = _RawState(
         ts=now,
@@ -285,12 +321,12 @@ def build_snapshot(prev, now, clock, readers):
     )
 
 
-def _build_procs(prev_raw, dwall, clock, readers):
+def _build_procs(prev_raw, dwall, clock, readers, btime, mem_total):
     """Build the per-process records + the raw delta-carry for next time."""
     procs = {}
     raw = {}
     for pid in readers.iter_pids():
-        built = _one_proc(pid, prev_raw, dwall, clock, readers)
+        built = _one_proc(pid, prev_raw, dwall, clock, readers, btime, mem_total)
         if built is None:
             continue
         key, record, counters = built
@@ -299,7 +335,7 @@ def _build_procs(prev_raw, dwall, clock, readers):
     return procs, raw
 
 
-def _one_proc(pid, prev_raw, dwall, clock, readers):
+def _one_proc(pid, prev_raw, dwall, clock, readers, btime, mem_total):
     """One process record, or ``None`` to skip (exit / truncated line)."""
     try:
         stat = readers.parse_stat(pid)
@@ -363,6 +399,29 @@ def _one_proc(pid, prev_raw, dwall, clock, readers):
     if key in clock.rollup_targets:
         rollup = _read_opt(readers.parse_smaps_rollup, pid)
 
+    # --- r093 extended keys (all None-able; absent = unknown = "—"). ------
+    # cpu_time / started share the injected clk_tck with the cpu% math.
+    cpu_time = None
+    if utime is not None and stime is not None:
+        cpu_time = (utime + stime) / clock.clk_tck
+    started = None
+    if starttime is not None and btime is not None:
+        started = btime + starttime / clock.clk_tck
+    mem_pct = None
+    if mem_rss is not None and mem_total:  # mem_total None or 0 -> unknown
+        mem_pct = mem_rss / mem_total * 100.0
+    # io totals are the raw byte counters already read for the rate deltas.
+    io_read_total = cur_read
+    io_write_total = cur_write
+    oom_score = _read_opt(readers.read_oom_score, pid)
+    affinity = _read_opt(readers.read_affinity, pid)  # tuple[int] | None
+    cmdline_str = procfs.cmdline_string(cmdline)
+    # Per-process network is attributed post-build by the Sampler shell (it
+    # needs the interface deltas this snapshot produces); pure build leaves it
+    # unknown so build_snapshot stays a pure step over injected readers.
+    net_rx_rate = None
+    net_tx_rate = None
+
     record = {
         "pid": pid,
         "starttime": starttime,
@@ -384,15 +443,28 @@ def _one_proc(pid, prev_raw, dwall, clock, readers):
         "is_defunct": is_defunct,
         "from_backoff": clock.from_backoff,
         "rollup": rollup,
+        "cpu_time": cpu_time,
+        "mem_pct": mem_pct,
+        "io_read_total": io_read_total,
+        "io_write_total": io_write_total,
+        "net_rx_rate": net_rx_rate,
+        "net_tx_rate": net_tx_rate,
+        "oom_score": oom_score,
+        "affinity": affinity,
+        "cmdline": cmdline_str,
+        "started": started,
     }
     counters = (utime, stime, cur_read, cur_write)
     return key, record, counters
 
 
-def _build_system(prev_raw, dwall, readers):
-    """Build the machine-wide section + its raw delta-carry."""
-    stat = _read_system(readers.system_stat)
-    mem = _read_system(readers.system_meminfo)
+def _build_system(prev_raw, dwall, readers, stat, mem):
+    """Build the machine-wide section + its raw delta-carry.
+
+    ``stat`` (/proc/stat) and ``mem`` (/proc/meminfo) are read ONCE by
+    :func:`build_snapshot` and passed in — shared with the per-process build so
+    the pass reads each file only once (r093 single-btime-read mandate).
+    """
     net = _read_system(readers.system_net_dev)
     disks = _read_system(readers.system_diskstats)
     psi = _read_system(readers.system_pressure)
@@ -483,6 +555,8 @@ def default_readers(proc_root=procfs.PROC):
         read_cmdline=bind(procfs.read_cmdline, proc_root=proc_root),
         parse_cgroup=bind(procfs.parse_cgroup, proc_root=proc_root),
         parse_smaps_rollup=bind(procfs.parse_smaps_rollup, proc_root=proc_root),
+        read_oom_score=bind(procfs.read_oom_score, proc_root=proc_root),
+        read_affinity=bind(procfs.read_affinity, proc_root=proc_root),
         system_stat=bind(procfs.system_stat, proc_root=proc_root),
         system_meminfo=bind(procfs.system_meminfo, proc_root=proc_root),
         system_net_dev=bind(procfs.system_net_dev, proc_root=proc_root),
@@ -509,8 +583,14 @@ class Sampler:
                  readers=None, clk_tck=None, queue_size=QUEUE_SIZE,
                  max_failures=DEFAULT_MAX_FAILURES,
                  backoff_interval=DEFAULT_BACKOFF_INTERVAL,
-                 uid_name=None, monotonic=None, sleep=None, logger=None):
+                 uid_name=None, monotonic=None, sleep=None, logger=None,
+                 netattr=None):
         self._readers = readers if readers is not None else default_readers(proc_root)
+        # Per-process network attributor (r053). Injectable for tests; the
+        # default reads the same proc_root. Enrichment is best-effort and never
+        # allowed to break a tick (see _enrich_net).
+        self._netattr = (netattr if netattr is not None
+                         else manager_netattr.NetAttributor(proc_root))
         self._clk_tck = clk_tck if clk_tck is not None else procfs.CLK_TCK
         self._max_failures = max_failures
         self._backoff_interval = backoff_interval
@@ -642,6 +722,7 @@ class Sampler:
             self._rearm = False
 
         prev = None if rearm else self._prev
+        prev_ts = prev.raw.ts if (prev is not None and prev.raw is not None) else None
         clock = StepClock(
             clk_tck=self._clk_tck,
             period=period,
@@ -651,7 +732,35 @@ class Sampler:
         )
         snapshot = build_snapshot(prev, now, clock, self._readers)
         self._prev = snapshot
+        self._enrich_net(snapshot, now, prev_ts)
         self._enqueue(snapshot)
+
+    def _enrich_net(self, snapshot, now, prev_ts):
+        """Attribute per-process rx/tx into the records (r053, best-effort).
+
+        The socket-owner attribution needs THIS snapshot's per-interface deltas,
+        so it runs after :func:`build_snapshot` and mutates each record's
+        ``net_rx_rate``/``net_tx_rate`` (plain dicts). Any failure degrades to
+        no attribution (records keep ``None``) and never trips the watchdog —
+        this pass must not be able to stop the sampler.
+        """
+        if self._netattr is None:
+            return
+        try:
+            net = (snapshot.system or {}).get("net") or {}
+            total_rx = _sum_net_rate(net, "rx_rate")
+            total_tx = _sum_net_rate(net, "tx_rate")
+            interval = (now - prev_ts) if prev_ts is not None else None
+            pid_start = {pid: st for (pid, st) in snapshot.procs}
+            attr = self._netattr.poll(
+                now, interval, total_rx, total_tx, pid_start)
+            for key, rates in attr.items():
+                record = snapshot.procs.get(key)
+                if record is None or rates is None:
+                    continue  # restricted (Yama) -> leave None (lock + "—")
+                record["net_rx_rate"], record["net_tx_rate"] = rates
+        except Exception:  # noqa: BLE001 - attribution must never break a tick
+            self._log.debug("net attribution skipped", exc_info=True)
 
     def _enqueue(self, snapshot):
         """put_nowait + drop-oldest on full (bounded, no callback pileup)."""

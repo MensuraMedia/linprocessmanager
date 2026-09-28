@@ -403,6 +403,16 @@ def command_line(key, *, proc_root=PROC):
     return " ".join(argv) if argv else ""
 
 
+def dependencies(key, *, proc_root=PROC, cap=12):
+    """Linked-library basenames for a selection key (deduped, capped) + total.
+
+    The ``/proc/<pid>/maps`` read stays in this core layer (boundary law — the
+    preview pane hands us the key and renders what we return), mirroring
+    :func:`command_line`. Returns ``([], 0)`` when restricted/absent.
+    """
+    return procfs.read_maps_basenames(key[0], proc_root=proc_root, cap=cap)
+
+
 def _fmt_cpus(cpus):
     ordered = sorted(cpus)
     return "{%s}" % ", ".join(str(c) for c in ordered) if ordered else "{}"

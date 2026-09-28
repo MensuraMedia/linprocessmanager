@@ -12,7 +12,7 @@ import pytest
 
 from config.app_settings import (
     AppSettings, COLUMN_KEYS, COLUMN_MIN_WIDTH, DEFAULT_INTERVAL,
-    MIN_INTERVAL, MAX_INTERVAL,
+    DEFAULT_VISIBLE_COLUMNS, MIN_INTERVAL, MAX_INTERVAL,
 )
 
 
@@ -46,7 +46,8 @@ def test_defaults_when_file_missing(tmp_path):
     assert settings.get("refresh_interval_s") == DEFAULT_INTERVAL
     assert settings.get("view_mode") == "flat"
     assert settings.get("scope_chip") == "all"
-    assert settings.get("columns")["visible"] == list(COLUMN_KEYS)
+    # r093: default visible is the opt-in-free head, not every extended column.
+    assert settings.get("columns")["visible"] == list(DEFAULT_VISIBLE_COLUMNS)
 
 
 def test_corrupt_file_falls_back_to_defaults(tmp_path):
@@ -95,7 +96,7 @@ def test_unknown_columns_filtered_and_empty_defaults():
     settings = AppSettings({"columns": {"visible": ["pid", "bogus", "cpu"]}})
     assert settings.get("columns")["visible"] == ["pid", "cpu"]
     settings_empty = AppSettings({"columns": {"visible": []}})
-    assert settings_empty.get("columns")["visible"] == list(COLUMN_KEYS)
+    assert settings_empty.get("columns")["visible"] == list(DEFAULT_VISIBLE_COLUMNS)
 
 
 def test_column_widths_clamped_to_minimums():
@@ -132,6 +133,36 @@ def test_atomic_write_leaves_no_tmp_and_valid_json(tmp_path):
     with open(target, "r", encoding="utf-8") as handle:
         parsed = json.load(handle)  # must be complete, parseable JSON
     assert parsed["refresh_interval_s"] == DEFAULT_INTERVAL
+
+
+# --- r093 (task 010) column chooser groups + extended-column persistence ----
+
+def test_column_groups_cover_every_key_exactly_once():
+    from config.app_settings import COLUMN_GROUPS
+    grouped = [k for _name, keys in COLUMN_GROUPS for k in keys]
+    assert sorted(grouped) == sorted(COLUMN_KEYS)   # exact coverage
+    assert len(grouped) == len(set(grouped))        # no key in two groups
+    assert [name for name, _ in COLUMN_GROUPS] == [
+        "Identity", "CPU", "Memory", "I/O & Network", "Diagnostics"]
+
+
+def test_default_visible_is_the_opt_in_free_head():
+    # The extended columns are opt-in: default-visible is the original set only.
+    for extended in ("cmdline", "cpu_time", "affinity", "net_rx", "oom_score",
+                     "started", "ppid", "pss"):
+        assert extended in COLUMN_KEYS               # exists in the chooser
+        assert extended not in DEFAULT_VISIBLE_COLUMNS  # but not shown by default
+
+
+def test_extended_columns_visibility_round_trips(tmp_path):
+    chosen = ["process", "cpu", "oom_score", "net_rx", "started", "affinity"]
+    settings = AppSettings({}, path=_path(tmp_path))
+    settings.set_visible_columns(chosen)
+    settings.set_column_width("oom_score", 120)
+    settings.save()
+    reloaded = AppSettings.load(_path(tmp_path))
+    assert reloaded.get("columns")["visible"] == chosen
+    assert reloaded.get("columns")["widths"]["oom_score"] == 120
 
 
 def test_default_path_honours_xdg(monkeypatch, tmp_path):

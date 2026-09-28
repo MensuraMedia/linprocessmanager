@@ -31,10 +31,14 @@ the queue is installed by the table layer, not here; r046 ruling):
   or an absent key — pure Python** (the `-1` + `has_data` sentinel
   translation is the model layer's job at the ListStore boundary, per
   process-table.md; r046 ruling). The enumerated record field set lives in
-  this doc — frozen r048 at **20 fields**: `pid, starttime, name, user,
-  state, ppid, cpu_pct, mem_rss, mem_vsize, mem_shared, mem_swap,
+  this doc — frozen r048 at 20 fields, extended by the **31 fields, r093
+  signed** amendment to **30 fields** (10 keys added; `io_prio` of the 11
+  proposed was DEFERRED — see the freeze note below): `pid, starttime, name,
+  user, state, ppid, cpu_pct, mem_rss, mem_vsize, mem_shared, mem_swap,
   io_read_rate, io_write_rate, nice, threads, unit, is_kthread,
-  is_defunct, from_backoff, rollup`. Changes cross the 003→004 seam and
+  is_defunct, from_backoff, rollup` + `cpu_time, mem_pct, io_read_total,
+  io_write_total, net_rx_rate, net_tx_rate, oom_score, affinity, cmdline,
+  started`. Changes cross the 003→004 seam and
   need C-review sign-off (precedent: the r048 mem_swap rejection).
 - Queue: plain bounded `queue.Queue` (4 slots), `put_nowait` + drop-oldest.
 

@@ -20,8 +20,10 @@ from ui.compat import (Gtk, Gdk, GdkPixbuf, GLib, Gio, Pango, GTK_MAJOR,
                        icons, css, events, layout, menu, dialogs, charts)
 
 from pages.page_base import BasePage
-from config.app_settings import AppSettings, COLUMN_KEYS
+from config.app_settings import (AppSettings, COLUMN_KEYS, COLUMN_GROUPS,
+                                 COLUMN_MIN_WIDTH)
 from ui import process_model as pm
+from ui.process_preview import PreviewPane
 from modules import manager_actions as ma
 from modules import manager_rank as mr
 from log import get_logger, log_exception
@@ -129,6 +131,86 @@ def _fmt_rate(value):
     if value is None or value < 0:
         return "—"
     return _fmt_bytes(value) + "/s"
+
+
+def _fmt_duration(seconds):
+    """CPU time as a compact ``H:MM:SS`` / ``M:SS`` / ``Ns`` string."""
+    if seconds is None or seconds < 0:
+        return "—"
+    total = int(seconds)
+    hours, rem = divmod(total, 3600)
+    minutes, secs = divmod(rem, 60)
+    if hours:
+        return "%d:%02d:%02d" % (hours, minutes, secs)
+    if minutes:
+        return "%d:%02d" % (minutes, secs)
+    return "%ds" % secs
+
+
+def _fmt_clock(epoch):
+    """Process start time (epoch seconds) as a local ``MMM DD HH:MM`` string."""
+    if epoch is None or epoch <= 0:
+        return "—"
+    try:
+        return time.strftime("%b %d %H:%M", time.localtime(epoch))
+    except (ValueError, OSError):
+        return "—"
+
+
+def _fmt_value(kind, value):
+    """Render a numeric store value for its column kind (present values only)."""
+    if kind == "pct":
+        return "%.1f%%" % value
+    if kind == "bytes":
+        return _fmt_bytes(value)
+    if kind == "rate":
+        return _fmt_rate(value)
+    if kind == "int":
+        return str(int(value))
+    if kind == "duration":
+        return _fmt_duration(value)
+    if kind == "clock":
+        return _fmt_clock(value)
+    return str(value)
+
+
+# Right-aligned numeric column kinds.
+_NUMERIC_KINDS = {"pct", "bytes", "rate", "int", "duration", "clock"}
+
+# Column key -> (render kind, store value col, store has col | None). The four
+# bespoke columns (process/state markup, and the always-present string cells)
+# are handled directly in _cell_data; everything else renders through this spec.
+_COL_SPEC = {
+    "user": ("str", pm.COL_USER, None),
+    "pid": ("pid", pm.COL_PID, None),
+    "cmdline": ("str", pm.COL_CMDLINE, None),
+    "unit": ("str", pm.COL_UNIT, None),
+    "affinity": ("str", pm.COL_AFFINITY, None),
+    "cpu": ("pct", pm.COL_CPU, pm.COL_CPU_HAS),
+    "cpu_time": ("duration", pm.COL_CPU_TIME, pm.COL_CPU_TIME_HAS),
+    "nice": ("int", pm.COL_NICE, pm.COL_NICE_HAS),
+    "threads": ("int", pm.COL_THREADS, pm.COL_THREADS_HAS),
+    "memory": ("bytes", pm.COL_MEM, pm.COL_MEM_HAS),
+    "mem_pct": ("pct", pm.COL_MEM_PCT, pm.COL_MEM_PCT_HAS),
+    "swap": ("bytes", pm.COL_SWAP, pm.COL_SWAP_HAS),
+    "shared": ("bytes", pm.COL_SHARED, pm.COL_SHARED_HAS),
+    "pss": ("bytes", pm.COL_PSS, pm.COL_PSS_HAS),
+    "disk_read": ("rate", pm.COL_DISK_R, pm.COL_DISK_R_HAS),
+    "disk_write": ("rate", pm.COL_DISK_W, pm.COL_DISK_W_HAS),
+    "disk_read_total": ("bytes", pm.COL_DISK_R_TOT, pm.COL_DISK_R_TOT_HAS),
+    "disk_write_total": ("bytes", pm.COL_DISK_W_TOT, pm.COL_DISK_W_TOT_HAS),
+    "net_rx": ("rate", pm.COL_NET_RX, pm.COL_NET_RX_HAS),
+    "net_tx": ("rate", pm.COL_NET_TX, pm.COL_NET_TX_HAS),
+    "oom_score": ("int", pm.COL_OOM, pm.COL_OOM_HAS),
+    "started": ("clock", pm.COL_STARTED, pm.COL_STARTED_HAS),
+    "ppid": ("int", pm.COL_PPID, pm.COL_PPID_HAS),
+}
+
+
+def _column_sortable(key):
+    """True if a header click on ``key`` sorts (numeric columns + the four
+    always-sortable identity keys). Text extras (cmdline/affinity/unit) don't."""
+    return key == "process" or key in pm.SORT_COLUMNS
 
 
 class ProcessesPage(BasePage):
@@ -250,6 +332,13 @@ class ProcessesPage(BasePage):
         self.kthread_check.set_tooltip_text("Show kernel threads")
         layout.box_add(bar, self.kthread_check, False, False, 0)
 
+        # r028 fold-out toggle for the process preview pane (mockup J).
+        self.preview_toggle = Gtk.ToggleButton(label="Preview")
+        self.preview_toggle.set_active(
+            self.settings.get("preview_pane_open", False))
+        self.preview_toggle.set_tooltip_text("Show the process preview pane")
+        layout.box_add(bar, self.preview_toggle, False, False, 0)
+
         # Wire signals after initial values are set (no _loading guard needed).
         self.search_entry.connect("search-changed", self._on_search)
         self.regex_toggle.connect("toggled", self._on_search)
@@ -259,6 +348,7 @@ class ProcessesPage(BasePage):
         self.refresh_button.connect("clicked", self._on_refresh_clicked)
         self.interval_combo.connect("changed", self._on_interval_changed)
         self.kthread_check.connect("toggled", self._on_kthread_toggled)
+        self.preview_toggle.connect("toggled", self._on_preview_toggled)
 
         layout.box_add(self, bar, False, False, 0)
 
@@ -346,6 +436,8 @@ class ProcessesPage(BasePage):
         # the view responsive at the row budget (thousands of rows).
         self.treeview.set_fixed_height_mode(True)
         self._update_sort_indicators()
+        # Selection drives the preview pane (mockup J).
+        selection.connect("changed", self._on_selection_changed)
 
         # store re-sorts (header clicks) keep row references valid; nothing to
         # persist here because our header handler owns the sort setting.
@@ -353,32 +445,50 @@ class ProcessesPage(BasePage):
         scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         scrolled.set_min_content_height(360)
         layout.set_child(scrolled, self.treeview)
-        layout.box_add(self, scrolled, True, True, 0)
+
+        # Table on the left, the fold-out preview pane on the right (r028 toggle
+        # in the toolbar drives visibility). One horizontal row so the pane
+        # never steals the table's width when hidden.
+        split = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        layout.box_add(split, scrolled, True, True, 0)
+        self.preview_pane = PreviewPane(self)
+        self.preview_pane.set_no_show_all(True)
+        self.preview_pane.set_visible(
+            self.settings.get("preview_pane_open", False))
+        layout.box_add(split, self.preview_pane, False, False, 0)
+        layout.box_add(self, split, True, True, 0)
 
     _COLUMN_TITLES = {
         "process": "Process", "user": "User", "cpu": "CPU %", "memory": "Memory",
         "swap": "Swap", "disk_read": "Reads", "disk_write": "Writes",
         "nice": "Nice", "pid": "PID", "state": "State",
-    }
-    _COLUMN_MINW = {
-        "process": 200, "user": 90, "cpu": 70, "memory": 100, "swap": 90,
-        "disk_read": 90, "disk_write": 90, "nice": 55, "pid": 75,
-        "state": 80,
+        # r093 extended columns.
+        "cmdline": "Command line", "unit": "cgroup unit", "cpu_time": "CPU time",
+        "threads": "Threads", "affinity": "CPU affinity", "mem_pct": "Mem %",
+        "shared": "Shared", "pss": "PSS", "disk_read_total": "Read total",
+        "disk_write_total": "Write total", "net_rx": "Net ↓", "net_tx": "Net ↑",
+        "oom_score": "OOM", "started": "Started", "ppid": "PPID",
     }
 
     def _make_column(self, key):
         renderer = Gtk.CellRendererText()
-        # Right-align the numeric columns.
-        if key in ("cpu", "memory", "swap", "disk_read", "disk_write",
-                   "nice", "pid"):
+        spec = _COL_SPEC.get(key)
+        kind = spec[0] if spec else None
+        # Right-align the numeric columns (and PID).
+        if key == "pid" or kind in _NUMERIC_KINDS:
             renderer.set_property("xalign", 1.0)
+        if key == "cmdline":
+            renderer.set_property("ellipsize", Pango.EllipsizeMode.END)
         column = Gtk.TreeViewColumn(self._COLUMN_TITLES[key], renderer)
         column.set_resizable(True)
         column.set_sizing(Gtk.TreeViewColumnSizing.FIXED)
-        column.set_fixed_width(self._COLUMN_MINW[key])
-        column.set_min_width(self._COLUMN_MINW[key])
-        column.set_clickable(True)
-        column.connect("clicked", self._on_header_clicked, key)
+        minw = COLUMN_MIN_WIDTH.get(key, 90)
+        column.set_fixed_width(minw)
+        column.set_min_width(minw)
+        # Only sortable columns respond to header clicks (§5b: no dead affordance).
+        if _column_sortable(key):
+            column.set_clickable(True)
+            column.connect("clicked", self._on_header_clicked, key)
         column.set_cell_data_func(renderer, self._cell_data, key)
         return column
 
@@ -407,36 +517,21 @@ class ProcessesPage(BasePage):
             else:
                 cell.set_property("markup", _escape(text))
             return
-        if key == "user":
-            cell.set_property("text", model.get_value(it, pm.COL_USER))
-        elif key == "pid":
-            cell.set_property("text", str(model.get_value(it, pm.COL_PID)))
-        elif key == "cpu":
-            has = model.get_value(it, pm.COL_CPU_HAS)
-            cell.set_property(
-                "text", "%.1f%%" % model.get_value(it, pm.COL_CPU) if has else "—")
-        elif key == "memory":
-            has = model.get_value(it, pm.COL_MEM_HAS)
-            cell.set_property(
-                "text", _fmt_bytes(model.get_value(it, pm.COL_MEM)) if has else "—")
-        elif key == "swap":
-            has = model.get_value(it, pm.COL_SWAP_HAS)
-            cell.set_property(
-                "text", _fmt_bytes(model.get_value(it, pm.COL_SWAP)) if has else "—")
-        elif key == "disk_read":
-            has = model.get_value(it, pm.COL_DISK_R_HAS)
-            cell.set_property(
-                "text", _fmt_rate(model.get_value(it, pm.COL_DISK_R))
-                if has else "—")
-        elif key == "disk_write":
-            has = model.get_value(it, pm.COL_DISK_W_HAS)
-            cell.set_property(
-                "text", _fmt_rate(model.get_value(it, pm.COL_DISK_W))
-                if has else "—")
-        elif key == "nice":
-            has = model.get_value(it, pm.COL_NICE_HAS)
-            cell.set_property(
-                "text", str(model.get_value(it, pm.COL_NICE)) if has else "—")
+        spec = _COL_SPEC.get(key)
+        if spec is None:
+            return
+        kind, value_col, has_col = spec
+        if has_col is None:
+            value = model.get_value(it, value_col)
+            if kind == "pid":
+                cell.set_property("text", str(value))
+            else:  # always-present strings: blank -> "—" (r039)
+                cell.set_property("text", value if value else "—")
+            return
+        if not model.get_value(it, has_col):
+            cell.set_property("text", "—")
+            return
+        cell.set_property("text", _fmt_value(kind, model.get_value(it, value_col)))
 
 
     # -- strip formatting (r055: color-coded metrics) ---------------------
@@ -749,6 +844,7 @@ class ProcessesPage(BasePage):
         selected = self._capture_selection()
         self.model.apply_snapshot(snapshot.procs)
         self._restore_selection(selected)
+        self._update_preview(snapshot)
         if self._compact_strip:
             self._update_status(snapshot)
         else:
@@ -944,9 +1040,35 @@ class ProcessesPage(BasePage):
         return False
 
     def _on_row_activated(self, _treeview, _path, _column):
-        # Details pane is Phase 4; Enter just selects (the activation already
-        # moved/kept selection here).
-        pass
+        # Enter activates a row: open the preview on it if it is hidden.
+        if not self.preview_toggle.get_active():
+            self.preview_toggle.set_active(True)
+
+    # -- preview pane (mockup J) ------------------------------------------
+
+    def _on_preview_toggled(self, button):
+        open_ = button.get_active()
+        self.preview_pane.set_visible(open_)
+        self.settings.set("preview_pane_open", open_)
+        self.settings.save()
+        if open_:
+            self._sync_preview_selection()
+            if self._last_procs:
+                self.preview_pane.update(self._last_procs, self._last_system)
+
+    def _on_selection_changed(self, _selection):
+        self._sync_preview_selection()
+
+    def _sync_preview_selection(self):
+        """Point the pane at the first selected row (or clear it)."""
+        keys = self._capture_selection()
+        self.preview_pane.set_selection(keys[0] if keys else None)
+
+    def _update_preview(self, snapshot):
+        # Cheap when hidden: skip the per-row model build until the pane is open.
+        if not self.preview_toggle.get_active():
+            return
+        self.preview_pane.update(snapshot.procs or {}, snapshot.system or {})
 
     # -- context menu + action surface (Phase 3) --------------------------
 
@@ -1041,9 +1163,17 @@ class ProcessesPage(BasePage):
         return model
 
     def _open_column_chooser(self, x, y):
-        """Right-click on the column headers: add/remove columns (r075)."""
+        """Right-click on the column headers: add/remove columns (r075/r093).
+
+        The 22-column set is grouped (Identity / CPU / Memory / I/O & Network /
+        Diagnostics) with a header per group; the list scrolls so the popover
+        stays bounded (§5b)."""
         popover = Gtk.Popover()
         popover.set_relative_to(self.treeview)
+        scroller = Gtk.ScrolledWindow()
+        scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroller.set_min_content_height(320)
+        scroller.set_max_content_height(420)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         box.set_margin_top(10); box.set_margin_bottom(10)
         box.set_margin_start(12); box.set_margin_end(12)
@@ -1051,15 +1181,25 @@ class ProcessesPage(BasePage):
         head.set_xalign(0)
         css.add_css_class(head, "gauge-k")
         layout.box_add(box, head, False, False, 0)
-        for key in COLUMN_KEYS:
-            column = self._columns.get(key)
-            if column is None:
-                continue
-            check = Gtk.CheckButton(label=self._COLUMN_TITLES[key])
-            check.set_active(column.get_visible())
-            check.connect("toggled", self._on_column_toggled, key)
-            layout.box_add(box, check, False, False, 0)
-        layout.set_child(popover, box)  # GTK3 add / GTK4 set_child
+        for group_name, keys in COLUMN_GROUPS:
+            group_label = Gtk.Label()
+            group_label.set_xalign(0)
+            group_label.set_markup(
+                "<span size='small' foreground='#888888'>%s</span>"
+                % _escape(group_name))
+            group_label.set_margin_top(6)
+            css.add_css_class(group_label, "band-meta")
+            layout.box_add(box, group_label, False, False, 0)
+            for key in keys:
+                column = self._columns.get(key)
+                if column is None:
+                    continue
+                check = Gtk.CheckButton(label=self._COLUMN_TITLES[key])
+                check.set_active(column.get_visible())
+                check.connect("toggled", self._on_column_toggled, key)
+                layout.box_add(box, check, False, False, 0)
+        layout.set_child(scroller, box)
+        layout.set_child(popover, scroller)  # GTK3 add / GTK4 set_child
         rectangle = Gdk.Rectangle()
         rectangle.x, rectangle.y = int(x), int(y)
         popover.set_pointing_to(rectangle)

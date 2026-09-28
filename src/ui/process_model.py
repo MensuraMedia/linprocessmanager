@@ -48,8 +48,37 @@ COL_IS_KTHREAD = 18
 COL_IS_DEFUNCT = 19
 COL_NAME_SORT = 20   # r067: clean casefolded name — stable sort key for the
                      # Process column (markup changes must not reorder rows)
-N_COLUMNS = 21   # r081 fix: COL_NAME_SORT (20) was excluded by the old 20 —
-                 # row updates never rewrote the sort key on a process rename
+# r093 (task 010) extended columns — appended AFTER the original layout so every
+# pre-existing COL_* index (and the model's tests that use them) is untouched.
+# Nullable numerics keep the (value, has_data) pair (unknowns render "—" and
+# sort last); string columns store "" for absent.
+COL_CMDLINE = 21
+COL_AFFINITY = 22          # pre-formatted display string ("" when unknown)
+COL_THREADS = 23
+COL_THREADS_HAS = 24
+COL_CPU_TIME = 25          # seconds
+COL_CPU_TIME_HAS = 26
+COL_MEM_PCT = 27
+COL_MEM_PCT_HAS = 28
+COL_SHARED = 29            # bytes
+COL_SHARED_HAS = 30
+COL_PSS = 31               # bytes (selected row only, via rollup)
+COL_PSS_HAS = 32
+COL_DISK_R_TOT = 33        # bytes (cumulative)
+COL_DISK_R_TOT_HAS = 34
+COL_DISK_W_TOT = 35        # bytes (cumulative)
+COL_DISK_W_TOT_HAS = 36
+COL_NET_RX = 37            # bytes/s (attribution)
+COL_NET_RX_HAS = 38
+COL_NET_TX = 39            # bytes/s (attribution)
+COL_NET_TX_HAS = 40
+COL_OOM = 41
+COL_OOM_HAS = 42
+COL_STARTED = 43           # epoch seconds
+COL_STARTED_HAS = 44
+COL_PPID = 45
+COL_PPID_HAS = 46
+N_COLUMNS = 47
 
 STORE_TYPES = [
     int,                    # COL_PID
@@ -67,6 +96,21 @@ STORE_TYPES = [
     bool,                   # IS_KTHREAD
     bool,                   # IS_DEFUNCT
     str,                    # NAME_SORT (hidden stable key)
+    # --- r093 extended columns ---
+    str,                        # CMDLINE
+    str,                        # AFFINITY (display)
+    int, bool,                  # THREADS
+    float, bool,                # CPU_TIME (seconds)
+    float, bool,                # MEM_PCT
+    GObject.TYPE_INT64, bool,   # SHARED (bytes)
+    GObject.TYPE_INT64, bool,   # PSS (bytes)
+    GObject.TYPE_INT64, bool,   # DISK_R_TOT (bytes)
+    GObject.TYPE_INT64, bool,   # DISK_W_TOT (bytes)
+    float, bool,                # NET_RX (bytes/s)
+    float, bool,                # NET_TX (bytes/s)
+    int, bool,                  # OOM
+    GObject.TYPE_DOUBLE, bool,  # STARTED (epoch seconds — needs double)
+    int, bool,                  # PPID
 ]
 
 # Logical (persisted) sort-key -> the (value_col, has_col) it maps to. Columns
@@ -83,6 +127,19 @@ SORT_COLUMNS = {
     "process": (COL_NAME, None),
     "user": (COL_USER, None),
     "state": (COL_STATE, None),
+    # r093 extended numeric columns (string columns are not numerically sorted).
+    "cpu_time": (COL_CPU_TIME, COL_CPU_TIME_HAS),
+    "threads": (COL_THREADS, COL_THREADS_HAS),
+    "mem_pct": (COL_MEM_PCT, COL_MEM_PCT_HAS),
+    "shared": (COL_SHARED, COL_SHARED_HAS),
+    "pss": (COL_PSS, COL_PSS_HAS),
+    "disk_read_total": (COL_DISK_R_TOT, COL_DISK_R_TOT_HAS),
+    "disk_write_total": (COL_DISK_W_TOT, COL_DISK_W_TOT_HAS),
+    "net_rx": (COL_NET_RX, COL_NET_RX_HAS),
+    "net_tx": (COL_NET_TX, COL_NET_TX_HAS),
+    "oom_score": (COL_OOM, COL_OOM_HAS),
+    "started": (COL_STARTED, COL_STARTED_HAS),
+    "ppid": (COL_PPID, COL_PPID_HAS),
 }
 
 # Record field a logical sort-key reads for the Python-side budget pre-sort.
@@ -91,6 +148,12 @@ _SORT_RECORD_FIELD = {
     "nice": "nice", "pid": "pid", "process": "name", "user": "user",
     "state": "state", "disk_read": "io_read_rate", "disk_write":
     "io_write_rate",
+    "cpu_time": "cpu_time", "threads": "threads", "mem_pct": "mem_pct",
+    "shared": "mem_shared", "disk_read_total": "io_read_total",
+    "disk_write_total": "io_write_total", "net_rx": "net_rx_rate",
+    "net_tx": "net_tx_rate", "oom_score": "oom_score", "started": "started",
+    "ppid": "ppid",
+    # "pss" rides the selected-only rollup, not a flat field -> no pre-sort key.
 }
 
 DEFAULT_ROW_BUDGET = 5000
@@ -106,6 +169,25 @@ def _me():
         return pwd.getpwuid(os.getuid()).pw_name
     except (KeyError, OSError):
         return os.environ.get("USER") or ""
+
+
+def format_affinity(affinity):
+    """Compact CPU-set display: ``(0,1,2,3)`` -> ``"0-3"``, ``(0,2,3)`` ->
+    ``"0,2-3"``; ``None``/empty -> ``""`` (blanked "—" in the cell)."""
+    if not affinity:
+        return ""
+    cpus = sorted(set(affinity))
+    ranges = []
+    start = prev = cpus[0]
+    for cpu in cpus[1:]:
+        if cpu == prev + 1:
+            prev = cpu
+            continue
+        ranges.append((start, prev))
+        start = prev = cpu
+    ranges.append((start, prev))
+    return ",".join("%d" % a if a == b else "%d-%d" % (a, b)
+                    for a, b in ranges)
 
 
 def record_to_row(rec):
@@ -124,6 +206,22 @@ def record_to_row(rec):
     dr_has, dr = num(rec.get("io_read_rate"))
     dw_has, dw = num(rec.get("io_write_rate"))
     nice_has, nice = num(rec.get("nice"))
+
+    # r093 extended fields (all None-tolerant; missing key -> unknown).
+    ct_has, ct = num(rec.get("cpu_time"))
+    thr_has, thr = num(rec.get("threads"))
+    mp_has, mp = num(rec.get("mem_pct"))
+    sh_has, sh = num(rec.get("mem_shared"))
+    rollup = rec.get("rollup")
+    pss_has, pss = num(rollup.get("pss_bytes") if isinstance(rollup, dict)
+                       else None)
+    drt_has, drt = num(rec.get("io_read_total"))
+    dwt_has, dwt = num(rec.get("io_write_total"))
+    nrx_has, nrx = num(rec.get("net_rx_rate"))
+    ntx_has, ntx = num(rec.get("net_tx_rate"))
+    oom_has, oom = num(rec.get("oom_score"))
+    st_has, st = num(rec.get("started"))
+    ppid_has, ppid = num(rec.get("ppid"))
 
     unit = rec.get("unit")
     unit_disp = unit if (unit and unit != "—") else ""
@@ -144,6 +242,21 @@ def record_to_row(rec):
         bool(rec.get("is_kthread")),
         bool(rec.get("is_defunct")),
         (rec.get("name") or "?").casefold(),
+        # --- r093 extended columns ---
+        rec.get("cmdline") or "",
+        format_affinity(rec.get("affinity")),
+        int(thr) if thr_has else -1, thr_has,
+        float(ct) if ct_has else -1.0, ct_has,
+        float(mp) if mp_has else -1.0, mp_has,
+        int(sh) if sh_has else -1, sh_has,
+        int(pss) if pss_has else -1, pss_has,
+        int(drt) if drt_has else -1, drt_has,
+        int(dwt) if dwt_has else -1, dwt_has,
+        float(nrx) if nrx_has else -1.0, nrx_has,
+        float(ntx) if ntx_has else -1.0, ntx_has,
+        int(oom) if oom_has else -1, oom_has,
+        float(st) if st_has else -1.0, st_has,
+        int(ppid) if ppid_has else -1, ppid_has,
     ]
 
 
@@ -186,6 +299,15 @@ class ProcessTableModel:
             (COL_CPU, COL_CPU_HAS), (COL_MEM, COL_MEM_HAS),
             (COL_SWAP, COL_SWAP_HAS), (COL_NICE, COL_NICE_HAS),
             (COL_DISK_R, COL_DISK_R_HAS), (COL_DISK_W, COL_DISK_W_HAS),
+            # r093 extended numeric columns.
+            (COL_CPU_TIME, COL_CPU_TIME_HAS), (COL_THREADS, COL_THREADS_HAS),
+            (COL_MEM_PCT, COL_MEM_PCT_HAS), (COL_SHARED, COL_SHARED_HAS),
+            (COL_PSS, COL_PSS_HAS),
+            (COL_DISK_R_TOT, COL_DISK_R_TOT_HAS),
+            (COL_DISK_W_TOT, COL_DISK_W_TOT_HAS),
+            (COL_NET_RX, COL_NET_RX_HAS), (COL_NET_TX, COL_NET_TX_HAS),
+            (COL_OOM, COL_OOM_HAS), (COL_STARTED, COL_STARTED_HAS),
+            (COL_PPID, COL_PPID_HAS),
         ):
             self.store.set_sort_func(
                 value_col, self._num_sort, (value_col, has_col))

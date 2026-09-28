@@ -54,7 +54,8 @@ def status_rec(pid, uid=1000, rss=2048, vsize=4096, shared=64):
 
 
 def make_readers(*, pids=(), stat=None, status=None, io=None, cmdline=None,
-                 cgroup=None, rollup=None, system_stat=None, meminfo=None,
+                 cgroup=None, rollup=None, oom=None, affinity=None,
+                 system_stat=None, meminfo=None,
                  net=None, diskstats=None, pressure=None, loadavg=None,
                  iter_error=None):
     stat = stat or {}
@@ -63,6 +64,8 @@ def make_readers(*, pids=(), stat=None, status=None, io=None, cmdline=None,
     cmdline = cmdline or {}
     cgroup = cgroup or {}
     rollup = rollup or {}
+    oom = oom or {}
+    affinity = affinity or {}
 
     def _iter():
         if iter_error is not None:
@@ -77,6 +80,8 @@ def make_readers(*, pids=(), stat=None, status=None, io=None, cmdline=None,
         read_cmdline=lambda pid: cmdline.get(pid),
         parse_cgroup=lambda pid: cgroup.get(pid),
         parse_smaps_rollup=lambda pid: rollup.get(pid),
+        read_oom_score=lambda pid: oom.get(pid),
+        read_affinity=lambda pid: affinity.get(pid),
         system_stat=lambda: system_stat,
         system_meminfo=lambda: meminfo,
         system_net_dev=lambda: net or {},
@@ -266,6 +271,7 @@ def test_truncated_and_exited_pids_are_skipped():
         parse_status=lambda pid: None, parse_io=lambda pid: None,
         read_cmdline=lambda pid: None, parse_cgroup=lambda pid: None,
         parse_smaps_rollup=lambda pid: None,
+        read_oom_score=lambda pid: None, read_affinity=lambda pid: None,
         system_stat=lambda: None, system_meminfo=lambda: None,
         system_net_dev=lambda: {}, system_diskstats=lambda: {},
         system_pressure=lambda: None, system_loadavg=lambda: None)
@@ -332,9 +338,122 @@ def test_system_load_absent_reader_degrades_to_none():
     assert snap.system["load"] is None
 
 
+# ---------------------------------------------------------------------------
+# r093 extended keys (task 010 Stage 1) — cpu_time / mem_pct / io totals /
+# oom_score / affinity / cmdline / started; net_* left to attribution.
+# ---------------------------------------------------------------------------
+
+def test_extended_keys_default_to_none():
+    # Minimal readers (no io/oom/affinity/cmdline, no system stat/meminfo):
+    # every new key is present and None — never fabricated (r039).
+    readers = make_readers(pids=[100], stat={100: stat_rec(100)})
+    snap = manager_sampler.build_snapshot(None, 1.0, make_clock(), readers)
+    rec = snap.procs[(100, 111)]
+    for key in ("cpu_time", "mem_pct", "io_read_total", "io_write_total",
+                "net_rx_rate", "net_tx_rate", "oom_score", "affinity",
+                "cmdline", "started"):
+        assert key in rec
+    # cpu_time IS computable from stat (utime+stime present, default 0) — the
+    # only always-None-here keys are the ones needing readers/system data.
+    assert rec["cpu_time"] == pytest.approx(0.0)
+    assert rec["mem_pct"] is None          # no meminfo total
+    assert rec["started"] is None          # no btime
+    assert rec["net_rx_rate"] is None and rec["net_tx_rate"] is None
+
+
+def test_cpu_time_started_and_mem_pct_computed():
+    system_stat = {"btime": 1000, "ncpu": 0, "total": None, "cpus": {}}
+    meminfo = {"total": 204800, "available": 100000, "used": 104800,
+               "cached": 0, "swap_total": 0, "swap_free": 0}
+    readers = make_readers(
+        pids=[100],
+        stat={100: stat_rec(100, utime=100, stime=50, starttime=111)},
+        status={100: status_rec(100, rss=2048)},
+        system_stat=system_stat, meminfo=meminfo)
+    snap = manager_sampler.build_snapshot(
+        None, 1.0, make_clock(), readers)  # clk_tck=100
+    rec = snap.procs[(100, 111)]
+    assert rec["cpu_time"] == pytest.approx(1.5)        # (100+50)/100
+    assert rec["started"] == pytest.approx(1000 + 111 / 100.0)
+    assert rec["mem_pct"] == pytest.approx(1.0)         # 2048/204800*100
+
+
+def test_io_totals_are_the_raw_counters_even_on_first_sample():
+    readers = make_readers(
+        pids=[100], stat={100: stat_rec(100)}, status={100: status_rec(100)},
+        io={100: {"read_bytes": 40960, "write_bytes": 8192}})
+    snap = manager_sampler.build_snapshot(None, 1.0, make_clock(), readers)
+    rec = snap.procs[(100, 111)]
+    assert rec["io_read_total"] == 40960     # totals, not rates
+    assert rec["io_write_total"] == 8192
+    assert rec["io_read_rate"] is None       # rate is still first-sample None
+
+
+def test_oom_affinity_and_cmdline_from_readers():
+    readers = make_readers(
+        pids=[100], stat={100: stat_rec(100)},
+        cmdline={100: ["/usr/bin/app", "--flag", "value"]},
+        oom={100: 42}, affinity={100: (0, 1, 2, 3)})
+    snap = manager_sampler.build_snapshot(None, 1.0, make_clock(), readers)
+    rec = snap.procs[(100, 111)]
+    assert rec["oom_score"] == 42
+    assert rec["affinity"] == (0, 1, 2, 3)
+    assert rec["cmdline"] == "/usr/bin/app --flag value"
+
+
+def test_cmdline_empty_and_missing_are_none():
+    readers = make_readers(
+        pids=[1, 2], stat={1: stat_rec(1), 2: stat_rec(2)},
+        cmdline={1: [], 2: None})  # kthread empty argv / restricted None
+    snap = manager_sampler.build_snapshot(None, 1.0, make_clock(), readers)
+    assert snap.procs[(1, 111)]["cmdline"] is None
+    assert snap.procs[(2, 111)]["cmdline"] is None
+
+
+def test_cmdline_string_is_capped_at_512():
+    long_arg = "x" * 1000
+    readers = make_readers(
+        pids=[100], stat={100: stat_rec(100)}, cmdline={100: [long_arg]})
+    snap = manager_sampler.build_snapshot(None, 1.0, make_clock(), readers)
+    assert len(snap.procs[(100, 111)]["cmdline"]) == 512
+
+
+def test_single_proc_stat_read_shared_btime(monkeypatch):
+    # The pass reads /proc/stat once: btime for started + the system cpu math
+    # both come from the SAME injected system_stat dict (no second read).
+    calls = {"n": 0}
+    system_stat = {"btime": 5, "ncpu": 1, "total": {"busy": 1, "total": 2},
+                   "cpus": {0: {"busy": 1, "total": 2}}}
+
+    def counting_stat():
+        calls["n"] += 1
+        return system_stat
+
+    readers = manager_sampler.Readers(
+        iter_pids=lambda: iter([100]),
+        parse_stat=lambda pid: stat_rec(100, starttime=200),
+        parse_status=lambda pid: None, parse_io=lambda pid: None,
+        read_cmdline=lambda pid: None, parse_cgroup=lambda pid: None,
+        parse_smaps_rollup=lambda pid: None,
+        read_oom_score=lambda pid: None, read_affinity=lambda pid: None,
+        system_stat=counting_stat, system_meminfo=lambda: None,
+        system_net_dev=lambda: {}, system_diskstats=lambda: {},
+        system_pressure=lambda: None, system_loadavg=lambda: None)
+    snap = manager_sampler.build_snapshot(None, 1.0, make_clock(), readers)
+    assert calls["n"] == 1  # one /proc/stat read per pass
+    assert snap.procs[(100, 200)]["started"] == pytest.approx(5 + 200 / 100.0)
+
+
 # ===========================================================================
 # 2. Schema freeze (acceptance gate 6) — against the fixture tree.
 # ===========================================================================
+
+def test_record_field_count_is_r093_signed_set():
+    # r048 froze 20 fields; r093 signed 10 more (io_prio DEFERRED, not added) ->
+    # 30 fields. See docs/modules/sampling-pipeline.md "Schema freeze r093".
+    assert len(manager_sampler.RECORD_FIELDS) == 30
+    assert "io_prio" not in manager_sampler.RECORD_FIELDS
+
 
 def test_record_schema_matches_frozen_appendix():
     readers = manager_sampler.default_readers(PROC)
@@ -459,6 +578,50 @@ def test_request_rollup_fulfilled_on_next_tick_then_cleared():
     s._tick()
     snap2 = s.drain_latest()
     assert snap2.procs[(100, 123456)]["rollup"] is None
+
+
+class _FakeNetAttr:
+    """Injected attributor: returns a fixed pid-key -> (rx, tx)|None map."""
+
+    def __init__(self, mapping):
+        self.mapping = mapping
+        self.calls = []
+
+    def poll(self, now, interval, total_rx, total_tx, pid_start):
+        self.calls.append((total_rx, total_tx, dict(pid_start)))
+        return self.mapping
+
+
+def test_sampler_enriches_records_with_net_attribution():
+    fake = _FakeNetAttr({(100, 123456): (500.0, 250.0)})
+    s = manager_sampler.Sampler(proc_root=PROC, monotonic=_Ticker(), netattr=fake)
+    s._tick()
+    rec = s.drain_latest().procs[(100, 123456)]
+    assert rec["net_rx_rate"] == 500.0
+    assert rec["net_tx_rate"] == 250.0
+    assert fake.calls  # the shell actually ran the attribution pass
+
+
+def test_sampler_net_attribution_restricted_stays_none():
+    # A restricted (Yama) pid maps to None -> the record keeps its None net
+    # fields (lock + "—" in the UI), never a fabricated 0.
+    fake = _FakeNetAttr({(100, 123456): None})
+    s = manager_sampler.Sampler(proc_root=PROC, monotonic=_Ticker(), netattr=fake)
+    s._tick()
+    rec = s.drain_latest().procs[(100, 123456)]
+    assert rec["net_rx_rate"] is None and rec["net_tx_rate"] is None
+
+
+def test_sampler_net_attribution_failure_never_breaks_tick():
+    class _Boom:
+        def poll(self, *_a):
+            raise RuntimeError("attribution blew up")
+
+    s = manager_sampler.Sampler(proc_root=PROC, monotonic=_Ticker(),
+                                netattr=_Boom())
+    s._tick()  # must not raise
+    snap = s.drain_latest()
+    assert snap.procs[(100, 123456)]["net_rx_rate"] is None
 
 
 def test_watchdog_stops_after_consecutive_failures():

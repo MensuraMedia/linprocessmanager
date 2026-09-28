@@ -28,9 +28,35 @@ DEFAULT_INTERVAL = 2.0
 
 # Canonical process-table column keys (order = default display order).
 # r084: disk_rw split into disk_read / disk_write (separate columns).
+# r093 (task 010): the 22-column chooser — the original nine (well, ten) columns
+# keep their display order at the head so the default table is unchanged; the
+# extended columns append after them and are opt-in via the chooser.
 COLUMN_KEYS = [
+    # the default-visible head (unchanged order)
     "process", "user", "cpu", "memory", "swap", "disk_read", "disk_write",
     "nice", "pid", "state",
+    # extended columns (opt-in), appended in display order
+    "cmdline", "unit", "cpu_time", "threads", "affinity",
+    "mem_pct", "shared", "pss",
+    "disk_read_total", "disk_write_total", "net_rx", "net_tx",
+    "oom_score", "started", "ppid",
+]
+
+# Columns shown by default; everything else is opt-in via the chooser (r093).
+DEFAULT_VISIBLE_COLUMNS = [
+    "process", "user", "cpu", "memory", "swap", "disk_read", "disk_write",
+    "nice", "pid", "state",
+]
+
+# Chooser groups (process-preview.md §1) — rendered with headers, in this
+# order; every COLUMN_KEYS key belongs to exactly one group.
+COLUMN_GROUPS = [
+    ("Identity", ["process", "user", "pid", "state", "cmdline", "unit"]),
+    ("CPU", ["cpu", "cpu_time", "nice", "threads", "affinity"]),
+    ("Memory", ["memory", "mem_pct", "swap", "shared", "pss"]),
+    ("I/O & Network", ["disk_read", "disk_write", "disk_read_total",
+                       "disk_write_total", "net_rx", "net_tx"]),
+    ("Diagnostics", ["oom_score", "started", "ppid"]),
 ]
 
 # r084 migration: persisted settings still carrying a legacy key expand to
@@ -62,6 +88,11 @@ def _migrate_legacy_columns(raw):
 COLUMN_MIN_WIDTH = {
     "process": 200, "user": 90, "cpu": 70, "memory": 100, "swap": 90,
     "disk_read": 90, "disk_write": 90, "nice": 55, "pid": 75, "state": 80,
+    # r093 extended columns.
+    "cmdline": 240, "unit": 120, "cpu_time": 80, "threads": 70,
+    "affinity": 110, "mem_pct": 70, "shared": 100, "pss": 100,
+    "disk_read_total": 100, "disk_write_total": 100, "net_rx": 90, "net_tx": 90,
+    "oom_score": 80, "started": 150, "ppid": 75,
 }
 
 VIEW_MODES = ("flat", "tree")
@@ -73,7 +104,7 @@ DEFAULTS = {
     "refresh_interval_s": DEFAULT_INTERVAL,
     "view_mode": "flat",
     "columns": {
-        "visible": list(COLUMN_KEYS),
+        "visible": list(DEFAULT_VISIBLE_COLUMNS),
         "widths": dict(COLUMN_MIN_WIDTH),
     },
     "sort": {"column": "cpu", "direction": "desc"},
@@ -117,7 +148,7 @@ def _validate_columns(raw):
     else:
         visible = []
     if not visible:
-        visible = list(COLUMN_KEYS)
+        visible = list(DEFAULT_VISIBLE_COLUMNS)
 
     widths_raw = raw.get("widths")
     widths = dict(COLUMN_MIN_WIDTH)

@@ -14,3 +14,4 @@
 - 2026-09-27 12:29 | do_activate | AttributeError: 'Button' object has no attribute 'set_child'
 - 2026-09-27 12:30 | do_activate | AttributeError: 'Button' object has no attribute 'set_child'
 - 2026-09-27 12:31 | do_activate | AttributeError: 'Box' object has no attribute 'set_xalign'
+- 2026-09-27 22:53 | do_activate | KeyError: 'cmdline'
