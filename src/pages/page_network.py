@@ -38,6 +38,23 @@ _COL_KEY_START = 8
 _BAR_W, _BAR_H = 160, 12       # Disks geometry (r129 unification)
 _TICK = 5                      # px per packet tick (3px tick + 2px gap)
 _TICKS_PER_HALF = _BAR_W // 2 // _TICK   # 16 packets per half
+_TICK_START_BYTES = 64.0       # r134: the first tick measures 64 B/s
+
+
+def _byte_ticks(value, half_ticks=_TICKS_PER_HALF):
+    """Packet-tick count for a byte-rate, in Bytes/KB increments.
+
+    Each tick is a fixed byte step (64 B/s, 128 B/s, 256 B/s … doubling)
+    chosen so the busiest side fits ``half_ticks`` — ticks literally count
+    byte increments (the digital packet representation). Nonzero rates
+    render at least one tick.
+    """
+    if value is None or value <= 0:
+        return 0
+    quantum = _TICK_START_BYTES
+    while value / quantum > half_ticks and quantum < 2.0 ** 40:
+        quantum *= 2.0
+    return max(1, min(half_ticks, int(round(value / quantum))))
 
 
 def _fmt_rate(value):
@@ -259,12 +276,15 @@ class NetworkPage(BasePage):
 
     def _register_net_actions(self):
         group = Gio.SimpleActionGroup()
+        # r134: callbacks receive (action, parameter) — the zero-arg lambdas
+        # raised TypeError on every menu activation (the operator's
+        # "some of the options are not fully functional").
         for name, callback in (
-                ("mark-high", lambda: self._set_importance("high")),
-                ("mark-medium", lambda: self._set_importance("medium")),
-                ("mark-low", lambda: self._set_importance("low")),
-                ("mark-clear", lambda: self._set_importance(None)),
-                ("track-toggle", self._toggle_track)):
+                ("mark-high", lambda a, p: self._set_importance("high")),
+                ("mark-medium", lambda a, p: self._set_importance("medium")),
+                ("mark-low", lambda a, p: self._set_importance("low")),
+                ("mark-clear", lambda a, p: self._set_importance(None)),
+                ("track-toggle", lambda a, p: self._toggle_track())):
             group.add_action(events.make_action(name, callback))
         self.view.insert_action_group("net", group)
         self._net_actions = group
@@ -370,12 +390,15 @@ class NetworkPage(BasePage):
 
     def _register_net_actions(self):
         group = Gio.SimpleActionGroup()
+        # r134: callbacks receive (action, parameter) — the zero-arg lambdas
+        # raised TypeError on every menu activation (the operator's
+        # "some of the options are not fully functional").
         for name, callback in (
-                ("mark-high", lambda: self._set_importance("high")),
-                ("mark-medium", lambda: self._set_importance("medium")),
-                ("mark-low", lambda: self._set_importance("low")),
-                ("mark-clear", lambda: self._set_importance(None)),
-                ("track-toggle", self._toggle_track)):
+                ("mark-high", lambda a, p: self._set_importance("high")),
+                ("mark-medium", lambda a, p: self._set_importance("medium")),
+                ("mark-low", lambda a, p: self._set_importance("low")),
+                ("mark-clear", lambda a, p: self._set_importance(None)),
+                ("track-toggle", lambda a, p: self._toggle_track())):
             group.add_action(events.make_action(name, callback))
         self.view.insert_action_group("net", group)
         self._net_actions = group
@@ -533,25 +556,15 @@ class NetworkPage(BasePage):
                 "total": total, "conns": conns,
             }
 
-        max_rx = max((i["rx"] or 0) for i in active.values()) if active else 0
-        max_tx = max((i["tx"] or 0) for i in active.values()) if active else 0
-
         for key in list(self._rows):
             if key not in active:
                 self.store.remove(self._rows.pop(key))
         for key, info in active.items():
-            # r129: the packet-tick bar — each side normalized to the busiest
-            # process on ITS side; 1 tick minimum when traffic is nonzero.
-            tx_ticks = (min(_TICKS_PER_HALF,
-                            round(info["tx"] / max_tx * _TICKS_PER_HALF))
-                        if info["tx"] is not None and max_tx else 0)
-            rx_ticks = (min(_TICKS_PER_HALF,
-                            round(info["rx"] / max_rx * _TICKS_PER_HALF))
-                        if info["rx"] is not None and max_rx else 0)
-            if (info["tx"] or 0) > 0 and tx_ticks == 0:
-                tx_ticks = 1
-            if (info["rx"] or 0) > 0 and rx_ticks == 0:
-                rx_ticks = 1
+            # r134: the packet-tick bar measures in Bytes/KB increments —
+            # each tick is a fixed byte step (64 B/s doubling), so the ticks
+            # read as digital packet counts, not a relative share.
+            tx_ticks = _byte_ticks(info["tx"])
+            rx_ticks = _byte_ticks(info["rx"])
             pixbuf = _bar_pixbuf(tx_ticks, rx_ticks)
             values = (info["name"], info["user"],
                       info["conns"] if info["conns"] is not None else -1,

@@ -428,7 +428,17 @@ class BasicsPage(BasePage):
             return
         rgb = _ZONE_RGB.get(state.get("zone"), _ZONE_RGB[mr.ZONE_NOMINAL])
         cr.set_source_rgb(*rgb)
-        cr.rectangle(0, 0, max(0.0, min(1.0, frac)) * width, height)
+        frac = max(0.0, min(1.0, frac))
+        if metric == "network":
+            # r134 (operator): the Network bar renders as packet ticks —
+            # byte increments of the ceiling scale (each tick 5px = a fixed
+            # byte step), the digital packet representation.
+            ticks = int(round(frac * (width / 5.0)))
+            for i in range(ticks):
+                cr.rectangle(i * 5.0, 0, 3.0, height)
+            cr.fill()
+            return
+        cr.rectangle(0, 0, frac * width, height)
         cr.fill()
 
     def _draw_contrib_bar(self, cr, width, height, frac, metric):
