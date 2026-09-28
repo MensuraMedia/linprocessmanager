@@ -42,14 +42,15 @@ log = get_logger("disks")
 _REFRESH_MS = 5000
 
 _CARD_H = 64
-_USAGE_W, _USAGE_H = 160, 8   # §5b fixed usage-bar box.
+_USAGE_W, _USAGE_H = 160, 12   # §5b fixed usage-bar box (r120: 8 → 12, slightly thicker per operator).
 
-# Zone colours (r056 convention, copied from the Basics/Processes pages — the
-# only colours on this page) and the usage-bar trough (disks-capacity.md §3.1).
+# Zone colours (r056 convention) — r120: the VIVID palette (same values as
+# Basics/Processes/Graphs; this page had kept the old muted table). Trough:
+# disks-capacity.md §3.1.
 _ZONE_RGB = {
-    mr.ZONE_NOMINAL: (0x7f / 255.0, 0xd0 / 255.0, 0xa0 / 255.0),
-    mr.ZONE_MEDIUM: (0xe8 / 255.0, 0xc2 / 255.0, 0x68 / 255.0),
-    mr.ZONE_NEAR: (0xe0 / 255.0, 0x4c / 255.0, 0x4c / 255.0),
+    mr.ZONE_NOMINAL: (0x22 / 255.0, 0xc5 / 255.0, 0x5e / 255.0),
+    mr.ZONE_MEDIUM: (0xfa / 255.0, 0xcc / 255.0, 0x15 / 255.0),
+    mr.ZONE_NEAR: (0xef / 255.0, 0x44 / 255.0, 0x44 / 255.0),
 }
 _TROUGH_RGB = (0x1b / 255.0, 0x1b / 255.0, 0x1b / 255.0)
 
