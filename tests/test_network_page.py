@@ -120,3 +120,20 @@ def test_idle_socket_holder_listed_via_connections():
     }))
     assert _names(page.store) == ["long-lived-listener"], (
         'a process holding sockets is listed even at zero traffic')
+
+
+def test_txrx_bar_column_pixbufs():
+    """r129: the Tx←→Rx packet-tick bar column sits in front of Total/s and
+    renders distinct pixbufs for rx-heavy vs tx-heavy processes."""
+    page, _box = _build_page()
+    page.on_snapshot(_snap({
+        (50, 1): _rec("rx-heavy", "user", 900.0, 100.0),
+        (51, 1): _rec("tx-heavy", "user", 100.0, 900.0),
+    }))
+    bars = _col(page.store, 6)   # _COL_BAR
+    assert all(b is not None for b in bars), 'bar pixbufs must render'
+    assert bars[0] is not bars[1], (
+        'rx-heavy and tx-heavy must produce different tick patterns')
+    # view order: the bar column sits in front of Total/s
+    titles = [c.get_title() for c in page.view.get_columns()]
+    assert titles.index("Tx ← → Rx") == titles.index("Total/s") - 1

@@ -68,6 +68,9 @@ _CONTRIB_BAR_TROUGH = (0x1b / 255.0, 0x1b / 255.0, 0x1b / 255.0)
 # four contributor rows; content scrolls/clips inside, the box never moves.
 BASICS_CARD_HEIGHT = 132
 
+# r129: unified bar geometry (Disks standard) — every usage bar in the app.
+_BAR_W, _BAR_H = 160, 12
+
 # r111: paired-card geometry — two uniform cards per row (FlowBox pairs).
 BASICS_CARD_WIDTH = 530
 BASICS_CARD_HEIGHT = 208
@@ -190,8 +193,10 @@ class BasicsPage(BasePage):
 
         bar = charts.ChartArea(
             draw_func=lambda a, cr, w, h, m=metric: self._draw_bar(cr, w, h, m))
-        bar.set_size_request(-1, 14)
-        bar.set_hexpand(True)
+        # r129: unified bar geometry — the same 160 × 12 box as the Disks
+        # usage bars (operator); the card pairs keep their uniform size and
+        # the bar sits left-aligned on top.
+        bar.set_size_request(_BAR_W, _BAR_H)
         layout.box_add(card, bar, False, True, 0)
 
         caption = Gtk.Label()
@@ -370,7 +375,7 @@ class BasicsPage(BasePage):
         bar = charts.ChartArea(
             draw_func=lambda a, cr, w, h, f=frac, m=metric:
             self._draw_contrib_bar(cr, w, h, f, m))
-        bar.set_size_request(110, 8)
+        bar.set_size_request(_BAR_W, _BAR_H)   # r129: unified 160 × 12
         bar.set_valign(Gtk.Align.CENTER)
         layout.box_add(line, bar, False, False, 0)
 

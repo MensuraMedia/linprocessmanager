@@ -52,6 +52,8 @@ _NET_HISTORY_MAX = 600
 
 # The honest, permanent per-process-network empty-state (spec §2). The cross-ref
 # repoints at the Network hub card (Graphs) now that Resources is retired (r061).
+_BAR_W, _BAR_H = 160, 12   # r129: unified bar geometry (Disks standard)
+
 _NET_EMPTY = ("per-process network not available from /proc — "
               "interface totals on the Network graph")
 
@@ -645,8 +647,9 @@ class ProcessesPage(BasePage):
 
         area = charts.ChartArea(
             draw_func=lambda a, cr, w, h, m=metric: self._draw_gauge(cr, w, h, m))
-        area.set_size_request(-1, 10)
-        area.set_hexpand(True)
+        # r129: unified bar geometry — the same 160 × 12 box as the Disks
+        # usage bars (operator), fixed, left-aligned; no hexpand.
+        area.set_size_request(_BAR_W, _BAR_H)
         area.set_tooltip_text(
             _NET_EMPTY if metric == "network" else "Double-click for Basics")
         layout.box_add(box, area, False, True, 0)

@@ -30,7 +30,7 @@ indexed in `index.html`, and referenced from `docs/modules/*`.
 | [N — Disks](mockup-disks.html) | Disks page: capacity + I/O | **PENDING operator pick** → task 011 | [disks-capacity.md](../modules/disks-capacity.md) + [disks-filesystems.md](../modules/disks-filesystems.md) + [disks-implementation.md](../modules/disks-implementation.md) |
 | [P — Peripherals](mockup-peripherals.html) | connected devices + sensors | **SHIPPED** r092 (page live; sidebar updated r092 to the flat structure) | [peripherals.md](../modules/peripherals.md) + [sysfs-data.md](../modules/sysfs-data.md) |
 | [Q — Network](mockup-q-network.html) | per-process traffic page: live table (shipped r113) + per-app monitor + history (v2) | **Q1 live table SHIPPED r113**; Q2/Q3 design directions for v2 | [network-page.md](../modules/network-page.md) |
-| [R — Tx←→Rx bar](mockup-r-txrx-bar.html) | the bidirectional process network bar (component mockup) | **PENDING operator confirm** → Network page column (r113 follow-up) | [network-page.md](../modules/network-page.md) |
+| [R — Tx←→Rx bar](mockup-r-txrx-bar.html) | the bidirectional process network bar (component mockup) | **CONFIRMED r128 — IMPLEMENTED r129** as the Network page representation (packet-tick fills, midline split, 160×12) | [network-page.md](../modules/network-page.md) |
 
 
 

@@ -11,7 +11,9 @@ Boundary law: consumes snapshot records + the sampler's public
 ``open_sockets()`` summary; never reads /proc directly.
 """
 
-from ui.compat import Gtk, GLib, Pango, css, layout, charts
+import cairo
+
+from ui.compat import Gtk, GLib, GdkPixbuf, Pango, css, layout, charts
 
 from pages.page_base import BasePage
 
@@ -19,16 +21,21 @@ _ACCENT = (0x00 / 255.0, 0x78 / 255.0, 0xD7 / 255.0)
 _TROUGH = (0x1b / 255.0, 0x1b / 255.0, 0x1b / 255.0)
 
 _COLS = [
-    # (store col, title, kind)  kind: text | rate | int
+    # (store col, title, kind)  kind: text | rate | int | bar
     (0, "Process", "text"),
     (1, "User", "text"),
     (2, "Conns", "int"),
     (3, "↓ Rx/s", "rate"),
     (4, "↑ Tx/s", "rate"),
+    (8, "Tx ← → Rx", "bar"),      # r129: the packet-tick bar, in front of Total
     (5, "Total/s", "rate"),
 ]
-_COL_KEY_PID = 6
-_COL_KEY_START = 7
+_COL_BAR = 6                    # store column holding the rendered bar pixbuf
+_COL_KEY_PID = 7
+_COL_KEY_START = 8
+_BAR_W, _BAR_H = 160, 12       # Disks geometry (r129 unification)
+_TICK = 5                      # px per packet tick (3px tick + 2px gap)
+_TICKS_PER_HALF = _BAR_W // 2 // _TICK   # 16 packets per half
 
 
 def _fmt_rate(value):
@@ -50,6 +57,51 @@ def _escape(text):
 
 def _span(text, color):
     return "<span foreground='%s'>%s</span>" % (color, text)
+
+
+_TX_TICK_RGB = (0xfa / 255.0, 0xcc / 255.0, 0x15 / 255.0)   # yellow: sent
+_RX_TICK_RGB = (0x21 / 255.0, 0x96 / 255.0, 0xf3 / 255.0)   # blue: received
+_TROUGH_RGB = (0x1b / 255.0, 0x1b / 255.0, 0x1b / 255.0)
+_MIDLINE_RGB = (0x3a / 255.0, 0x3a / 255.0, 0x3a / 255.0)
+
+_bar_cache = {}
+
+
+def _bar_pixbuf(tx_ticks, rx_ticks):
+    """The Tx←→Rx packet-tick bar as a 160×12 pixbuf (mockup R, confirmed).
+
+    Tx ticks grow from the LEFT edge toward the center; Rx ticks grow from
+    the RIGHT edge toward the center; the center line = zero. Cached by
+    tick counts — there are only 17×17 possible bars.
+    """
+    key = (tx_ticks, rx_ticks)
+    if key in _bar_cache:
+        return _bar_cache[key]
+    surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, _BAR_W, _BAR_H)
+    cr = cairo.Context(surf)
+    cr.set_source_rgb(*_TROUGH_RGB)
+    cr.rectangle(0, 0, _BAR_W, _BAR_H)
+    cr.fill()
+    half = _BAR_W / 2.0
+    tick_w, tick_gap = 3.0, 2.0
+
+    # Tx: ticks packed from the left edge, growing toward the center.
+    cr.set_source_rgb(*_TX_TICK_RGB)
+    for i in range(tx_ticks):
+        cr.rectangle(i * _TICK, 0, tick_w, _BAR_H)
+    # Rx: ticks packed from the right edge, growing toward the center.
+    cr.set_source_rgb(*_RX_TICK_RGB)
+    for i in range(rx_ticks):
+        cr.rectangle(_BAR_W - (i + 1) * _TICK, 0, tick_w, _BAR_H)
+    # center line = zero
+    cr.set_source_rgb(*_MIDLINE_RGB)
+    cr.rectangle(half - 0.5, 0, 1, _BAR_H)
+    surf.flush()
+    pb = GdkPixbuf.Pixbuf.new_from_data(
+        bytes(surf.get_data()), GdkPixbuf.Colorspace.RGB, True, 8,
+        _BAR_W, _BAR_H, surf.get_stride())
+    _bar_cache[key] = pb
+    return pb
 
 
 class NetworkPage(BasePage):
@@ -102,7 +154,7 @@ class NetworkPage(BasePage):
 
     def _build_table(self):
         types = (str, str, int, float, float, float,
-                 int, int)               # + key pid/start (hidden)
+                 GdkPixbuf.Pixbuf, int, int)   # + bar pixbuf, key pid/start
         self.store = Gtk.ListStore(*types)
         self.view = Gtk.TreeView(model=self.store)
         self.view.set_headers_clickable(True)
@@ -113,6 +165,15 @@ class NetworkPage(BasePage):
         self._sort_state = {"col": 5, "desc": True}   # default: busiest first
 
         for col_id, title, kind in _COLS:
+            if kind == "bar":
+                # r129: the Tx←→Rx packet-tick bar (pixbuf column, in front
+                # of Total/s). Not sortable — it visualizes rx+tx together.
+                renderer = Gtk.CellRendererPixbuf()
+                column = Gtk.TreeViewColumn(title, renderer)
+                column.add_attribute(renderer, "pixbuf", _COL_BAR)
+                column.set_min_width(_BAR_W + 12)
+                self.view.append_column(column)
+                continue
             renderer = Gtk.CellRendererText()
             if kind in ("rate", "int"):
                 renderer.set_property("xalign", 1.0)
@@ -217,15 +278,31 @@ class NetworkPage(BasePage):
                 "total": total, "conns": conns,
             }
 
+        max_rx = max((i["rx"] or 0) for i in active.values()) if active else 0
+        max_tx = max((i["tx"] or 0) for i in active.values()) if active else 0
+
         for key in list(self._rows):
             if key not in active:
                 self.store.remove(self._rows.pop(key))
         for key, info in active.items():
+            # r129: the packet-tick bar — each side normalized to the busiest
+            # process on ITS side; 1 tick minimum when traffic is nonzero.
+            tx_ticks = (min(_TICKS_PER_HALF,
+                            round(info["tx"] / max_tx * _TICKS_PER_HALF))
+                        if info["tx"] is not None and max_tx else 0)
+            rx_ticks = (min(_TICKS_PER_HALF,
+                            round(info["rx"] / max_rx * _TICKS_PER_HALF))
+                        if info["rx"] is not None and max_rx else 0)
+            if (info["tx"] or 0) > 0 and tx_ticks == 0:
+                tx_ticks = 1
+            if (info["rx"] or 0) > 0 and rx_ticks == 0:
+                rx_ticks = 1
+            pixbuf = _bar_pixbuf(tx_ticks, rx_ticks)
             values = (info["name"], info["user"],
                       info["conns"] if info["conns"] is not None else -1,
                       info["rx"] if info["rx"] is not None else -1,
                       info["tx"] if info["tx"] is not None else -1,
-                      info["total"], key[0], key[1])
+                      info["total"], pixbuf, key[0], key[1])
             if key in self._rows:
                 it = self._rows[key]
                 for col, val in enumerate(values):
