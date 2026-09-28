@@ -88,3 +88,18 @@ cpu%_total = cpu% / ncpu                                   # 100% = whole machin
 Synthetic-jiffy units (known deltas → expected %), first-sample None,
 Δwall-guard, counter-reset → no-data, queue drop-oldest under backpressure,
 watchdog state machine, backoff exclusion from rings.
+
+### Schema freeze r093 — task 010 additions (C-review SIGNED, amended)
+
+The 20-field r048 freeze gains 11 optional keys for the process preview +
+extended columns (process-preview.md §1/§4). Signed by C-review with four
+amendments: `affinity` is `tuple[int]|None` via stdlib `os.sched_getaffinity`
+(no ctypes in core); `started` is `float|None` epoch seconds (btime +
+starttime/CLK_TCK — one new per-pass read of `/proc/stat` btime);
+`mem_pct` is `float|None`, recomputed and never summed on rollups (or
+derived in the table layer); `io_prio` is DEFERRED — it needs ctypes, which
+collides with the core import allowlist — moved to a sanctioned seam before
+it can ship. Signed as proposed: `cpu_time`, `io_read_total`,
+`io_write_total`, `net_rx_rate`, `net_tx_rate` (r053 attribution), `oom_score`,
+`cmdline`. All keys optional, absent = unknown = "—" (r039); rollups sum
+only additive quantities.

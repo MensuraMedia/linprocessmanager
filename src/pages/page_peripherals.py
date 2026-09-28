@@ -229,8 +229,11 @@ class PeripheralsPage(BasePage):
             _escape(value_text)))
         layout.box_add(card, head, False, False, 0)
 
+        # ChartArea invokes cb(area, cr, width, height) — the widget is the
+        # first arg (r093 P1, Claude cross-review: a 3-arg lambda drew with
+        # the widget bound as the cairo context).
         bar = charts.ChartArea(
-            draw_func=lambda cr, w, h, f=fill: self._draw_bar(cr, w, h, f))
+            draw_func=lambda a, cr, w, h, f=fill: self._draw_bar(cr, w, h, f))
         bar.set_size_request(-1, 8)
         bar.set_hexpand(True)
         layout.box_add(card, bar, False, False, 0)
