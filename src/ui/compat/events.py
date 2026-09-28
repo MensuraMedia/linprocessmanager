@@ -58,38 +58,6 @@ def click_gesture(widget, on_pressed, button=0, min_press=1):
     return gesture
 
 
-def press_swallow(widget, on_pressed, button=1):
-    """Install a press handler that STOPS the event at ``widget``.
-
-    For press targets that sit INSIDE another press target (r081: the
-    Graphs caret inside the group button). GTK3 connects
-    ``button-press-event`` here — the one file allowed to — and returns
-    True so ancestor widgets (the button) never see the press; a real-event
-    test proved the gesture route alone still navigated. GTK4: a claimed
-    GestureClick sequence.
-
-    ``on_pressed(x, y)`` runs on a matching press. Returns the handler/
-    controller (caller keeps a reference alive).
-    """
-    if GTK_MAJOR >= 4:
-        def _pressed(gesture, _n, x, y):
-            gesture.set_state(Gtk.EventSequenceState.CLAIMED)
-            on_pressed(x, y)
-        return click_gesture(widget, _pressed, button=button)
-
-    def _press(_widget, event):
-        if event.button != button:
-            return False                # other buttons pass through
-        on_pressed(event.x, event.y)
-        return True                     # swallowed: ancestors never see it
-
-    widget.set_events(widget.get_events() | _button_mask())
-    return widget.connect('button-press-event', _press)
-
-
-def _button_mask():
-    from .gtk_env import Gdk
-    return Gdk.EventMask.BUTTON_PRESS_MASK
 
 
 def key_controller(widget, on_key_pressed):

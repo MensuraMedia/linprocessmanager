@@ -34,8 +34,8 @@ def pop_open():
 
 
 def to_basics():
-    app.navigation_manager.navigate_to("basics")
-    state["basics"] = shot("basics")
+    app.navigation_manager.navigate_to("graphs")
+    state["basics"] = shot("graphs-basics")
     GLib.timeout_add(400, app.quit)
     return False
 

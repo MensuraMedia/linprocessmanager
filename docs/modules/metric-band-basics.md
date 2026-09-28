@@ -40,10 +40,11 @@ The documented design was: single-click → Top-10 popover, double-click →
 Basics. History: the r059 popover shipped; r070 removed the delta arrows;
 r081 replaced the popover with direct navigation but on SINGLE click (a
 deviation — too easy to fire while scanning the table) and deleted the
-popover machinery; r090 restored the documented DOUBLE-click trigger — a
-double-click on any gauge now navigates to the Basics page (the Graphs
-submenu auto-expands; sidebar highlight moves). The r059 popover machinery
-remains deleted (git history preserves it). Baseline per gauge:
+popover machinery; r090 restored the documented DOUBLE-click trigger, and r092
+retargeted it: a double-click on any gauge navigates to the GRAPHS hub,
+whose top section now hosts the Basics cards (the sidebar submenu was
+retired with r092). The r059 popover machinery remains deleted (git
+history preserves it). Baseline per gauge:
 
 | Gauge | "Responsible" ranking | Source |
 |---|---|---|

@@ -3,10 +3,9 @@
 1. Right-click on the column-header band opens the COLUMN CHOOSER, not the
    process context menu (r075 regression: widget-vs-bin-window coords slid
    header clicks into the first data row).
-2. The Graphs caret toggles the Basics submenu downward/upward WITHOUT
-   navigating (r075 left no collapse path at all).
-3. A Processes band-chart click lands on Basics and auto-expands the
-   Graphs group in the sidebar (dashboard on_page_changed hook).
+2. (r092) The Processes band double-click lands on the Graphs hub — the
+   Basics cards live at its top; the standalone Basics page and the sidebar
+   submenu are retired (superseded the r081 caret tests).
 
 Builds the real window; needs a display like the other UI tiers.
 """
@@ -42,10 +41,6 @@ def _build_window():
     win.show_all()
     _pump()
     return win
-
-
-def _graphs_box(sidebar):
-    return sidebar.submenu_boxes['graphs']
 
 
 def test_header_right_click_opens_column_chooser_not_process_menu():

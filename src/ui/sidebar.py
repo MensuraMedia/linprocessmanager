@@ -114,38 +114,28 @@ class Sidebar(Gtk.Box):
         # Add bottom navigation
         layout.box_add(self, nav_box_bottom, False, False, 0)
     
-    def create_nav_button(self, label, page_id, is_top=False, is_bottom=False,
-                          indent=False, is_group=False):
+    def create_nav_button(self, label, page_id, is_top=False, is_bottom=False):
         """
-        Create navigation button
+        Create a flat navigation button (r092: no submenu variants — the
+        Graphs child button and its HBox/label assembly are gone).
+
+        r080 lesson that must survive the simplification: NEVER pin a nav
+        label with set_hexpand — GTK3 propagates hexpand up every ancestor
+        and the 171px sidebar became expansion-hungry (floating centered,
+        dead strips both flanks, table squeezed). Pack flags only.
 
         Args:
             label: Button label text
             page_id: Page identifier for navigation
             is_top: If True, applies top button styling (Home)
             is_bottom: If True, applies bottom button styling (Settings)
-            indent: If True, submenu child styling (r062)
 
         Returns:
             Gtk.Button: Configured navigation button
         """
         button = Gtk.Button()
-        if is_group:
-            hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-            lbl = Gtk.Label(label=label, xalign=0)
-            # r080: NO set_hexpand here. GTK3 propagates a child's hexpand up
-            # every ancestor, so the Sidebar itself became expansion-hungry:
-            # the window's spare width was handed to the 171px sidebar, which
-            # then floated centered (dead strips both flanks, table squeezed
-            # to 537px). The pack flags below already expand the label within
-            # the button — nothing else is needed.
-            layout.box_add(hbox, lbl, True, True, 0)
-            layout.set_child(button, hbox)  # GTK3 add / GTK4 set_child
-        else:
-            button.set_label(label)
+        button.set_label(label)
         css.add_css_class(button, 'nav-button')
-        if indent:
-            css.add_css_class(button, 'nav-sub')
 
         # Add special class for top button (Home)
         if is_top:
