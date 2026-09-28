@@ -403,6 +403,23 @@ def command_line(key, *, proc_root=PROC):
     return " ".join(argv) if argv else ""
 
 
+def exe_dir(key, *, proc_root=PROC):
+    """Directory of the process's executable (readlink /proc/<pid>/exe).
+
+    None when the process is gone, the link is unreadable (kernel thread,
+    other-user under Yama), or the exe vanished — the page renders "—".
+    Kernel read stays in the actions layer (boundary law).
+    """
+    target = probe(key, proc_root=proc_root)
+    if target is None or target.status != "OK":
+        return None
+    try:
+        exe = os.readlink("%s/%d/exe" % (proc_root, target.pid))
+    except OSError:
+        return None
+    return os.path.dirname(exe) or "/"
+
+
 def dependencies(key, *, proc_root=PROC, cap=12):
     """Linked-library basenames for a selection key (deduped, capped) + total.
 

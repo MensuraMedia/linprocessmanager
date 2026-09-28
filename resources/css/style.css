@@ -645,6 +645,12 @@ scale slider:hover {
     background-color: #202020;
 }
 
+.section-title {
+    font-size: 13pt;
+    color: #d5d5d5;
+    padding: 4px 0 2px 0;
+}
+
 .basics-contrib-title {
     font-size: 9pt;
     color: #909090;

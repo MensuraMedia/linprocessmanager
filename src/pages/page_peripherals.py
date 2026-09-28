@@ -159,9 +159,10 @@ class PeripheralsPage(BasePage):
     # -- sensors ----------------------------------------------------------
 
     def _section_label(self, text):
+        # r099 (operator item 6): section titles are LARGE headers now.
         label = Gtk.Label(label=text)
         label.set_xalign(0)
-        css.add_css_class(label, "basics-contrib-title")
+        css.add_css_class(label, "section-title")
         layout.box_add(self, label, False, False, 0)
         return label
 

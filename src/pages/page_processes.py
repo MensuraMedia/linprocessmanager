@@ -333,10 +333,15 @@ class ProcessesPage(BasePage):
         layout.box_add(bar, self.kthread_check, False, False, 0)
 
         # r028 fold-out toggle for the process preview pane (mockup J).
-        self.preview_toggle = Gtk.ToggleButton(label="Preview")
+        # r099 (operator item 3): an ICON, not text — the chevron points in
+        # the collapse direction (right = fold away, left = bring back).
+        self.preview_toggle = Gtk.ToggleButton()
         self.preview_toggle.set_active(
             self.settings.get("preview_pane_open", False))
-        self.preview_toggle.set_tooltip_text("Show the process preview pane")
+        self.preview_toggle.set_tooltip_text(
+            "Show / hide the process preview pane")
+        self._sync_preview_icon()
+        self.preview_toggle.connect("toggled", self._on_preview_toggled)
         layout.box_add(bar, self.preview_toggle, False, False, 0)
 
         # Wire signals after initial values are set (no _loading guard needed).
@@ -1046,8 +1051,18 @@ class ProcessesPage(BasePage):
 
     # -- preview pane (mockup J) ------------------------------------------
 
+    def _sync_preview_icon(self):
+        image = _load_icon_image(
+            "caret-right" if self.preview_toggle.get_active()
+            else "caret-left", size=12)
+        if image is None:
+            image = Gtk.Label(label="Preview")   # text fallback, never blank
+            image.show()
+        self.preview_toggle.set_image(image)
+
     def _on_preview_toggled(self, button):
         open_ = button.get_active()
+        self._sync_preview_icon()
         self.preview_pane.set_visible(open_)
         self.settings.set("preview_pane_open", open_)
         self.settings.save()
@@ -1107,10 +1122,13 @@ class ProcessesPage(BasePage):
 
         # Phase-4 placeholders: present but always disabled (grayed) so the
         # menu shows the full surface without pretending to wire it yet.
-        for name in ("tree", "frequency", "journal", "open-location"):
+        for name in ("tree", "frequency", "journal"):
             action = events.make_action(name, lambda a, p: None)
             action.set_enabled(False)
             group.add_action(action)
+        # r099: open-location is FUNCTIONAL (exe dir via the actions layer).
+        group.add_action(events.make_action(
+            "open-location", lambda a, p: self._act_open_location()))
 
         self.treeview.insert_action_group("proc", group)
         self._row_menu_model = self._build_row_menu_model()
@@ -1158,7 +1176,7 @@ class ProcessesPage(BasePage):
         later = Gio.Menu()
         later.append("Frequency… (Phase 4)", "proc.frequency")
         later.append("View journal for unit… (Phase 4)", "proc.journal")
-        later.append("Open executable location… (Phase 4)", "proc.open-location")
+        later.append("Open executable location", "proc.open-location")
         model.append_section(None, later)
         return model
 
@@ -1268,8 +1286,8 @@ class ProcessesPage(BasePage):
 
         if not targets:
             for name in ("stop", "continue", "end", "kill", "hangup", "signal",
-                         "end-group", "kill-group",
-                         "renice", "affinity", "copy-pid", "copy-cmdline"):
+                         "end-group", "kill-group", "renice", "affinity",
+                         "copy-pid", "copy-cmdline", "open-location"):
                 enable(name, False)
             return
         # Signal feasibility is uniform across the signal items (a zombie or a
@@ -1309,6 +1327,15 @@ class ProcessesPage(BasePage):
             self._render_action(
                 ma.render_signal(action, results, signum),
                 ma.has_failure(results))
+            # r099 (operator item 11): VERIFY the outcome after signaling —
+            # "sent" is not "dead". Poll each signaled pid (probe-fresh) and
+            # report confirmed termination, zombie-awaiting-reap, survivors,
+            # or guard failures, in the status line.
+            sent_keys = [(t.pid, t.key_starttime)
+                         for t, r in zip(targets, results)
+                         if r.kind == "sent"]
+            if sent_keys:
+                self._verify_after_signal(action, sent_keys)
 
         need = ma.needs_confirm(action, targets, self.settings)
         message = ma.confirm_message(action, targets)
@@ -1362,6 +1389,19 @@ class ProcessesPage(BasePage):
         self._render_action(
             "Copied PID%s to clipboard" % ("s" if len(keys) > 1 else ""), False)
 
+    def _act_open_location(self):
+        keys = self._selected_keys()
+        if not keys:
+            return
+        path = ma.exe_dir(keys[0])
+        if not path:
+            self._render_action(
+                "Executable location unavailable (gone or restricted)", True)
+            return
+        Gtk.show_uri_on_window(self._toplevel_window(),
+                               "file://" + path, 0)
+        self._render_action("Opened %s" % path, False)
+
     def _act_copy_cmdline(self):
         keys = self._selected_keys()
         if not keys:
@@ -1404,6 +1444,49 @@ class ProcessesPage(BasePage):
         except Exception:  # noqa: BLE001 - fall back to an untethered window
             return None
         return root if isinstance(root, Gtk.Window) else None
+
+    def _verify_after_signal(self, action, keys, polls=4, grace_ms=500):
+        """r099 (operator item 11): confirm each signaled pid actually left
+        the process table — "sent" is not "dead". A killed process can
+        linger as a zombie until its parent reaps it; that is REPORTED as
+        such instead of reading like a failed kill. Final verdict replaces
+        the 'sent' line in the status label."""
+        attempts = [0]
+
+        def poll():
+            attempts[0] += 1
+            gone, zombie, alive = [], [], []
+            for key in keys:
+                target = ma.probe(key)
+                status = target.status if target else "gone"
+                if status in ("gone", "reused"):
+                    gone.append(key[0])       # pid left or was recycled
+                elif target.defunct:
+                    zombie.append(key[0])
+                else:
+                    alive.append(key[0])
+            if not alive and not zombie:
+                self._render_action(
+                    "%s confirmed — process %s terminated"
+                    % (action.upper(),
+                       ", ".join(str(p) for p in gone or
+                                 [k[0] for k in keys])), False)
+                return
+            if attempts[0] >= polls:
+                parts = []
+                if alive:
+                    parts.append("still running: "
+                                 + ", ".join(str(p) for p in alive))
+                if zombie:
+                    parts.append("terminated — awaiting parent reap: "
+                                 + ", ".join(str(p) for p in zombie))
+                self._render_action(
+                    "%s — %s" % (action.upper(), "; ".join(parts)),
+                    bool(alive))
+                return
+            GLib.timeout_add(grace_ms, poll)
+
+        GLib.timeout_add(grace_ms, poll)
 
     def _render_action(self, message, failed):
         color = "#e8c268" if failed else "#7fd0a0"
