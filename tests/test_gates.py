@@ -36,7 +36,9 @@ NET_ROOTS = {
 CORE_ALLOWED = {"os", "re", "time", "functools"}
 CORE_MODULES = {"procfs.py", "sysfs.py"}
 
-# The only binaries a subprocess call site may invoke (none used in Phase 1).
+# The only binaries a subprocess call site may invoke. journalctl is spawned by
+# the logs engine (manager_logs.read_journal, Phase 7) as an argv LIST with a
+# literal binary and `=`-form values only; dmesg is the reserved fallback.
 SANCTIONED_BINARIES = {"journalctl", "dmesg"}
 
 BANNED_PATH_NAMES = {"claude", "claude.md", ".claude"}
@@ -125,8 +127,27 @@ def _spawn_calls(tree):
     return calls
 
 
+def _uses_shell(call):
+    """True if the spawn passes ``shell=True`` (shell parsing = flag injection).
+
+    Only a literal ``shell=True`` is provable; anything else (variable, absent)
+    is treated as no shell — but the argv-list requirement below already blocks
+    the string forms a shell would need.
+    """
+    for kw in call.keywords:
+        if kw.arg == "shell" and isinstance(kw.value, ast.Constant):
+            return kw.value.value is True
+    return False
+
+
 def _sanctioned_binary(call):
-    """Return a sanctioned binary name if statically provable, else None."""
+    """Return the sanctioned binary for an argv-LIST spawn, else None.
+
+    Only the argv-list form is honoured: ``run(["/usr/bin/journalctl", ...])``
+    whose first element is a string literal naming a sanctioned binary. A shell
+    STRING (``run("journalctl ...")``) — or any other first-arg shape — returns
+    None and therefore fails the gate: user input must never reach a shell.
+    """
     if not call.args:
         return None
     arg = call.args[0]
@@ -134,10 +155,6 @@ def _sanctioned_binary(call):
         first = arg.elts[0]
         if isinstance(first, ast.Constant) and isinstance(first.value, str):
             return os.path.basename(first.value)
-    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-        tokens = arg.value.split()
-        if tokens:
-            return os.path.basename(tokens[0])
     return None
 
 
@@ -145,11 +162,44 @@ def test_subprocess_argv_allowlist():
     offenders = []
     for path in _iter_src_files():
         for call in _spawn_calls(_parse(path)):
+            rel = os.path.relpath(path, REPO_ROOT)
+            if _uses_shell(call):
+                offenders.append("%s: shell=True spawn" % rel)
+                continue
             binary = _sanctioned_binary(call)
             if binary not in SANCTIONED_BINARIES:
-                offenders.append("%s: spawn of %r" % (
-                    os.path.relpath(path, REPO_ROOT), binary))
+                offenders.append("%s: spawn of %r" % (rel, binary))
     assert offenders == [], "unsanctioned subprocess call sites: %s" % offenders
+
+
+def _one_call(src):
+    return _spawn_calls(ast.parse(src))[0]
+
+
+def test_gate_accepts_journalctl_argv_list():
+    """The sanctioned pattern: argv list, literal binary, `=`-form values."""
+    call = _one_call(
+        "subprocess.run(['/usr/bin/journalctl', '--no-pager', "
+        "'--grep=' + value])")
+    assert not _uses_shell(call)
+    assert _sanctioned_binary(call) == "journalctl"
+
+
+def test_gate_rejects_string_invocation():
+    """A shell/string invocation must fail even for a sanctioned binary."""
+    call = _one_call("subprocess.run('/usr/bin/journalctl --no-pager')")
+    assert _sanctioned_binary(call) not in SANCTIONED_BINARIES
+
+
+def test_gate_rejects_shell_true():
+    call = _one_call("subprocess.run(['/usr/bin/journalctl'], shell=True)")
+    assert _uses_shell(call) is True
+
+
+def test_gate_rejects_variable_argv():
+    """A bare variable (unprovable binary) is not the sanctioned list form."""
+    call = _one_call("subprocess.run(argv)")
+    assert _sanctioned_binary(call) is None
 
 
 # ---------------------------------------------------------------------------
