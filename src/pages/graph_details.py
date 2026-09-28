@@ -31,15 +31,15 @@ _DEFAULT_WINDOW_S = 300.0
 _GAP_S = 8.0
 
 _ZONE_RGB = {
-    mr.ZONE_NOMINAL: (0x7f / 255.0, 0xd0 / 255.0, 0xa0 / 255.0),
-    mr.ZONE_MEDIUM: (0xe8 / 255.0, 0xc2 / 255.0, 0x68 / 255.0),
-    mr.ZONE_NEAR: (0xe0 / 255.0, 0x4c / 255.0, 0x4c / 255.0),
+    mr.ZONE_NOMINAL: (0x22 / 255.0, 0xc5 / 255.0, 0x5e / 255.0),
+    mr.ZONE_MEDIUM: (0xfa / 255.0, 0xcc / 255.0, 0x15 / 255.0),
+    mr.ZONE_NEAR: (0xef / 255.0, 0x44 / 255.0, 0x44 / 255.0),
 }
-_TRACE_RGB = (0x6c / 255.0, 0xb6 / 255.0, 0xe0 / 255.0)   # neutral chart accent
+_TRACE_RGB = (0x21 / 255.0, 0x96 / 255.0, 0xf3 / 255.0)   # vivid chart accent (r106)
 # Distinct traces for the PSI triple (cpu / mem / io).
 _PSI_TRACE_RGB = [
-    (0x6c / 255.0, 0xb6 / 255.0, 0xe0 / 255.0),
-    (0xe8 / 255.0, 0xc2 / 255.0, 0x68 / 255.0),
+    (0x21 / 255.0, 0x96 / 255.0, 0xf3 / 255.0),
+    (0xfa / 255.0, 0xcc / 255.0, 0x15 / 255.0),
     (0xc0 / 255.0, 0x8c / 255.0, 0xe0 / 255.0),
 ]
 _GRID_RGBA = (1, 1, 1, 0.08)

@@ -41,9 +41,9 @@ _BAND_GAUGES = [
 
 # Cairo fill colors per capacity zone (mirror the page's _cap_zone hexes).
 _ZONE_RGB = {
-    mr.ZONE_NOMINAL: (0x7f / 255.0, 0xd0 / 255.0, 0xa0 / 255.0),
-    mr.ZONE_MEDIUM: (0xe8 / 255.0, 0xc2 / 255.0, 0x68 / 255.0),
-    mr.ZONE_NEAR: (0xe0 / 255.0, 0x4c / 255.0, 0x4c / 255.0),
+    mr.ZONE_NOMINAL: (0x22 / 255.0, 0xc5 / 255.0, 0x5e / 255.0),
+    mr.ZONE_MEDIUM: (0xfa / 255.0, 0xcc / 255.0, 0x15 / 255.0),
+    mr.ZONE_NEAR: (0xef / 255.0, 0x44 / 255.0, 0x44 / 255.0),
 }
 _TROUGH_RGB = (0x3a / 255.0, 0x3a / 255.0, 0x3a / 255.0)
 

@@ -49,9 +49,9 @@ _RING_AGE_S = 300.0
 _GAP_S = 8.0
 
 _ZONE_RGB = {
-    mr.ZONE_NOMINAL: (0x7f / 255.0, 0xd0 / 255.0, 0xa0 / 255.0),
-    mr.ZONE_MEDIUM: (0xe8 / 255.0, 0xc2 / 255.0, 0x68 / 255.0),
-    mr.ZONE_NEAR: (0xe0 / 255.0, 0x4c / 255.0, 0x4c / 255.0),
+    mr.ZONE_NOMINAL: (0x22 / 255.0, 0xc5 / 255.0, 0x5e / 255.0),
+    mr.ZONE_MEDIUM: (0xfa / 255.0, 0xcc / 255.0, 0x15 / 255.0),
+    mr.ZONE_NEAR: (0xef / 255.0, 0x44 / 255.0, 0x44 / 255.0),
 }
 _TROUGH_RGB = (0x3a / 255.0, 0x3a / 255.0, 0x3a / 255.0)
 
@@ -159,6 +159,11 @@ class BasicsPage(BasePage):
 
         left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         css.add_css_class(left, "basics-left")
+        # r106 (operator): the card splits 50/50 — BOTH halves expand, so
+        # GTK divides the card width exactly in half. The halves' natural
+        # widths are capped below (labels + contributor names), so nothing
+        # can skew the split anymore.
+        left.set_hexpand(True)
         left.set_size_request(300, -1)
 
         head = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
@@ -350,6 +355,10 @@ class BasicsPage(BasePage):
         name.set_xalign(0)
         name.set_use_markup(True)
         name.set_ellipsize(Pango.EllipsizeMode.END)
+        # r106: cap the natural — a long unit string used to claim ~450px
+        # of natural request and skewed the card's left/right split.
+        name.set_width_chars(30)
+        name.set_max_width_chars(30)
         unit = (" <span size='small' foreground='#888888'>%s</span>"
                 % _escape(row["unit"])) if row["unit"] else ""
         name.set_markup("%s%s%s" % (
