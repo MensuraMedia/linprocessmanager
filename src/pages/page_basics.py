@@ -68,6 +68,10 @@ _CONTRIB_BAR_TROUGH = (0x1b / 255.0, 0x1b / 255.0, 0x1b / 255.0)
 # four contributor rows; content scrolls/clips inside, the box never moves.
 BASICS_CARD_HEIGHT = 132
 
+# r111: paired-card geometry — two uniform cards per row (FlowBox pairs).
+BASICS_CARD_WIDTH = 530
+BASICS_CARD_HEIGHT = 208
+
 _NET_EMPTY = ("per-process network not available from /proc — "
               "interface totals on the Network graph")
 
@@ -125,8 +129,18 @@ class BasicsPage(BasePage):
             "Processes.</span>",
             wrap=True, spacing_after=6)
 
+        # r111 (operator): individual cards STACKED IN PAIRS — two per row,
+        # uniform size (the FlowBox enforces equal child geometry).
+        self._card_flow = Gtk.FlowBox()
+        self._card_flow.set_selection_mode(Gtk.SelectionMode.NONE)
+        self._card_flow.set_max_children_per_line(2)
+        self._card_flow.set_min_children_per_line(1)
+        self._card_flow.set_homogeneous(True)
+        self._card_flow.set_column_spacing(10)
+        self._card_flow.set_row_spacing(10)
+        layout.box_add(self, self._card_flow, True, True, 0)
         for metric, label in _GAUGES:
-            self._build_gauge(metric, label)
+            self._card_flow.insert(self._build_gauge(metric, label), -1)
 
     # -- external wiring --------------------------------------------------
 
@@ -145,26 +159,14 @@ class BasicsPage(BasePage):
     # -- gauge construction ----------------------------------------------
 
     def _build_gauge(self, metric, label):
-        # Split card (mockup M / spec §3): fixed gauge block on the LEFT (title +
-        # big bar + zone caption), top contributing processes on the RIGHT.
-        # r108 (operator): the card is a Gtk.Paned with the divider FORCED
-        # to the midline on every size allocation — the left/right split is
-        # exactly 50/50 at any width, immune to content requisition. (The
-        # previous Box-based halves negotiated from unequal label naturals
-        # and drifted per card.) Height stays pinned at BASICS_CARD_HEIGHT.
-        card = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
+        # r111 (operator redesign): ONE card per metric, stacked in pairs —
+        # performance bar on TOP (full width), the processes responsible for
+        # it BELOW with their own individual usage bars. No left/right
+        # split, no center line: the card is a single vertical Box with
+        # fixed geometry (§5b) and the pair-FlowBox enforces equal sizes.
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         css.add_css_class(card, "basics-card")
-        card.set_size_request(-1, BASICS_CARD_HEIGHT)
-        card.connect("size-allocate", self._on_card_allocate)
-
-        left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        css.add_css_class(left, "basics-left")
-        # r106 (operator): the card splits 50/50 — BOTH halves expand, so
-        # GTK divides the card width exactly in half. The halves' natural
-        # widths are capped below (labels + contributor names), so nothing
-        # can skew the split anymore.
-        left.set_hexpand(True)
-        left.set_size_request(300, -1)
+        card.set_size_request(BASICS_CARD_WIDTH, BASICS_CARD_HEIGHT)
 
         head = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         name = Gtk.Label(label=label)
@@ -184,13 +186,13 @@ class BasicsPage(BasePage):
         value.set_markup("<span foreground='#888888'>—</span>")
         layout.box_add(head, name, False, False, 0)
         layout.box_add(head, value, True, True, 0)
-        layout.box_add(left, head, False, False, 0)
+        layout.box_add(card, head, False, False, 0)
 
         bar = charts.ChartArea(
             draw_func=lambda a, cr, w, h, m=metric: self._draw_bar(cr, w, h, m))
         bar.set_size_request(-1, 14)
         bar.set_hexpand(True)
-        layout.box_add(left, bar, False, True, 0)
+        layout.box_add(card, bar, False, True, 0)
 
         caption = Gtk.Label()
         caption.set_xalign(0)
@@ -202,21 +204,20 @@ class BasicsPage(BasePage):
         caption.set_max_width_chars(26)
         caption.set_ellipsize(Pango.EllipsizeMode.END)
         css.add_css_class(caption, "basics-gauge-sub")
-        layout.box_add(left, caption, False, False, 0)
-        card.pack1(left, True, True)
+        layout.box_add(card, caption, False, False, 0)
 
-        # Right: the processes driving this metric, mini-bar proportional to the
-        # leader. Populated by _rebuild_contrib on every snapshot.
+        # Below: the processes driving this metric, each with its own
+        # individual usage bar (proportional to the leader). Populated by
+        # _rebuild_contrib on every snapshot.
         contrib = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         css.add_css_class(contrib, "basics-right")
-        card.pack2(contrib, True, True)
-
-        layout.box_add(self, card, False, False, 0)
+        layout.box_add(card, contrib, False, False, 0)
         self._state[metric] = {"fraction": None, "zone": None}
         self._gauges[metric] = {
             "value": value, "caption": caption, "bar": bar,
             "contrib": contrib, "rows": [],
         }
+        return card
 
     # -- snapshot application (forwarded by the Processes page) -----------
 
@@ -335,11 +336,6 @@ class BasicsPage(BasePage):
         layout.box_add(refs["contrib"], label, False, False, 0)
         label.show()
         refs["rows"].append(label)
-
-    def _on_card_allocate(self, paned, allocation):
-        """r108: the divider sits at the exact midline, always."""
-        if allocation.width > 60:
-            paned.set_position(allocation.width / 2.0)
 
     def _add_row(self, refs, rank, row, metric, frac, extra):
         button = Gtk.Button()
