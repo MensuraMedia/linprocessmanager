@@ -173,7 +173,8 @@ class BasicsPage(BasePage):
         # r071 bounding-box policy: dynamic text is pinned + ellipsized so the
         # card's natural width can never grow with the displayed value.
         value.set_width_chars(12)        # r086: fixed requisition (§5b)
-        value.set_max_width_chars(12)    # r079 cap kept
+        value.set_max_width_chars(12)
+        value.set_ellipsize(Pango.EllipsizeMode.END)    # r079 cap kept
         value.set_ellipsize(Pango.EllipsizeMode.END)
         value.set_markup("<span foreground='#888888'>—</span>")
         layout.box_add(head, name, False, False, 0)
@@ -188,8 +189,12 @@ class BasicsPage(BasePage):
 
         caption = Gtk.Label()
         caption.set_xalign(0)
-        caption.set_width_chars(34)      # r086: fixed requisition (§5b)
-        caption.set_max_width_chars(34)
+        # r102: caption pinned at 26 chars — 34 chars at this font requested
+        # ~340px, past the left block's 300px floor, so Swap/Disk captions
+        # flexed the whole card (the operator's "uneven cards"). The ellipsis
+        # is the honest truncation; the text below the bar stays single-line.
+        caption.set_width_chars(26)      # r086: fixed requisition (§5b)
+        caption.set_max_width_chars(26)
         caption.set_ellipsize(Pango.EllipsizeMode.END)
         css.add_css_class(caption, "basics-gauge-sub")
         layout.box_add(left, caption, False, False, 0)
@@ -330,6 +335,9 @@ class BasicsPage(BasePage):
         button = Gtk.Button()
         button.set_relief(Gtk.ReliefStyle.NONE)
         css.add_css_class(button, "basics-contrib-row")
+        # r102: every contributor row is the same fixed height — variable
+        # row heights were the remaining source of uneven card interiors.
+        button.set_size_request(-1, 26)
 
         line = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
 
