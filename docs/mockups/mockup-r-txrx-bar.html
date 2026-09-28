@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>mockup R — process network bar (Tx ← | → Rx)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box;
+      font-family: Ubuntu, Cantarell, sans-serif; }
+  body { background: #262626; color: #eee; width: 1200px; padding: 20px 24px; }
+  h2 { font-size: 15pt; font-weight: 600; margin-bottom: 6px; }
+  .lead { font-size: 9pt; color: #9a9a9a; margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+  th { background: #2e2e2e; color: #b5b5b5; text-align: left; font-weight: 400;
+       padding: 6px 8px; border: 1px solid #1a1a1a; }
+  th.num, td.num { text-align: right; }
+  td { padding: 6px 8px; background: #2b2b2b; border: 1px solid #1a1a1a; }
+  td.dim { color: #8a8a8a; }
+  /* THE BAR — same geometry as the Disks usage bars: 160 × 12, trough
+     #1b1b1b. Center line: Tx grows LEFT from the middle (yellow),
+     Rx grows RIGHT from the middle (blue). Scale: each side normalized
+     to the busiest process on its side. */
+  .txrx { width: 160px; height: 12px; background: #1b1b1b; border-radius: 2px;
+          position: relative; overflow: hidden; }
+  .txrx .tx { position: absolute; right: 50%; top: 0; height: 12px;
+              background: #facc15; }
+  .txrx .rx { position: absolute; left: 50%; top: 0; height: 12px;
+              background: #2196f3; }
+  .txrx .mid { position: absolute; left: calc(50% - 0.5px); top: 0;
+               width: 1px; height: 12px; background: #3a3a3a; }
+  .legend { margin: 10px 0 16px; font-size: 8.5pt; color: #9a9a9a; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px;
+         margin: 0 4px -1px 10px; }
+  .zoom { display: flex; gap: 26px; align-items: flex-start; margin-top: 6px; }
+  .zoombox { background: #222; border: 1px solid #333; border-radius: 3px;
+             padding: 14px 16px; }
+  .zoombox .cap { font-size: 8pt; color: #9a9a9a; margin-bottom: 6px; }
+  .zoombar { width: 480px; height: 36px; background: #1b1b1b; border-radius: 3px;
+             position: relative; overflow: hidden; }
+  .zoombar .tx { position: absolute; right: 50%; top: 0; height: 36px;
+                 background: #facc15; }
+  .zoombar .rx { position: absolute; left: 50%; top: 0; height: 36px;
+                 background: #2196f3; }
+  .zoombar .mid { position: absolute; left: calc(50% - 1px); top: 0;
+                  width: 2px; height: 36px; background: #3a3a3a; }
+  .callout { font-size: 8pt; color: #9a9a9a; margin-top: 6px; }
+  .callout b { color: #2a9fd8; }
+</style>
+</head>
+<body>
+  <h2>Process network bar — Tx grows left, Rx grows right, from the center</h2>
+  <div class="lead">The new Network-page column. Same box as the Disks usage
+    bars (160 × 12 px, trough #1b1b1b, §5b — fixed, only the fill moves).
+    Scale: each side is normalized to the busiest process on ITS side, so a
+    download-heavy app fills only the right (Rx) half and an upload-heavy app
+    only the left (Tx) half. Restricted processes (Yama) draw the center line
+    alone with "—" rates.</div>
+
+  <div class="legend">
+    <span class="dot" style="background:#facc15"></span><b>Tx — transmitted
+    (grows left ←)</b>
+    <span class="dot" style="background:#2196f3"></span><b>Rx — received
+    (grows right →)</b>
+    <span style="color:#666">· center line = zero · classic network-illustration
+    color code (blue in / yellow-out, as in mockup Q's legend)</span>
+  </div>
+
+  <table>
+    <tr><th>Process</th><th>User</th><th class="num">Conns</th>
+        <th class="num">↓ Rx/s</th><th class="num">↑ Tx/s</th>
+        <th style="width:200px">Tx ← → Rx</th></tr>
+    <tr><td>librewolf <span style="color:#8a8a8a">app-flatpak…</span></td>
+        <td>user</td><td class="num">14</td>
+        <td class="num">1.1 MB/s</td><td class="num">88.2 KB/s</td>
+        <td><div class="txrx">
+          <div class="tx" style="width:12%"></div>
+          <div class="rx" style="width:100%"></div>
+          <div class="mid"></div></div></td></tr>
+    <tr><td>steam <span style="color:#8a8a8a">session-c2</span></td>
+        <td>user</td><td class="num">9</td>
+        <td class="num">84.0 KB/s</td><td class="num">640.0 KB/s</td>
+        <td><div class="txrx">
+          <div class="tx" style="width:88%"></div>
+          <div class="rx" style="width:18%"></div>
+          <div class="mid"></div></div></td></tr>
+    <tr><td>syncthing <span style="color:#8a8a8a">syncthing</span></td>
+        <td>user</td><td class="num">6</td>
+        <td class="num">640.0 KB/s</td><td class="num">640.0 KB/s</td>
+        <td><div class="txrx">
+          <div class="tx" style="width:50%"></div>
+          <div class="rx" style="width:50%"></div>
+          <div class="mid"></div></div></td></tr>
+    <tr><td class="dim">systemd-resolve <span style="color:#8a8a8a">systemd-resolved</span></td>
+        <td class="dim">systemd-resolve</td><td class="num">2</td>
+        <td class="num dim">— 🔒</td><td class="num dim">— 🔒</td>
+        <td><div class="txrx"><div class="mid"></div></div></td></tr>
+  </table>
+
+  <div class="zoom">
+    <div class="zoombox">
+      <div class="cap">ANATOMY — one bar, 160 × 12 px (Disks geometry)</div>
+      <div class="zoombar">
+        <div class="tx" style="width:38%"></div>
+        <div class="mid"></div>
+        <div class="rx" style="width:24%"></div>
+      </div>
+      <div class="callout"><b>← Tx half:</b> grows right-to-left from the
+        center · <b>Rx half →:</b> grows left-to-right from the center ·
+        <b>center line</b> = zero traffic · empty half = no traffic that side</div>
+    </div>
+    <div class="zoombox">
+      <div class="cap">BALANCED — equal in and out (e.g. syncthing)</div>
+      <div class="zoombar">
+        <div class="tx" style="width:50%"></div>
+        <div class="mid"></div>
+        <div class="rx" style="width:50%"></div>
+      </div>
+      <div class="callout">equal halves read as "uploading as much as it
+        downloads" at a glance</div>
+    </div>
+  </div>
+</body>
+</html>
