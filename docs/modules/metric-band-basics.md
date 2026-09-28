@@ -34,11 +34,16 @@ batch — until then the Load gauge renders "—" (probe-first rule).
 Threshold ticks at 60/85 with zone coloring per `_cap_zone`; delta arrows
 per r056 (▲red up · ▼green down · gray flat). Click behavior in §2.
 
-## 2. Click-through: top-10 contributors, then drill down
+## 2. Click-through (current: double-click → Basics; r090 restatement)
 
-Clicking a gauge opens a **Top-10 popover** (compat/menu popover anchored
-to the gauge; also expands inline on double-click into the Basics page —
-§3). Contents per gauge:
+The documented design was: single-click → Top-10 popover, double-click →
+Basics. History: the r059 popover shipped; r070 removed the delta arrows;
+r081 replaced the popover with direct navigation but on SINGLE click (a
+deviation — too easy to fire while scanning the table) and deleted the
+popover machinery; r090 restored the documented DOUBLE-click trigger — a
+double-click on any gauge now navigates to the Basics page (the Graphs
+submenu auto-expands; sidebar highlight moves). The r059 popover machinery
+remains deleted (git history preserves it). Baseline per gauge:
 
 | Gauge | "Responsible" ranking | Source |
 |---|---|---|

@@ -31,6 +31,11 @@ system python3 — no network for app code, ever)
 | 007–009 | preview pane (mockup J) + metric band (mockup K) / resources+sensors / disks | 4–6 | same pattern per module doc | queued |
 | 010+ | logs engine + views + frequency (three tasks: engine, views+menu, frequency) | 7 | same pattern; argv-contract tests first | queued |
 | 0xx | installer + .deb spec + v1 tag | 8 | Z contract → C execute → OP gate | queued |
+| 011 | Disks build-out (capacity + I/O per disks-filesystems.md + disks-capacity.md; mockup N) | 6 | Z contract → C execute → Z verify | planned — awaiting mockup pick |
+| 012 | Peripherals page (sysfs chips, mockup P; sidebar entry after Disks) | 5.5 | Z contract → C execute → Z verify | planned — awaiting mockup pick |
+| 013 | Logs engine (journalctl argv-contract, presets, follow, time-jump) | 7a | Z contract (argv tests first) → C execute → Z verify + C review | queued |
+| 014 | Logs views + menu (mockups E/F/G/H, priority coloring, saved views) | 7b | Z contract → C execute → Z verify | queued |
+| 015 | Logs frequency analysis (log-frequency.md) | 7c | Z contract → C execute → Z verify | queued |
 
 ## Riders (attached to nearest task)
 

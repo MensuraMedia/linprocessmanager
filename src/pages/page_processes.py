@@ -548,7 +548,7 @@ class ProcessesPage(BasePage):
         area.set_size_request(-1, 10)
         area.set_hexpand(True)
         area.set_tooltip_text(
-            _NET_EMPTY if metric == "network" else "Click for Basics")
+            _NET_EMPTY if metric == "network" else "Double-click for Basics")
         layout.box_add(box, area, False, True, 0)
 
         caption = Gtk.Label()
@@ -558,8 +558,11 @@ class ProcessesPage(BasePage):
         caption.set_ellipsize(Pango.EllipsizeMode.END)
         layout.box_add(box, caption, False, False, 0)
 
+        # r090 (operator): DOUBLE-click opens Basics — a single click on a
+        # gauge is too easy to fire while scanning the table.
         gesture = events.click_gesture(
-            area, lambda g, n, x, y, m=metric: self._on_gauge_pressed(m), button=1)
+            area, lambda g, n, x, y, m=metric: self._on_gauge_pressed(m),
+            button=1, min_press=2)
 
         self._gauge_state[metric] = {"fraction": None, "zone": None}
         self._gauges[metric] = {

@@ -64,6 +64,10 @@ _TROUGH_RGB = (0x3a / 255.0, 0x3a / 255.0, 0x3a / 255.0)
 _CONTRIB_BAR_RGB = (0x00 / 255.0, 0x78 / 255.0, 0xD7 / 255.0)
 _CONTRIB_BAR_TROUGH = (0x1b / 255.0, 0x1b / 255.0, 0x1b / 255.0)
 
+# r090: fixed Basics card height (bounding-box policy §5b): sized for the
+# four contributor rows; content scrolls/clips inside, the box never moves.
+BASICS_CARD_HEIGHT = 132
+
 _NET_EMPTY = ("per-process network not available from /proc — "
               "interface totals on the Network graph")
 
@@ -145,6 +149,13 @@ class BasicsPage(BasePage):
         # big bar + zone caption), top contributing processes on the RIGHT.
         card = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         css.add_css_class(card, "basics-card")
+        # r090 bounding-box hardening (operator): cards are FIXED size —
+        # uniform width (hexpand; every card spans the page) and a pinned
+        # height (four contributor rows). Nothing inside may grow the card:
+        # the §5b "box is fixed; only the visual inside moves" rule now
+        # holds at the card level, not just the label level.
+        card.set_hexpand(True)
+        card.set_size_request(-1, BASICS_CARD_HEIGHT)
 
         left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         css.add_css_class(left, "basics-left")
@@ -349,6 +360,10 @@ class BasicsPage(BasePage):
         value.set_xalign(1)
         value.set_use_markup(True)
         css.add_css_class(value, "basics-contrib-val")
+        # r090: pinned width — "499.6 MB" vs "0 B" used to breathe the row.
+        value.set_width_chars(9)
+        value.set_max_width_chars(9)
+        value.set_ellipsize(Pango.EllipsizeMode.END)
         value.set_markup(self._span(
             _escape(self._value_text(metric, row["value"])), "#dddddd"))
         layout.box_add(line, value, False, False, 0)

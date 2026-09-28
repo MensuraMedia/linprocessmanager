@@ -27,24 +27,34 @@ def _attach(widget, controller):
         widget.add_controller(controller)
 
 
-def click_gesture(widget, on_pressed, button=0):
+def click_gesture(widget, on_pressed, button=0, min_press=1):
     """Install a click gesture on ``widget``.
+
+    ``min_press`` > 1 gates the callback to multi-clicks (r090: the
+    Processes band gauges open Basics on DOUBLE-click). The gate lives here
+    — the portable "pressed" signal already carries the running press count —
+    because GtkGestureMultiPress.set_n_press is missing from some bindings.
+    
 
     ``on_pressed`` is called ``on_pressed(gesture, n_press, x, y)`` — the
     "pressed" signal shape shared by both GestureMultiPress and GestureClick.
     Returns the gesture (the caller must keep a reference alive).
     """
+    def _gated(gesture, n, x, y):
+        if n >= min_press:
+            on_pressed(gesture, n, x, y)
+
     if GTK_MAJOR >= 4:
         gesture = Gtk.GestureClick.new()
         if button:
             gesture.set_button(button)
-        gesture.connect("pressed", on_pressed)
+        gesture.connect("pressed", _gated)
         _attach(widget, gesture)
     else:
         gesture = Gtk.GestureMultiPress.new(widget)
         if button:
             gesture.set_button(button)
-        gesture.connect("pressed", on_pressed)
+        gesture.connect("pressed", _gated)
     return gesture
 
 
