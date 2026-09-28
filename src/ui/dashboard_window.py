@@ -49,6 +49,11 @@ class DashboardWindow(Gtk.ApplicationWindow):
             page = self.nav_manager.get_page_widget("processes")
             if page is not None and hasattr(page, "attach_sampler"):
                 page.attach_sampler(self.sampler, self.get_application())
+            # r113: the Network page reads the sampler's public
+            # open_sockets() summary for its Conns column.
+            net_page = self.nav_manager.get_page_widget("network")
+            if net_page is not None and hasattr(net_page, "set_sampler"):
+                net_page.set_sampler(self.sampler)
             # Inject window activity/iconified state (sampler backoff input);
             # the sampler never reads GTK itself (r046).
             self.connect("notify::is-active", self._on_activity_changed)

@@ -159,6 +159,15 @@ class NetAttributor:
         return attribute(inode_pids, active, weights, total_rx, total_tx,
                          pid_start, restricted)
 
+    def open_sockets(self):
+        """pid -> open network socket count (from the last fd scan).
+
+        Feeds the Network page's Conns column (r113). Restricted pids (no
+        readable fd table) are absent from the map — the page renders "—".
+        """
+        return {pid: len(cached[1]) for pid, cached in self._fd_cache.items()
+                if cached is not None}
+
     def families_for(self, pids):
         """Sorted socket-family labels currently held by any of ``pids``.
 

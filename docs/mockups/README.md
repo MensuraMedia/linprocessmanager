@@ -29,10 +29,9 @@ indexed in `index.html`, and referenced from `docs/modules/*`.
 | [M — Visuals](mockup-m-visuals.html) | Basics split cards + chart visuals | **APPLIED** (r068–r070) | [metric-band-basics.md](../modules/metric-band-basics.md) |
 | [N — Disks](mockup-disks.html) | Disks page: capacity + I/O | **PENDING operator pick** → task 011 | [disks-capacity.md](../modules/disks-capacity.md) + [disks-filesystems.md](../modules/disks-filesystems.md) + [disks-implementation.md](../modules/disks-implementation.md) |
 | [P — Peripherals](mockup-peripherals.html) | connected devices + sensors | **SHIPPED** r092 (page live; sidebar updated r092 to the flat structure) | [peripherals.md](../modules/peripherals.md) + [sysfs-data.md](../modules/sysfs-data.md) |
+| [Q — Network](mockup-q-network.html) | per-process traffic page: live table (shipped r113) + per-app monitor + history (v2) | **Q1 live table SHIPPED r113**; Q2/Q3 design directions for v2 | [network-page.md](../modules/network-page.md) |
 
-Planned, not yet mocked: a **Network** page (dedicated per-app traffic view —
-technical doc + mockup queued, operator item r099/9). When it exists it
-becomes mockup Q and joins this table.
+
 
 ## Also in this directory
 

@@ -19,6 +19,7 @@ NAV_ITEMS = [
     ("Processes", "processes", True),   # first item gets top border
     ("Graphs", "graphs", False),        # navigates to the hub (Basics on top)
     ("Disks", "disks", False),
+    ("Network", "network", False),           # r113: per-process traffic
     ("Peripherals", "peripherals", False),   # r092: connected devices + sensors
     ("Logs", "logs", False),
     ("About", "about", False),

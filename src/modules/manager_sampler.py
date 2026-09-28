@@ -679,6 +679,12 @@ class Sampler:
                 break
         return latest
 
+    def open_sockets(self):
+        """pid -> open network socket count (r113 Network page summary)."""
+        if self._netattr is None:
+            return {}
+        return self._netattr.open_sockets()
+
     def start(self):
         """Start the background thread (idempotent while running)."""
         if self._thread is not None and self._thread.is_alive():

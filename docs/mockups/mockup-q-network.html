@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>mockup Q — Network page design directions</title>
+<style>
+  /* linprocman design language (r098 live sample): window #262626,
+     sidebar #353535, accent #0078D7, cards #2b2b2b, hairline #1a1a1a */
+  * { margin: 0; padding: 0; box-sizing: border-box;
+      font-family: Ubuntu, Cantarell, sans-serif; }
+  body { background: #262626; color: #eee; width: 1200px; }
+  .variant { padding: 18px 24px 26px; border-bottom: 2px dashed #333; }
+  .vtag { font-size: 10pt; color: #7a7a7a; margin-bottom: 10px; }
+  .vtag b { color: #2a9fd8; }
+  .shell { display: flex; }
+  .sidebar { width: 150px; background: #353535; border-right: 1px solid #1a1a1a;
+             padding: 12px 0; min-height: 420px; }
+  .sidebar div { padding: 9px 18px; font-size: 9pt; color: #ddd; }
+  .sidebar div.active { background: #0078D7; color: #fff; }
+  h2 { font-size: 15pt; font-weight: 600; margin: 4px 0 8px; }
+  .content { flex: 1; padding: 4px 18px 12px; }
+  .band { display: flex; gap: 8px; margin-bottom: 10px; }
+  .card { background: #2b2b2b; border: 1px solid #1a1a1a; border-radius: 3px;
+          padding: 8px 10px; }
+  .band .card { flex: 1; }
+  .k { font-size: 8pt; color: #9a9a9a; }
+  .v { font-size: 12pt; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+  th { background: #2e2e2e; color: #b5b5b5; text-align: left; font-weight: 400;
+       padding: 6px 8px; border: 1px solid #1a1a1a; }
+  th.on { color: #fff; }
+  td { padding: 6px 8px; background: #2b2b2b; border: 1px solid #1a1a1a; }
+  td.num { text-align: right; }
+  td.dim { color: #8a8a8a; }
+  .bar { height: 6px; background: #1b1b1b; border-radius: 2px; width: 90px; }
+  .bar i { display: block; height: 6px; border-radius: 2px; background: #2196f3; }
+  .split { display: flex; gap: 10px; }
+  .pane { width: 300px; background: #2b2b2b; border: 1px solid #1a1a1a;
+          border-radius: 3px; padding: 10px 12px; }
+  .pane h3 { font-size: 11pt; margin-bottom: 2px; }
+  .pane .sub { font-size: 7.5pt; color: #8a8a8a; margin-bottom: 8px; }
+  .kv { display: flex; justify-content: space-between; font-size: 8.5pt;
+        padding: 2px 0; }
+  .kv span:last-child { color: #d5d5d5; }
+  .chart { height: 70px; background: #222; border: 1px solid #1a1a1a;
+           border-radius: 2px; margin: 6px 0;
+           background-image: linear-gradient(#2f2f2f 1px, transparent 1px);
+           background-size: 100% 17px; position: relative; overflow: hidden; }
+  .chart svg { position: absolute; inset: 0; }
+  .freq { display: flex; gap: 3px; align-items: flex-end; height: 34px;
+          margin-top: 4px; }
+  .freq i { flex: 1; background: #2196f3; border-radius: 1px; opacity: .85; }
+  .legend { font-size: 7.5pt; color: #8a8a8a; margin-top: 4px; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 2px;
+         margin-right: 4px; vertical-align: middle; }
+  .lock { color: #d9a53f; }
+  .note { font-size: 8pt; color: #7a7a7a; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<!-- ============ VARIANT 1 — live table (shipped v1) ============ -->
+<div class="variant">
+  <div class="vtag"><b>Q1</b> — live table (shipped r113): every column sortable, rows update in place.</div>
+  <div class="shell">
+    <div class="sidebar">
+      <div>Processes</div><div>Graphs</div><div>Disks</div>
+      <div class="active">Network</div><div>Peripherals</div><div>Logs</div><div>About</div>
+    </div>
+    <div class="content">
+      <h2>Network</h2>
+      <div class="band">
+        <div class="card"><div class="k">↓ Total received</div><div class="v">1.2 MB/s</div></div>
+        <div class="card"><div class="k">↑ Total sent</div><div class="v">96.4 KB/s</div></div>
+        <div class="card"><div class="k">Active apps</div><div class="v">4</div></div>
+        <div class="card"><div class="k">Busiest</div><div class="v">librewolf</div></div>
+      </div>
+      <table>
+        <tr><th class="on">Process ▼</th><th>User</th><th>Conns</th>
+            <th class="num">↓ Rx/s</th><th class="num">↑ Tx/s</th><th class="num">Total/s</th></tr>
+        <tr><td>librewolf <span class="lock" style="color:#8a8a8a">app-flatpak…</span></td><td>user</td>
+            <td class="num">14</td><td class="num">1.1 MB/s</td><td class="num">88.2 KB/s</td><td class="num">1.2 MB/s</td></tr>
+        <tr><td>steam <span style="color:#8a8a8a">session-c2</span></td><td>user</td>
+            <td class="num">9</td><td class="num">84.0 KB/s</td><td class="num">6.1 KB/s</td><td class="num">90.1 KB/s</td></tr>
+        <tr><td>python3 <span style="color:#8a8a8a">app-zcode-4408</span></td><td>user</td>
+            <td class="num">3</td><td class="num">2.4 KB/s</td><td class="num">1.9 KB/s</td><td class="num">4.3 KB/s</td></tr>
+        <tr><td class="dim">systemd-resolve <span style="color:#8a8a8a">systemd-resolved</span></td>
+            <td class="dim">systemd-resolve</td><td class="num">2</td>
+            <td class="num dim">— 🔒</td><td class="num dim">— 🔒</td><td class="num dim">— 🔒</td></tr>
+      </table>
+      <div class="note">Socket-owner attribution (proportional) — not kernel
+        accounting. 🔒 = restricted fd table (Yama), rates unavailable.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ VARIANT 2 — click-through app detail pane ============ -->
+<div class="variant">
+  <div class="vtag"><b>Q2</b> — click an app → per-app monitor: rx/tx history, connection frequency, families. (v2, needs per-app ring policy)</div>
+  <div class="shell">
+    <div class="sidebar">
+      <div>Processes</div><div>Graphs</div><div>Disks</div>
+      <div class="active">Network</div><div>Peripherals</div><div>Logs</div><div>About</div>
+    </div>
+    <div class="content">
+      <div class="split">
+        <div style="flex:1">
+          <h2>Network</h2>
+          <table>
+            <tr><th class="on">Process ▼</th><th>User</th><th>Conns</th>
+                <th class="num">↓ Rx/s</th><th class="num">↑ Tx/s</th></tr>
+            <tr style="outline:1px solid #0078D7"><td><b>librewolf</b></td><td>user</td>
+                <td class="num">14</td><td class="num">1.1 MB/s</td><td class="num">88.2 KB/s</td></tr>
+            <tr><td>steam</td><td>user</td><td class="num">9</td>
+                <td class="num">84.0 KB/s</td><td class="num">6.1 KB/s</td></tr>
+          </table>
+        </div>
+        <div class="pane">
+          <h3>librewolf</h3>
+          <div class="sub">app-flatpak-io.gitlab.librewolf · 14 sockets · tcp, udp</div>
+          <div class="kv"><span>↓ Rx/s</span><span>1.1 MB/s</span></div>
+          <div class="kv"><span>↑ Tx/s</span><span>88.2 KB/s</span></div>
+          <div class="kv"><span>Family</span><span>internet (default route)</span></div>
+          <div class="kv"><span>First seen</span><span>14 min ago</span></div>
+          <div class="chart">
+            <svg viewBox="0 0 276 70" preserveAspectRatio="none">
+              <polyline points="0,58 25,54 50,60 75,40 100,44 125,30 150,36 175,22
+                                200,28 225,14 250,20 276,10"
+                        fill="none" stroke="#2196f3" stroke-width="2"/>
+              <polyline points="0,66 25,64 50,65 75,62 100,63 125,61 150,62 175,60
+                                200,61 225,59 250,60 276,58"
+                        fill="none" stroke="#facc15" stroke-width="1.6"/>
+            </svg>
+          </div>
+          <div class="legend"><span class="dot" style="background:#2196f3"></span>rx
+            <span class="dot" style="background:#facc15; margin-left:8px"></span>tx · last 5 min</div>
+          <div class="k" style="margin-top:8px">CONNECTION FREQUENCY</div>
+          <div class="freq">
+            <i style="height:30%"></i><i style="height:55%"></i><i style="height:20%"></i>
+            <i style="height:80%"></i><i style="height:45%"></i><i style="height:65%"></i>
+            <i style="height:35%"></i><i style="height:90%"></i><i style="height:50%"></i>
+            <i style="height:25%"></i><i style="height:70%"></i><i style="height:40%"></i>
+          </div>
+          <div class="legend">new/changed sockets per 5 s interval — spikes = bursty
+            reconnect behavior</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ VARIANT 3 — history + collective traffic ============ -->
+<div class="variant">
+  <div class="vtag"><b>Q3</b> — history pane: collective traffic + connection frequency over a chosen window (v2).</div>
+  <div class="shell">
+    <div class="sidebar">
+      <div>Processes</div><div>Graphs</div><div>Disks</div>
+      <div class="active">Network</div><div>Peripherals</div><div>Logs</div><div>About</div>
+    </div>
+    <div class="content">
+      <h2>Network — history</h2>
+      <div class="band">
+        <div class="card"><div class="k">Window</div><div class="v">10 min ▾</div></div>
+        <div class="card"><div class="k">Peak ↓</div><div class="v">3.8 MB/s</div></div>
+        <div class="card"><div class="k">Peak ↑</div><div class="v">410 KB/s</div></div>
+        <div class="card"><div class="k">Connections</div><div class="v">214</div>
+          <div class="k" style="margin-top:2px">spikes at 21:04 · 21:31</div></div>
+      </div>
+      <div class="chart" style="height:110px">
+        <svg viewBox="0 0 1150 110" preserveAspectRatio="none">
+          <path d="M0,95 60,88 120,92 180,70 240,78 300,60 360,66 420,40 480,52
+                   540,30 600,44 660,24 720,36 780,18 840,44 900,56 960,50
+                   1020,68 1080,74 1150,80"
+                fill="none" stroke="#2196f3" stroke-width="2"/>
+          <path d="M0,104 60,102 120,103 180,99 240,101 300,97 360,99 420,94
+                   480,97 540,90 600,94 660,86 720,90 780,80 840,90 900,94
+                   960,92 1020,98 1080,100 1150,101"
+                fill="none" stroke="#facc15" stroke-width="1.6"/>
+        </svg>
+      </div>
+      <div class="legend"><span class="dot" style="background:#2196f3"></span>↓ collective rx
+        <span class="dot" style="background:#facc15; margin-left:8px"></span>↑ collective tx
+        · sampled per interval, gaps rendered as gaps (ring law)</div>
+      <div class="note">History source: per-app manager_history rings (bounded,
+        evict least-recently-seen) — needs a schema-freeze-style sign-off
+        before build (v2 gate).</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

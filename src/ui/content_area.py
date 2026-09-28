@@ -14,6 +14,7 @@ from pages.page_disks import DisksPage
 from pages.page_logs import LogsPage
 from pages.page_basics import BasicsPage
 from pages.page_peripherals import PeripheralsPage
+from pages.page_network import NetworkPage
 from pages.page_about import AboutPage
 from pages.page_settings import SettingsPage
 
@@ -73,6 +74,7 @@ class ContentArea(Gtk.Box):
         detail_pages = [(spec.page_id, gd.GraphDetailPage(spec))
                         for spec in gd.DETAIL_SPECS]
         disks_page = DisksPage()
+        network_page = NetworkPage()
         peripherals_page = PeripheralsPage()
         logs_page = LogsPage()
         basics_page = BasicsPage()
@@ -88,6 +90,7 @@ class ContentArea(Gtk.Box):
             ("processes", processes_page),
             ("graphs", graphs_page),
             ("disks", disks_page),
+            ("network", network_page),
             ("peripherals", peripherals_page),
             ("logs", logs_page),
             ("about", about_page),
@@ -101,7 +104,8 @@ class ContentArea(Gtk.Box):
         # Single-drain law (r046): the Processes page owns the one sampler
         # drain and forwards every snapshot to observers. Register the history
         # writer FIRST so pages read populated rings on the same tick.
-        graph_observers = [basics_page.on_snapshot, graphs_page.on_snapshot]
+        graph_observers = [basics_page.on_snapshot, graphs_page.on_snapshot,
+                           network_page.on_snapshot]
         graph_observers += [page.on_snapshot for _pid, page in detail_pages]
         if hasattr(processes_page, "add_snapshot_observer"):
             processes_page.add_snapshot_observer(
