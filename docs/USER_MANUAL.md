@@ -86,7 +86,7 @@ The left sidebar selects the page; the rest of the window is that page:
 | **Network** | per-process network traffic with a Tx/Rx bar per app |
 | **Peripherals** | connected USB devices and hardware sensor chips |
 | **Logs** | the systemd journal viewer |
-| **About** | app information and license |
+| **About** | app information, license, and project location |
 | **Settings** (bottom) | refresh interval, scope, calibration |
 
 ---
@@ -356,6 +356,25 @@ fill inside a bar or card ever moves.
 
 All offline: the app reads `/proc`, `/sys` and the local journal and makes
 **no network connections of its own**.
+
+---
+
+## 18. License and project location
+
+LinProcessManager is released under the **Creative Commons
+Attribution-NonCommercial 4.0 International** license (CC BY-NC 4.0 — see
+LICENSE in the source).
+
+- You are welcome to **use, modify, and distribute** the application
+  freely for personal and non-commercial purposes; attribution to the
+  author (MensuraMedia) is appreciated.
+- **Commercial use is not permitted without prior permission** from the
+  author — please reach out to discuss terms.
+
+Official project location:
+**https://github.com/MensuraMedia/linprocessmanager** — source, releases,
+issues, and documentation. The About page in the app carries the same
+summary.
 
 ---
 

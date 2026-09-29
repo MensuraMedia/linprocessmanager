@@ -9,6 +9,11 @@ frequency analysis. GTK3 + Python, fully offline.
 live table landing; logs and frequency analysis designed). Docs are the
 contract: what's described there is what gets built and tested.
 
+## Official repository
+
+**https://github.com/MensuraMedia/linprocessmanager** — source, releases,
+issues, and the documentation in `docs/`.
+
 ## Principles (binding — docs/build-principles.md)
 
 - **Fully offline.** Every datum from the local kernel (`/proc`, `/sys`)
@@ -91,7 +96,16 @@ shortcuts, and troubleshooting.
 
 ## License
 
-Code and documentation: CC BY-NC 4.0 (see LICENSE). Icons: Phosphor, MIT —
+LinProcessManager is released under the **Creative Commons
+Attribution-NonCommercial 4.0 International** license (CC BY-NC 4.0, see
+[LICENSE](LICENSE)).
+
+You are welcome to **use, modify, and distribute** the application and its
+source freely, for personal and non-commercial purposes — attribution is
+appreciated. **Commercial use is not permitted without prior permission**
+from the author (MensuraMedia); please reach out to discuss terms.
+
+Icons: Phosphor, MIT —
 see `resources/icons/manifest.txt`. Built on the
 gtk-python-dashboard-starter (vendored; starter terms in
 docs/starter-README.md).

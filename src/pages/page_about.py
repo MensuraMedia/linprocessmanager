@@ -8,44 +8,46 @@ from pages.page_base import BasePage
 
 
 class AboutPage(BasePage):
-    """About page with GTK information"""
-    
+    """About page — app identity, license, and project location."""
+
     def build_content(self):
-        """Build about page content"""
-        
+        """Build about page content."""
+
         # Page title
-        self.add_title("About GTK")
-        
-        # GTK overview
+        self.add_title("About LinProcessManager")
+
+        # Overview
         self.add_paragraph(
-            "GTK (formerly GIMP Toolkit) is a free and open-source cross-platform widget toolkit "
-            "for creating graphical user interfaces. Originally developed for the GIMP image editor, "
-            "GTK has evolved into one of the most popular GUI toolkits for Linux desktop applications."
+            "LinProcessManager is a native Linux process manager and system "
+            "monitor: a live process table with signals, priorities and group "
+            "operations, per-app network traffic, disk capacity and I/O, "
+            "hardware sensors, and a journal viewer — built on GTK and "
+            "Python for the Linux desktop."
         )
-        
-        # Platform support section
-        self.add_subtitle("Platform Support")
-        
+
+        # License section
+        self.add_subtitle("License")
+
         self.add_paragraph(
-            "GTK applications run natively on:\n\n"
-            "• Linux (primary platform)\n"
-            "• BSD variants (FreeBSD, OpenBSD, NetBSD)\n"
-            "• Windows (via MinGW or MSYS2)\n"
-            "• macOS (via Homebrew or MacPorts)\n\n"
-            "PyGObject provides Python bindings for GTK, enabling rapid development "
-            "with Python's simplicity and GTK's native performance."
+            "Released under the Creative Commons Attribution-NonCommercial "
+            "4.0 International license (CC BY-NC 4.0).\n\n"
+            "You are welcome to use, modify, and share this software freely. "
+            "Commercial use is not permitted without prior permission from "
+            "the author — please reach out to discuss terms. Attribution is "
+            "appreciated."
         )
-        
-        # Popularity section
-        self.add_subtitle("Adoption & Ecosystem")
-        
+
+        # Project location
+        self.add_subtitle("Project")
+
         self.add_paragraph(
-            "GTK powers many popular Linux desktop applications including:\n\n"
-            "• GNOME Desktop Environment\n"
-            "• GIMP (GNU Image Manipulation Program)\n"
-            "• Inkscape (Vector Graphics Editor)\n"
-            "• Transmission (BitTorrent Client)\n"
-            "• Audacity (Audio Editor)\n"
-            "• FileZilla (FTP Client)\n"
-            "• Many file managers, media players, and system utilities"
+            "Source and releases: github.com/MensuraMedia/linprocessmanager"
+        )
+
+        # Credits
+        self.add_subtitle("Built with")
+
+        self.add_paragraph(
+            "GTK and PyGObject · Python 3 · the Phosphor icon set (MIT) · "
+            "the gtk-python-dashboard-starter framework."
         )

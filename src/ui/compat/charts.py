@@ -355,10 +355,12 @@ def draw_txrx_bar(cr, width, height, tx_ticks, rx_ticks, *, tick=3.0):
         cr.set_source_rgb(*TX_TICK_RGB)
         for i in range(tx_ticks):
             cr.rectangle(i * tick, 0, tick - 1.0, height)
+        cr.fill()
     if rx_ticks:
         cr.set_source_rgb(*RX_TICK_RGB)
         for i in range(rx_ticks):
             cr.rectangle(width - (i + 1) * tick, 0, tick - 1.0, height)
+        cr.fill()
 
 
 def txrx_bar_surface(width, height, tx_ticks, rx_ticks, *, tick=3.0):
