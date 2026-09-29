@@ -9,11 +9,6 @@ frequency analysis. GTK3 + Python, fully offline.
 live table landing; logs and frequency analysis designed). Docs are the
 contract: what's described there is what gets built and tested.
 
-## Official repository
-
-**https://github.com/MensuraMedia/linprocessmanager** — source, releases,
-issues, and the documentation in `docs/`.
-
 ## Principles (binding — docs/build-principles.md)
 
 - **Fully offline.** Every datum from the local kernel (`/proc`, `/sys`)
