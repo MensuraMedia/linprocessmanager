@@ -9,6 +9,92 @@ frequency analysis. GTK3 + Python, fully offline.
 live table landing; logs and frequency analysis designed). Docs are the
 contract: what's described there is what gets built and tested.
 
+## What it does
+
+**LinProcessManager** is a desktop process manager and system monitor for
+Linux — everything in one window, fully offline, no root required:
+
+- **Live process table** — every process, updated in place; filter by name
+  (plain or regex), scope to your own processes, hide kernel threads.
+- **25 sortable columns** — CPU, memory, swap, per-process disk I/O and
+  network rates, threads, nice, OOM score, start time, cgroup unit and
+  more; pick your columns with a right-click on the headers.
+- **Signals and priorities** — Stop, Continue, End, Kill, any signal from a
+  picker; renice presets; CPU affinity. Destructive actions confirm inline
+  and the app **verifies the outcome** and reports it.
+- **Group termination** — end or kill a process and its entire descendant
+  tree, with per-step verification.
+- **Process preview sidebar** — ancestry, children, resource consumption,
+  dependencies, and per-process network attribution for the selected row.
+- **Graphs** — six system dashboards (CPU, Memory, Swap, Disk I/O,
+  Network, Pressure, Load) with per-metric detail pages and 5-minute
+  history, plus the **Basics** cards: a one-glance "am I OK?" view.
+- **Disks** — per-filesystem capacity with zone-colored usage bars, inode
+  pressure, and per-device read/write rates.
+- **Network** — which apps are talking to the network right now, how much,
+  and (tracked) whether their pattern is steady, bursty, or
+  small-regular-upload.
+- **Peripherals** — connected USB devices and hardware sensors
+  (temperatures, fans, CPU frequency, GPU).
+- **Logs** — the systemd journal with presets, unit/priority filters, and
+  severity coloring (saved views and frequency analysis in development).
+
+## Screenshots
+
+All pages, captured live from the running application:
+
+**Processes** — the live table, metric band, and the per-process preview
+sidebar:
+
+![Processes](docs/screenshots/processes.png)
+
+**Graphs** — the Basics summary cards and the chart hub:
+
+![Graphs](docs/screenshots/graphs.png)
+
+**Disks** — capacity, usage bars, and per-device I/O:
+
+![Disks](docs/screenshots/disks.png)
+
+**Network** — per-app traffic with the Tx←→Rx bars:
+
+![Network](docs/screenshots/network.png)
+
+**Peripherals** — USB devices and hardware sensors:
+
+![Peripherals](docs/screenshots/peripherals.png)
+
+**Logs** — the journal viewer:
+
+![Logs](docs/screenshots/logs.png)
+
+**Settings** — interval, scope, and baseline recalibration:
+
+![Settings](docs/screenshots/settings.png)
+
+## Requirements & compatibility
+
+Built **Mint-first** on Linux Mint 22 (Ubuntu 24.04 base) — verified on
+this machine — and designed to run on the whole Debian/Ubuntu family:
+
+| Base (representative distros) | Python | GTK 3 | Confidence |
+|---|---|---|---|
+| Linux Mint 22 · Ubuntu 24.04 | 3.12 | 3.24.41 | **verified on this machine** |
+| Linux Mint 21.x · Ubuntu 22.04 · Pop!_OS 22.04 | 3.10 | 3.24.33 | supported floor |
+| Debian 12 · LMDE 6 | 3.11 | 3.24.3x | supported floor |
+| Debian 13 · LMDE 7 | 3.13 | 3.24.4x | supported |
+
+**Runtime needs are four system packages** — no pip, no venv, no compiled
+components: `python3-gi`, `gir1.2-gtk-3.0`, `python3-cairo`, `python3-pil`
+(Python ≥ 3.10). Fedora, Arch, and openSUSE ship the same stack and are
+expected to work (untested — reports welcome).
+
+Also by design: **fully offline** (reads `/proc`, `/sys`, and the local
+`journalctl` — makes no network connections of its own), **unprivileged**
+(no root, no elevation paths), and degrades visibly instead of crashing on
+hardened kernels (hidepid, Yama, dmesg_restrict). Details and the version
+matrix: [docs/debian-compatibility.md](docs/debian-compatibility.md).
+
 ## Principles (binding — docs/build-principles.md)
 
 - **Fully offline.** Every datum from the local kernel (`/proc`, `/sys`)
