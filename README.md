@@ -66,6 +66,13 @@ Workflow, gates, task contracts, and the ZCode⇄Claude collaboration:
 Feature-to-spec mapping lives in the module docs
 ([docs/modules/](docs/modules/)); mockups are the visual contract for each.
 
+## User manual
+
+**[docs/USER_MANUAL.md](docs/USER_MANUAL.md)** — the complete end-user
+guide: every page, the right-click menus (signals, priorities, importance
+marks, tracking), sorting and columns, the color system, keyboard
+shortcuts, and troubleshooting.
+
 ## Documentation map
 
 | Doc | What it holds |
