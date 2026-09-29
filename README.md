@@ -1,4 +1,4 @@
-# linprocman
+# Linux Process Manager Project
 
 A native Linux process manager for Debian-based desktops (Mint first):
 live process table and tree, signals and renice, resource history, PSI,
