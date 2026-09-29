@@ -1009,6 +1009,10 @@ class ProcessesPage(BasePage):
             self._fit_columns_to_width()
 
     def _fit_columns_to_width(self):
+        # r136: the debounced pass consumes its source — clear the id so a
+        # later resize never removes an already-fired timeout (the journal
+        # collected "Source ID not found" warnings every tick otherwise).
+        self._fit_source_id = None
         tv_width = max(120, self.treeview.get_allocated_width() - 20)
         visible = [c for k, c in self._columns.items() if c.get_visible()]
         if not visible:

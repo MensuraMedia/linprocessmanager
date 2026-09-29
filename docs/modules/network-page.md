@@ -237,6 +237,34 @@ per-process rates, busiest = wineserver).
 
 ---
 
+## Selection, importance marks, tracking, properties sidebar (r133)
+
+Rows are **selectable** (single selection). Selecting a row opens the
+**properties sidebar** (right, 300px, no_show_all + per-widget reveal):
+process identity with importance badge, importance level, tracking state
+with sample count, open connections, live ↓/↑ rates, a
+**connection-frequency bar chart** (one bar per sample from the tracked
+ring, height = that interval's total traffic), the pattern verdict with its
+numeric evidence, and the honesty note (heuristic pattern; proportional
+attribution). Deselecting hides it.
+
+**Right-click menu** on a row (compat click gesture, button 3):
+
+- **Mark importance: High / Medium / Low / Clear** — persisted per process
+  NAME in `~/.config/linprocman/netwatch.json` (marks follow the program
+  across pids and restarts). The badge (colored ●) renders in the Process
+  cell via a data func.
+- **Track this process / Stop tracking** — a bounded 180-sample ring
+  (`manager_netwatch.NetWatch.rings`) fed every snapshot tick; the built-in
+  `classify_activity` turns the ring into the pattern verdict shown in the
+  sidebar. Categories: regular-intervals / telemetry-like (steady small
+  uploads — a PATTERN name, not an accusation, r055) / irregular-spikes /
+  quiet / insufficient-data, each with numeric evidence.
+
+The `net` action group lives on the treeview (menu items resolve through
+it); callbacks take (action, parameter) — the r134 fix after zero-arg
+lambdas made every menu item a silent TypeError.
+
 ## The Tx←→Rx packet-tick bar (r129, mockup R — CONFIRMED)
 
 Each row carries a **160×12 bar (the Disks geometry)** rendering network
